@@ -1,0 +1,36 @@
+{
+  "name": "pi-safety",
+  "version": "0.1.0",
+  "description": "Auto mode for pi: a decisions classifier like TypeSafe's Jev reviews risky tool calls",
+  "type": "module",
+  "keywords": [
+    "pi-package"
+  ],
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "^0.99.1",
+    "@earendil-works/pi-coding-agent": "^0.99.1",
+    "@types/node": "^26.6.3",
+    "typescript": "^7.0.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KTibow/pi-safety.git"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "eval": "node test/eval.ts"
+  }
+}
