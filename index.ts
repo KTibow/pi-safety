@@ -34,19 +34,11 @@ const SHELL_TOOLS = new Set(["bash", "powershell"]);
 const EXEC_TOOLS = new Set([...SHELL_TOOLS, "codemode"]);
 
 /**
- * Decisions endpoints outside pi's catalog, usable as `classifier: "<name>/<model>"`. When one's key is
- * set and the config names no classifier, it is used before pi's catalog.
+ * Classifiers from pi's catalog tried in order when the config names none. Providers register these;
+ * surplus-intelligence comes from a provider extension, the rest are built into pi.
  */
-const ENDPOINTS: Record<string, { url: string; model: string; keyEnvs: string[] }> = {
-	"surplus-intelligence": {
-		url: "https://api.surplusintelligence.ai/v1/decisions",
-		model: "jev-1.13",
-		keyEnvs: ["SURPLUS_INTELLIGENCE_API_KEY", "SI_API_KEY"],
-	},
-};
-
-/** Classifiers from pi's catalog tried in order when the config names none. */
 const DEFAULT_CLASSIFIERS = [
+	"surplus-intelligence/jev-1.13",
 	"typesafe/jev-latest",
 	"openrouter/~typesafe/jev-latest",
 	"openrouter/typesafe/jev-1.13",
@@ -338,7 +330,7 @@ function registryClassifier(ctx: ExtensionContext, config: Config): Classify {
 			if (model) return { model, name };
 		}
 		throw new Error(
-			"No Jev classifier has credentials. Set SURPLUS_INTELLIGENCE_API_KEY, TYPESAFE_API_KEY or OPENROUTER_API_KEY, or configure one in safety.json",
+			"No Jev classifier has credentials. Log in to a provider that serves Jev (e.g. TYPESAFE_API_KEY or OPENROUTER_API_KEY), or set classifier or endpoint in safety.json",
 		);
 	};
 	return async (state, signal) => {
@@ -358,19 +350,9 @@ function registryClassifier(ctx: ExtensionContext, config: Config): Classify {
 	};
 }
 
+/** A classifier from pi's catalog, or a decisions endpoint the config names directly. */
 function makeClassifier(ctx: ExtensionContext, config: Config): Classify {
-	if (config.endpoint) return endpointClassifier(config.endpoint, config);
-	const [provider, ...rest] = (config.classifier ?? "").split("/");
-	const named = ENDPOINTS[provider];
-	if (named) return endpointClassifier({ url: named.url, model: rest.join("/") || named.model, apiKeyEnv: named.keyEnvs }, config);
-	if (!config.classifier) {
-		for (const endpoint of Object.values(ENDPOINTS)) {
-			if (endpoint.keyEnvs.some((name) => process.env[name])) {
-				return endpointClassifier({ url: endpoint.url, model: endpoint.model, apiKeyEnv: endpoint.keyEnvs }, config);
-			}
-		}
-	}
-	return registryClassifier(ctx, config);
+	return config.endpoint ? endpointClassifier(config.endpoint, config) : registryClassifier(ctx, config);
 }
 
 function endpointClassifier(endpoint: Endpoint, config: Config): Classify {
