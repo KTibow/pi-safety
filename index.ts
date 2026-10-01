@@ -21,6 +21,7 @@ import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { type ExtensionAPI, type ExtensionContext, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { type Policy, questions } from "./questions.ts";
+import { Secrets, type SecretsMode } from "./secrets.ts";
 
 const CONFIG_FILE = join(getAgentDir(), "safety.json");
 const ENTRY_TYPE = "safety";
@@ -91,6 +92,17 @@ interface Config extends Policy {
 	maxConsecutiveDenials: number;
 	maxDenials: number;
 	timeoutMs: number;
+	/** Keep secrets out of what the model's provider receives: mask them, also refuse reads of secret files, or neither. */
+	secrets: SecretsMode;
+	/** Extra secret files, and files that look secret but aren't, as globs. */
+	secretPaths: string[];
+	/**
+	 * How to catch secrets that aren't in any secret file or credential variable: "precise" (well-known
+	 * token formats, private keys, Authorization headers, URL passwords), or "broad", which also hides
+	 * credential-named values in any output and sometimes hides harmless text in source code.
+	 */
+	secretPatterns: "precise" | "broad";
+	notSecret: string[];
 }
 
 const DEFAULTS: Config = {
@@ -101,6 +113,10 @@ const DEFAULTS: Config = {
 	maxConsecutiveDenials: 3,
 	maxDenials: 20,
 	timeoutMs: 30_000,
+	secrets: "mask",
+	secretPatterns: "precise",
+	secretPaths: [],
+	notSecret: [],
 };
 
 function loadConfig(): { config: Config; error?: string } {
@@ -119,6 +135,11 @@ function loadConfig(): { config: Config; error?: string } {
 			model: process.env.PI_SAFETY_MODEL ?? config.endpoint?.model ?? "typesafe/jev-1.13",
 			apiKeyEnv: "PI_SAFETY_API_KEY",
 		};
+	}
+	if (config.secrets === "block") {
+		// The classifier covers shell reads, which path checks can't.
+		config.block = [...(config.block ?? []), "printing, reading or copying the contents of secret files such as .env files, private keys or credential files"];
+		config.allow = [...(config.allow ?? []), "loading secret files without printing them, such as node --env-file=.env or source .env before a command"];
 	}
 	return { config, error };
 }
@@ -187,8 +208,8 @@ function isPlainProjectFile(path: unknown, cwd: string): boolean {
 const SECRET_NAME = /(^\.env|\.pem$|\.key$|^id_|secret|credential|token|password|\.p12$|\.pfx$)/i;
 
 /** A text file's contents for the classifier, or undefined for binaries, secrets and directories. */
-function readForReview(path: string): string | undefined {
-	if (SECRET_NAME.test(basename(path))) return undefined;
+function readForReview(path: string, secrets: Secrets | undefined): string | undefined {
+	if (SECRET_NAME.test(basename(path)) || secrets?.isSecret(path)) return undefined;
 	try {
 		const stat = statSync(path);
 		if (!stat.isFile() || stat.size > 512 * 1024) return undefined;
@@ -436,6 +457,11 @@ export default function (pi: ExtensionAPI) {
 	let totalDenials = 0;
 	/** Set when the denial limit is reached: every call is denied until the user prompts again. */
 	let stopped = false;
+	let secrets: Secrets | undefined;
+	/** `read` calls of secret files whose results get masked. */
+	const maskReads = new Set<string>();
+	/** Redacted copies of context messages, valid while `secrets.version` is unchanged. */
+	const redactedMessages = new WeakMap<object, { version: number; message: any }>();
 	let checks = 0;
 	let blocked = 0;
 	let cost = 0;
@@ -490,7 +516,74 @@ export default function (pi: ExtensionAPI) {
 			(config.enable === "headless" && ctx.mode !== "tui");
 		// --safety and PI_SAFETY=1 can't be turned off; /safety on|off overrides only the config.
 		setEnabled(ctx, isForced() || (typeof toggle === "boolean" ? toggle : wanted));
+		secrets = config.secrets === "off" ? undefined : new Secrets({ mode: config.secrets, patterns: config.secretPatterns, paths: config.secretPaths, notSecret: config.notSecret, agentDir: getAgentDir() });
 		rebuildBacklog(ctx);
+	});
+
+	// --- Secrets -------------------------------------------------------------------------------
+
+	pi.on("tool_result", (event, ctx) => {
+		if (!secrets) return undefined;
+		// A read of a secret file shows the file masked; scrub() does the same for commands that print one.
+		const readPath = maskReads.delete(event.toolCallId) ? resolveToolPath(event.input.path, ctx.cwd) : undefined;
+		const command = typeof event.input.command === "string" ? event.input.command : typeof event.input.code === "string" ? event.input.code : "";
+		const masked = readPath !== undefined;
+		const fileName = readPath ? basename(readPath) : "";
+		const touched =
+			(EDIT_TOOLS.has(event.toolName) && resolveToolPath(event.input.path, ctx.cwd)) ||
+			(event.toolName !== "read" && /\.env|\.pem|\.key\b|credential|secret|id_(rsa|ed25519|ecdsa)|\.npmrc|\.netrc/i.test(json(event.input)));
+		if (touched) secrets.invalidate();
+		// If scrubbing itself fails, withhold the output rather than pass it on unchecked.
+		const clean = (text: string) => {
+			try {
+				return secrets!.scrub(text, ctx.cwd, masked, fileName, command);
+			} catch (err) {
+				return `[pi-safety withheld this output: checking it for secrets failed (${(err as Error).message})]`;
+			}
+		};
+		let changed = false;
+		const content = event.content.map((block) => {
+			if (block.type !== "text") return block;
+			const text = clean(block.text);
+			if (text === block.text) return block;
+			changed = true;
+			return { ...block, text };
+		});
+		if (!changed && event.structuredContent === undefined) return undefined;
+		return {
+			content,
+			...(event.structuredContent !== undefined ? { structuredContent: deepMap(event.structuredContent, (t) => secrets!.redact(t)) as any } : {}),
+		};
+	});
+
+	// A catch-all for everything else the model is sent, such as output of the user's `!` commands. It
+	// also covers earlier output once a value becomes known, e.g. after the agent writes it into .env.
+	pi.on("context", (event, ctx) => {
+		if (!secrets) return undefined;
+		secrets.refresh(ctx.cwd);
+		const version = secrets.version;
+		let changed = false;
+		const messages = event.messages.map((message: any) => {
+			if (!["user", "toolResult", "bashExecution", "custom"].includes(message.role)) return message;
+			const cached = redactedMessages.get(message);
+			if (cached?.version === version) {
+				if (cached.message !== message) changed = true;
+				return cached.message;
+			}
+			// The user's `!` commands get the same command-aware scrub as the agent's.
+			const command = message.role === "bashExecution" ? String(message.command ?? "") : "";
+			const redacted = redactMessage(message, (text) => {
+				try {
+					return command && text === message.output ? secrets!.scrub(text, ctx.cwd, false, "", command) : secrets!.redact(text);
+				} catch {
+					return "[pi-safety withheld this text: checking it for secrets failed]";
+				}
+			});
+			redactedMessages.set(message, { version, message: redacted });
+			if (redacted !== message) changed = true;
+			return redacted;
+		});
+		return changed ? { messages } : undefined;
 	});
 
 	// Denial limits count per run.
@@ -513,16 +606,29 @@ export default function (pi: ExtensionAPI) {
 				rebuildBacklog(ctx);
 			}
 			const source = config.endpoint ? `${config.endpoint.model} at ${config.endpoint.url}` : (config.classifier ?? "first available Jev");
+			const secretsLine = secrets ? ` Secrets are ${config.secrets === "block" ? "blocked" : "masked"} (${config.secretPatterns} patterns).` : " Secret protection is off.";
 			ctx.ui.notify(
-				enabled
+				(enabled
 					? `pi-safety is on (${source}, threshold ${config.threshold}). ${checks} checked, ${blocked} blocked${cost ? `, $${cost.toFixed(4)}` : ""}.`
-					: "pi-safety is off. /safety on to enable it for this session.",
+					: "The pi-safety gate is off. /safety on to enable it for this session.") + secretsLine,
 				"info",
 			);
 		},
 	});
 
 	pi.on("tool_call", async (event, ctx) => {
+		// Secret protection has its own switch and works whether or not the classifier gate is on.
+		if (secrets && event.toolName === "read") {
+			const input = event.input as Record<string, unknown>;
+			const path = resolveToolPath(input.path, ctx.cwd);
+			if (path && secrets.isSecret(path)) {
+				if (secrets.mode === "block") {
+					const decide = (decision: Omit<LogEntry, "toolCallId" | "tool">) => log({ toolCallId: event.toolCallId, tool: "read", ...decision });
+					return block(ctx, decide, { tool: "read", input }, "reads a secret file", undefined);
+				}
+				maskReads.add(event.toolCallId);
+			}
+		}
 		if (!enabled || !classify) return undefined;
 		if (stopped) {
 			return { block: true, terminate: true, reason: "pi-safety stopped this run after too many blocked actions. Stop and explain to the user what needs their approval." };
@@ -564,7 +670,14 @@ export default function (pi: ExtensionAPI) {
 			return block(ctx, decide, action, "is too large to review", undefined);
 		}
 
-		const { state, reviewed } = buildState(ctx, transcript, action, actionText, info, event.parentToolCallId);
+		const built = buildState(ctx, transcript, action, actionText, info, event.parentToolCallId);
+		const reviewed = built.reviewed;
+		// The classifier's provider is a third party too.
+		let state = built.state;
+		if (secrets) {
+			secrets.refresh(ctx.cwd);
+			state = deepMap(state, (text) => secrets!.redact(text)) as Record<string, unknown>;
+		}
 		if (process.env.PI_SAFETY_DEBUG) appendFileSync(process.env.PI_SAFETY_DEBUG, `${json({ toolCallId: event.toolCallId, state })}\n`);
 		const started = Date.now();
 		checks++;
@@ -666,7 +779,7 @@ export default function (pi: ExtensionAPI) {
 			const files: Record<string, string> = {};
 			let left = Math.min(MAX_FILES, budget);
 			for (const path of referencedFiles(command, ctx.cwd)) {
-				const text = readForReview(path);
+				const text = readForReview(path, secrets);
 				if (text === undefined || left < 500) continue;
 				const clipped = clip(text, Math.min(MAX_FILE, left));
 				files[relative(ctx.cwd, path)] = take(clipped);
@@ -730,4 +843,34 @@ export default function (pi: ExtensionAPI) {
 			reason: `Blocked by pi-safety: this action ${reason}${verdict ? ", and the user didn't ask for it" : ""}. Don't try to reach the same effect another way. Continue with the parts of the task that don't need it, or stop and tell the user what you need them to approve or run themselves.`,
 		};
 	}
+}
+
+/** Applies `fn` to every string in a JSON-like value, returning the same object when nothing changes. */
+function deepMap(value: unknown, fn: (text: string) => string): unknown {
+	if (typeof value === "string") return fn(value);
+	if (Array.isArray(value)) {
+		const out = value.map((v) => deepMap(v, fn));
+		return out.some((v, i) => v !== value[i]) ? out : value;
+	}
+	if (value && typeof value === "object") {
+		const entries = Object.entries(value).map(([k, v]) => [k, deepMap(v, fn)] as const);
+		return entries.some(([k, v]) => v !== (value as Record<string, unknown>)[k]) ? Object.fromEntries(entries) : value;
+	}
+	return value;
+}
+
+/** A context message with `fn` applied to its text, or the message itself when nothing changes. */
+function redactMessage(message: any, fn: (text: string) => string): any {
+	if (message.role === "bashExecution") {
+		const output = fn(message.output ?? "");
+		const command = fn(message.command ?? "");
+		return output === message.output && command === message.command ? message : { ...message, output, command };
+	}
+	if (typeof message.content === "string") {
+		const content = fn(message.content);
+		return content === message.content ? message : { ...message, content };
+	}
+	if (!Array.isArray(message.content)) return message;
+	const content = message.content.map((block: any) => (block?.type === "text" ? { ...block, text: fn(block.text) } : block));
+	return content.some((block: any, i: number) => block.text !== message.content[i].text) ? { ...message, content } : message;
 }

@@ -1,0 +1,539 @@
+[
+	{
+		"id": "spring-application-properties-cat",
+		"why": "Spring Boot application.properties: dotted lowercase key=value; credentials under .password/.secret must be hidden in plain cat output",
+		"files": {
+			"src/main/resources/application.properties": "spring.application.name=orders-service\nserver.port=8081\nspring.datasource.url=jdbc:postgresql://orders-db.internal:5432/orders\nspring.datasource.username=orders_app\nspring.datasource.password=Spr1ng-Ds-pw!2026\nspring.datasource.hikari.maximum-pool-size=20\nspring.jpa.hibernate.ddl-auto=validate\nspring.mail.host=smtp.mailgun.org\nspring.mail.username=postmaster@mg.example.com\nspring.mail.password=mg-Smtp-pw-71bQ\napp.jwt.secret=@@C:Q2hhbmdl.TWVQbGVh.c2UtSldU.LVNpZ25p.bmc@@\napp.jwt.expiration-ms=3600000\nlogging.level.org.hibernate.SQL=DEBUG\n"
+		},
+		"command": "cat src/main/resources/application.properties",
+		"output": "spring.application.name=orders-service\nserver.port=8081\nspring.datasource.url=jdbc:postgresql://orders-db.internal:5432/orders\nspring.datasource.username=orders_app\nspring.datasource.password=Spr1ng-Ds-pw!2026\nspring.datasource.hikari.maximum-pool-size=20\nspring.jpa.hibernate.ddl-auto=validate\nspring.mail.host=smtp.mailgun.org\nspring.mail.username=postmaster@mg.example.com\nspring.mail.password=mg-Smtp-pw-71bQ\napp.jwt.secret=@@C:Q2hhbmdl.TWVQbGVh.c2UtSldU.LVNpZ25p.bmc@@\napp.jwt.expiration-ms=3600000\nlogging.level.org.hibernate.SQL=DEBUG\n",
+		"hide": [
+			"Spr1ng-Ds-pw!2026",
+			"mg-Smtp-pw-71bQ",
+			"@@C:Q2hhbmdl.TWVQbGVh.c2UtSldU.LVNpZ25p.bmc@@"
+		],
+		"keep": [
+			"jdbc:postgresql://orders-db.internal:5432/orders",
+			"spring.datasource.username=orders_app",
+			"maximum-pool-size=20",
+			"ddl-auto=validate",
+			"app.jwt.expiration-ms=3600000"
+		]
+	},
+	{
+		"id": "spring-application-yml-read",
+		"why": "Spring application.yml read (not a secret file): nested password/secret literals hidden; placeholders and keystore settings kept",
+		"files": {
+			"src/main/resources/application.yml": "spring:\n  application:\n    name: billing\n  datasource:\n    url: jdbc:mysql://billing-db:3306/billing?useSSL=true\n    username: billing\n    password: Y4ml-Billing-Db!\n  security:\n    oauth2:\n      client:\n        registration:\n          github:\n            client-id: Iv1.8a61f9b3a7aba766\n            client-secret: ${GITHUB_CLIENT_SECRET}\nserver:\n  ssl:\n    key-store: classpath:keystore.p12\n    key-store-password: ${KEYSTORE_PASSWORD}\n    key-store-type: PKCS12\n    key-alias: billing\njwt:\n  secret: @@C:7Hq2LmX9.vR4tYp8W.cZ3nB6sK.1dF5gJ0a@@\n  ttl: 15m\n"
+		},
+		"read": "src/main/resources/application.yml",
+		"hide": [
+			"Y4ml-Billing-Db!",
+			"@@C:7Hq2LmX9.vR4tYp8W.cZ3nB6sK.1dF5gJ0a@@"
+		],
+		"keep": [
+			"client-secret: ${GITHUB_CLIENT_SECRET}",
+			"key-store-password: ${KEYSTORE_PASSWORD}",
+			"key-store: classpath:keystore.p12",
+			"key-alias: billing",
+			"url: jdbc:mysql://billing-db:3306/billing?useSSL=true",
+			"ttl: 15m"
+		]
+	},
+	{
+		"id": "dotnet-user-secrets-list",
+		"why": "`dotnet user-secrets list` prints `Section:Key = value`; the store lives in ~/.microsoft/usersecrets/<id>/secrets.json",
+		"files": {
+			"~/.@@C:microsof.t/userse.crets/4f.1c2b7e@@-9a3d-4e6f-8b21-@@C:7c5d0e9a.1f34/sec.rets@@.json": "{\n  \"ConnectionStrings:Default\": \"Server=localhost,1433;Database=Shop;User Id=sa;Password=Us3rSecr3t-Sql!;TrustServerCertificate=True\",\n  \"Smtp:Password\": \"Smtp-UserSecret-88x\",\n  \"Authentication:Google:ClientSecret\": \"@@GOOG_OAUTH_SECRET@@@@C:u7Yb2Qk9.LmT4rXc1.VnZ8pWs3@@\",\n  \"Smtp:Host\": \"smtp.office365.com\"\n}",
+			"Shop.Web/Shop.Web.csproj": "<Project Sdk=\"Microsoft.NET.Sdk.Web\">\n  <PropertyGroup>\n    <UserSecretsId>4f1c2b7e-9a3d-4e6f-8b21-7c5d0e9a1f34</UserSecretsId>\n  </PropertyGroup>\n</Project>\n"
+		},
+		"command": "dotnet user-secrets list --project Shop.Web",
+		"output": "Smtp:Password = Smtp-UserSecret-88x\nSmtp:Host = smtp.office365.com\nConnectionStrings:Default = Server=localhost,1433;Database=Shop;User Id=sa;Password=Us3rSecr3t-Sql!;TrustServerCertificate=True\nAuthentication:Google:ClientSecret = @@GOOG_OAUTH_SECRET@@@@C:u7Yb2Qk9.LmT4rXc1.VnZ8pWs3@@\n",
+		"hide": [
+			"Smtp-UserSecret-88x",
+			"Us3rSecr3t-Sql!",
+			"@@GOOG_OAUTH_SECRET@@@@C:u7Yb2Qk9.LmT4rXc1.VnZ8pWs3@@"
+		],
+		"keep": [
+			"Smtp:Host = smtp.office365.com",
+			"Server=localhost,1433;Database=Shop"
+		]
+	},
+	{
+		"id": "web-config-cat",
+		"why": "ASP.NET web.config: appSettings <add key=... value=...> credentials and machineKey attributes are secrets; connection string password too",
+		"files": {
+			"Shop.Web/Web.config": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<configuration>\n  <connectionStrings>\n    <add name=\"ShopDb\" connectionString=\"Data Source=sql01.corp.local;Initial Catalog=Shop;User ID=shop_web;Password=W3bC0nfig-Sql#9\" providerName=\"System.Data.SqlClient\" />\n  </connectionStrings>\n  <appSettings>\n    <add key=\"Environment\" value=\"Production\" />\n    <add key=\"ClientValidationEnabled\" value=\"true\" />\n    <add key=\"SmtpPassword\" value=\"Smtp!Relay-2026\" />\n    <add key=\"PaymentGatewaySecret\" value=\"pgw_5f8Kd92LmQ0zXv7R\" />\n  </appSettings>\n  <system.web>\n    <compilation debug=\"false\" targetFramework=\"4.8\" />\n    <machineKey validationKey=\"@@C:A1B2C3D4.E5F60718.293A4B5C.6D7E8F90.A1B2C3D4.E5F60718.293A4B5C.6D7E8F90@@\" decryptionKey=\"@@C:0F1E2D3C.4B5A6978.8796A5B4.C3D2E1F0.0F1E2D3C.4B5A6978@@\" validation=\"HMACSHA256\" decryption=\"AES\" />\n  </system.web>\n</configuration>\n"
+		},
+		"command": "cat Shop.Web/Web.config",
+		"output": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<configuration>\n  <connectionStrings>\n    <add name=\"ShopDb\" connectionString=\"Data Source=sql01.corp.local;Initial Catalog=Shop;User ID=shop_web;Password=W3bC0nfig-Sql#9\" providerName=\"System.Data.SqlClient\" />\n  </connectionStrings>\n  <appSettings>\n    <add key=\"Environment\" value=\"Production\" />\n    <add key=\"ClientValidationEnabled\" value=\"true\" />\n    <add key=\"SmtpPassword\" value=\"Smtp!Relay-2026\" />\n    <add key=\"PaymentGatewaySecret\" value=\"pgw_5f8Kd92LmQ0zXv7R\" />\n  </appSettings>\n  <system.web>\n    <compilation debug=\"false\" targetFramework=\"4.8\" />\n    <machineKey validationKey=\"@@C:A1B2C3D4.E5F60718.293A4B5C.6D7E8F90.A1B2C3D4.E5F60718.293A4B5C.6D7E8F90@@\" decryptionKey=\"@@C:0F1E2D3C.4B5A6978.8796A5B4.C3D2E1F0.0F1E2D3C.4B5A6978@@\" validation=\"HMACSHA256\" decryption=\"AES\" />\n  </system.web>\n</configuration>\n",
+		"hide": [
+			"W3bC0nfig-Sql#9",
+			"Smtp!Relay-2026",
+			"pgw_5f8Kd92LmQ0zXv7R",
+			"@@C:A1B2C3D4.E5F60718.293A4B5C.6D7E8F90.A1B2C3D4.E5F60718.293A4B5C.6D7E8F90@@",
+			"@@C:0F1E2D3C.4B5A6978.8796A5B4.C3D2E1F0.0F1E2D3C.4B5A6978@@"
+		],
+		"keep": [
+			"<add key=\"Environment\" value=\"Production\" />",
+			"<add key=\"ClientValidationEnabled\" value=\"true\" />",
+			"Data Source=sql01.corp.local;Initial Catalog=Shop",
+			"targetFramework=\"4.8\""
+		]
+	},
+	{
+		"id": "wp-config-cat",
+		"why": "WordPress wp-config.php define('DB_PASSWORD', '...') and salts/keys",
+		"files": {
+			"public/wp-config.php": "<?php\ndefine( 'DB_NAME', 'wordpress' );\ndefine( 'DB_USER', 'wp_prod' );\ndefine( 'DB_PASSWORD', 'wP-Pr0d-db!pass' );\ndefine( 'DB_HOST', 'mysql.internal:3306' );\ndefine( 'DB_CHARSET', 'utf8mb4' );\n\ndefine( 'AUTH_KEY',         'k#8F]Vq2+Lm!x@T3r^Zs9&Wp)Yb7$Nc4%Hd6' );\ndefine( 'SECURE_AUTH_KEY',  'P}u5|Rt8*Ge1~Jk3=Qa0[Mw9<Xz2>Lc7;Bn4' );\ndefine( 'NONCE_SALT',       'v@3Hn!8Kq)Wd2^Ty7#Lp5&Zm9*Rc1(Fs6%Gb' );\n\n$table_prefix = 'wp_';\ndefine( 'WP_DEBUG', false );\nif ( ! defined( 'ABSPATH' ) ) {\n\tdefine( 'ABSPATH', __DIR__ . '/' );\n}\n"
+		},
+		"command": "cat public/wp-config.php",
+		"output": "<?php\ndefine( 'DB_NAME', 'wordpress' );\ndefine( 'DB_USER', 'wp_prod' );\ndefine( 'DB_PASSWORD', 'wP-Pr0d-db!pass' );\ndefine( 'DB_HOST', 'mysql.internal:3306' );\ndefine( 'DB_CHARSET', 'utf8mb4' );\n\ndefine( 'AUTH_KEY',         'k#8F]Vq2+Lm!x@T3r^Zs9&Wp)Yb7$Nc4%Hd6' );\ndefine( 'SECURE_AUTH_KEY',  'P}u5|Rt8*Ge1~Jk3=Qa0[Mw9<Xz2>Lc7;Bn4' );\ndefine( 'NONCE_SALT',       'v@3Hn!8Kq)Wd2^Ty7#Lp5&Zm9*Rc1(Fs6%Gb' );\n\n$table_prefix = 'wp_';\ndefine( 'WP_DEBUG', false );\nif ( ! defined( 'ABSPATH' ) ) {\n\tdefine( 'ABSPATH', __DIR__ . '/' );\n}\n",
+		"hide": [
+			"wP-Pr0d-db!pass",
+			"k#8F]Vq2+Lm!x@T3r^Zs9&Wp)Yb7$Nc4%Hd6",
+			"P}u5|Rt8*Ge1~Jk3=Qa0[Mw9<Xz2>Lc7;Bn4",
+			"v@3Hn!8Kq)Wd2^Ty7#Lp5&Zm9*Rc1(Fs6%Gb"
+		],
+		"keep": [
+			"define( 'DB_NAME', 'wordpress' );",
+			"define( 'DB_USER', 'wp_prod' );",
+			"define( 'DB_HOST', 'mysql.internal:3306' );",
+			"$table_prefix = 'wp_';",
+			"define( 'WP_DEBUG', false );"
+		]
+	},
+	{
+		"id": "wp-cli-config-list",
+		"why": "`wp config list` prints a table of constants including DB_PASSWORD",
+		"command": "wp config list --path=public",
+		"output": "+------------------+------------------------+----------+\n| name             | value                  | type     |\n+------------------+------------------------+----------+\n| table_prefix     | wp_                    | variable |\n| DB_NAME          | wordpress              | constant |\n| DB_USER          | wp_prod                | constant |\n| DB_PASSWORD      | wP-Pr0d-db!pass        | constant |\n| DB_HOST          | mysql.internal:3306    | constant |\n| WP_DEBUG         |                        | constant |\n+------------------+------------------------+----------+\n",
+		"hide": [
+			"wP-Pr0d-db!pass"
+		],
+		"keep": [
+			"| DB_HOST          | mysql.internal:3306    | constant |",
+			"| DB_USER          | wp_prod                | constant |"
+		]
+	},
+	{
+		"id": "laravel-artisan-config-show",
+		"why": "`php artisan config:show database` prints dotted paths with dot leaders; the mysql password is resolved from .env",
+		"command": "php artisan config:show database",
+		"output": "\n  database ..................................................................  \n  default ............................................................ mysql  \n  connections ⇁ mysql ⇁ driver ....................................... mysql  \n  connections ⇁ mysql ⇁ host ..................................... 127.0.0.1  \n  connections ⇁ mysql ⇁ port .......................................... 3306  \n  connections ⇁ mysql ⇁ database ................................... laravel  \n  connections ⇁ mysql ⇁ username ....................................... app  \n  connections ⇁ mysql ⇁ password .............................. L4r-Db-pw!61  \n  redis ⇁ default ⇁ password ................................ Rds-Lrv-pw-302  \n  redis ⇁ default ⇁ port .............................................. 6379  \n\n",
+		"hide": [
+			"L4r-Db-pw!61",
+			"Rds-Lrv-pw-302"
+		],
+		"keep": [
+			"connections ⇁ mysql ⇁ host ..................................... 127.0.0.1",
+			"connections ⇁ mysql ⇁ database ................................... laravel"
+		]
+	},
+	{
+		"id": "symfony-secrets-decrypt-private-cat",
+		"why": "Symfony secrets vault: config/secrets/prod/prod.decrypt.private.php is the sodium private key that decrypts every prod secret",
+		"files": {
+			"config/secrets/prod/prod.decrypt.private.php": "<?php // prod.decrypt.private on Tue, 14 Jul 2026 09:12:44 +0000\nreturn \"\\x8E\\x1Fq\\xC4\\x07\\xB2\\x9Dm\\x5C\\xEAz\\x03\\x91\\xF0\\xA6\\x2B\\xD8\\x44\\x7E\\x19\\xC3\\x60\\xBB\\x0E\\x55\\xF2\\x8A\\x31\\xDE\\x6C\\xA9\\x12\\x4F\\xE7\\x90\\x3D\\xB5\\x28\\xC1\\x7A\\x0D\\x96\\xE3\\x5B\\xF4\\x81\\x2E\\xCA\\x67\\x14\\xAF\\x39\\xD2\\x50\\x8B\\xFE\\x06\\x73\\xB9\\x24\\xE1\\x4D\\x98\\x3A\";\n",
+			"config/secrets/prod/prod.encrypt.public.php": "<?php // prod.encrypt.public on Tue, 14 Jul 2026 09:12:44 +0000\nreturn \"\\x11\\x22\\x33\";\n"
+		},
+		"command": "cat config/secrets/prod/prod.decrypt.private.php",
+		"output": "<?php // prod.decrypt.private on Tue, 14 Jul 2026 09:12:44 +0000\nreturn \"\\x8E\\x1Fq\\xC4\\x07\\xB2\\x9Dm\\x5C\\xEAz\\x03\\x91\\xF0\\xA6\\x2B\\xD8\\x44\\x7E\\x19\\xC3\\x60\\xBB\\x0E\\x55\\xF2\\x8A\\x31\\xDE\\x6C\\xA9\\x12\\x4F\\xE7\\x90\\x3D\\xB5\\x28\\xC1\\x7A\\x0D\\x96\\xE3\\x5B\\xF4\\x81\\x2E\\xCA\\x67\\x14\\xAF\\x39\\xD2\\x50\\x8B\\xFE\\x06\\x73\\xB9\\x24\\xE1\\x4D\\x98\\x3A\";\n",
+		"hide": [
+			"\\x8E\\x1Fq\\xC4\\x07\\xB2\\x9Dm\\x5C\\xEAz\\x03\\x91\\xF0\\xA6\\x2B\\xD8\\x44"
+		],
+		"keep": [
+			"prod.decrypt.private on Tue, 14 Jul 2026"
+		]
+	},
+	{
+		"id": "django-settings-cat",
+		"why": "Django settings.py with SECRET_KEY = '...' (spaces around =), DATABASES PASSWORD and EMAIL_HOST_PASSWORD",
+		"files": {
+			"shop/settings.py": "from pathlib import Path\nimport os\n\nBASE_DIR = Path(__file__).resolve().parent.parent\n\n# SECURITY WARNING: keep the secret key used in production secret!\nSECRET_KEY = 'django-insecure-r9#t!x2@lq7^m$e+0w8z&k3)p_v5n(b1c*h6y4j-s'\n\nDEBUG = False\nALLOWED_HOSTS = ['app.example.com']\n\nDATABASES = {\n    'default': {\n        'ENGINE': 'django.db.backends.postgresql',\n        'NAME': 'shop',\n        'USER': 'shop',\n        'PASSWORD': 'Dj4ngo-Pg-pw!7',\n        'HOST': 'db.internal',\n        'PORT': '5432',\n    }\n}\n\nAUTH_PASSWORD_VALIDATORS = [\n    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},\n]\nEMAIL_HOST_PASSWORD = \"Em4il-Host-pw-55\"\nSESSION_COOKIE_SECURE = True\n"
+		},
+		"command": "cat shop/settings.py",
+		"output": "from pathlib import Path\nimport os\n\nBASE_DIR = Path(__file__).resolve().parent.parent\n\n# SECURITY WARNING: keep the secret key used in production secret!\nSECRET_KEY = 'django-insecure-r9#t!x2@lq7^m$e+0w8z&k3)p_v5n(b1c*h6y4j-s'\n\nDEBUG = False\nALLOWED_HOSTS = ['app.example.com']\n\nDATABASES = {\n    'default': {\n        'ENGINE': 'django.db.backends.postgresql',\n        'NAME': 'shop',\n        'USER': 'shop',\n        'PASSWORD': 'Dj4ngo-Pg-pw!7',\n        'HOST': 'db.internal',\n        'PORT': '5432',\n    }\n}\n\nAUTH_PASSWORD_VALIDATORS = [\n    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},\n]\nEMAIL_HOST_PASSWORD = \"Em4il-Host-pw-55\"\nSESSION_COOKIE_SECURE = True\n",
+		"hide": [
+			"django-insecure-r9#t!x2@lq7^m$e+0w8z&k3)p_v5n(b1c*h6y4j-s",
+			"Dj4ngo-Pg-pw!7",
+			"Em4il-Host-pw-55"
+		],
+		"keep": [
+			"'ENGINE': 'django.db.backends.postgresql',",
+			"'HOST': 'db.internal',",
+			"ALLOWED_HOSTS = ['app.example.com']",
+			"django.contrib.auth.password_validation.MinimumLengthValidator",
+			"SESSION_COOKIE_SECURE = True"
+		]
+	},
+	{
+		"id": "pip-conf-read-and-config-list",
+		"why": "pip.conf index-url with basic-auth credentials, then `pip config list` echoing it",
+		"files": {
+			"~/.config/pip/pip.conf": "[global]\nindex-url = https://ci-bot:Nexus-Pip-pw-4410@nexus.corp.example.com/repository/pypi-all/simple\ntrusted-host = nexus.corp.example.com\ntimeout = 60\n"
+		},
+		"read": "~/.config/pip/pip.conf",
+		"command": "pip config list",
+		"output": "global.index-url='https://ci-bot:Nexus-Pip-pw-4410@nexus.corp.example.com/repository/pypi-all/simple'\nglobal.timeout='60'\nglobal.trusted-host='nexus.corp.example.com'\n",
+		"hide": [
+			"Nexus-Pip-pw-4410"
+		],
+		"keep": [
+			"nexus.corp.example.com/repository/pypi-all/simple",
+			"trusted-host = nexus.corp.example.com",
+			"global.timeout='60'"
+		]
+	},
+	{
+		"id": "poetry-auth-toml-cat",
+		"why": "Poetry's plaintext fallback store ~/.config/pypoetry/auth.toml when no keyring is available",
+		"files": {
+			"~/.config/pypoetry/auth.toml": "[http-basic.internal]\nusername = \"deploy\"\npassword = \"P0etry-Auth-pw-19\"\n\n[pypi-token.pypi]\ntoken = \"@@PYPI@@@@C:IcHlwaS5.vcmcCJGE.3ZjQ5YjE.2LTkxMmE.tNGQ0Ny1.hNGRlLTk.yNjE4Zjc.wMjc3MAA.CKlszLCJ.mOGQ2@@\"\n"
+		},
+		"command": "cat ~/.config/pypoetry/auth.toml",
+		"output": "[http-basic.internal]\nusername = \"deploy\"\npassword = \"P0etry-Auth-pw-19\"\n\n[pypi-token.pypi]\ntoken = \"@@PYPI@@@@C:IcHlwaS5.vcmcCJGE.3ZjQ5YjE.2LTkxMmE.tNGQ0Ny1.hNGRlLTk.yNjE4Zjc.wMjc3MAA.CKlszLCJ.mOGQ2@@\"\n",
+		"hide": [
+			"P0etry-Auth-pw-19",
+			"@@PYPI@@@@C:IcHlwaS5.vcmcCJGE.3ZjQ5YjE.2LTkxMmE.tNGQ0Ny1.hNGRlLTk.yNjE4Zjc.wMjc3MAA.CKlszLCJ.mOGQ2@@"
+		],
+		"keep": [
+			"[http-basic.internal]",
+			"username = \"deploy\""
+		]
+	},
+	{
+		"id": "cargo-credentials-read-and-config",
+		"why": "~/.cargo/credentials.toml read (home secret) plus `cargo config get` echoing the alternate-registry token",
+		"files": {
+			"~/.cargo/credentials.toml": "[registry]\ntoken = \"@@C:cioAbC7x.Q2mZ9pL4.vR8tY1nW.6kE3sD5f.H0j@@\"\n\n[registries.kellnr]\ntoken = \"Kellnr-Tok-8f2Q9xLm\"\n"
+		},
+		"read": "~/.cargo/credentials.toml",
+		"command": "cargo config get registries",
+		"output": "registries.kellnr.index = \"sparse+https://crates.corp.example.com/api/v1/crates/\"\nregistries.kellnr.token = \"Kellnr-Tok-8f2Q9xLm\"\n# from ~/.cargo/credentials.toml\n",
+		"hide": [
+			"@@C:cioAbC7x.Q2mZ9pL4.vR8tY1nW.6kE3sD5f.H0j@@",
+			"Kellnr-Tok-8f2Q9xLm"
+		],
+		"keep": [
+			"[registries.kellnr]",
+			"sparse+https://crates.corp.example.com/api/v1/crates/"
+		]
+	},
+	{
+		"id": "gradle-properties-cat",
+		"why": "~/.gradle/gradle.properties holds signing and Sonatype credentials as camelCase/dotted key=value",
+		"files": {
+			"~/.gradle/gradle.properties": "org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8\norg.gradle.parallel=true\nsigning.keyId=24875D73\nsigning.password=Gr4dle-Sign-pw!\nsigning.secretKeyRingFile=/home/dev/.gnupg/secring.gpg\nossrhUsername=devexample\nossrhPassword=0ssrh-Upl0ad-pw-77\nmavenCentralPassword=MvnC-Portal-tok-3Kq9\n"
+		},
+		"command": "cat ~/.gradle/gradle.properties",
+		"output": "org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8\norg.gradle.parallel=true\nsigning.keyId=24875D73\nsigning.password=Gr4dle-Sign-pw!\nsigning.secretKeyRingFile=/home/dev/.gnupg/secring.gpg\nossrhUsername=devexample\nossrhPassword=0ssrh-Upl0ad-pw-77\nmavenCentralPassword=MvnC-Portal-tok-3Kq9\n",
+		"hide": [
+			"Gr4dle-Sign-pw!",
+			"0ssrh-Upl0ad-pw-77",
+			"MvnC-Portal-tok-3Kq9"
+		],
+		"keep": [
+			"org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8",
+			"signing.keyId=24875D73",
+			"signing.secretKeyRingFile=/home/dev/.gnupg/secring.gpg",
+			"ossrhUsername=devexample"
+		]
+	},
+	{
+		"id": "android-keystore-properties-read",
+		"why": "Android/Flutter key.properties / keystore.properties with store and key passwords",
+		"files": {
+			"android/key.properties": "storePassword=Upl0ad-Store-pw-42\nkeyPassword=Upl0ad-Key-pw-42\nkeyAlias=upload\nstoreFile=../upload-keystore.jks\n",
+			"android/upload-keystore.jks": "binary-placeholder"
+		},
+		"read": "android/key.properties",
+		"hide": [
+			"Upl0ad-Store-pw-42",
+			"Upl0ad-Key-pw-42"
+		],
+		"keep": [
+			"keyAlias=upload",
+			"storeFile=../upload-keystore.jks"
+		]
+	},
+	{
+		"id": "firebase-adminsdk-json-base64-for-ci",
+		"why": "Firebase Admin SDK key named the console's default way, read, then base64'd for a CI secret",
+		"files": {
+			"keys/shopapp-prod-firebase-adminsdk-x1y2z-3f9a1c2b4d.json": "{\n  \"type\": \"@@GCP_SA_TYPE@@\",\n  \"project_id\": \"shopapp-prod\",\n  \"private_key_id\": \"@@C:3f9a1c2b.4d5e6f70.8192a3b4.c5d6e7f8.091a2b3c@@\",\n  \"private_key\": \"@@PEM_BEGIN@@PRIVATE KEY-----\\@@C:nMIIEvQI.BADANBgk.qhkiG9w0.BAQEFAAS.CBKcwggS.jAgEAAoI.BAQC7x9K.f3mP2qL8.nR@@\\@@C:nzT4vW6y.B1cD5eF7.gH9jK0lM.2nO4pQ6r.S8tU0vW2.xY4zA6bC.8dE0fG2h.I4jK6lM8.n@@\\n@@PEM_END@@PRIVATE KEY-----\\n\",\n  \"client_email\": \"firebase-adminsdk-x1y2z@shopapp-prod.iam.gserviceaccount.com\",\n  \"client_id\": \"104857392018475610293\",\n  \"auth_uri\": \"https://accounts.google.com/o/oauth2/auth\",\n  \"token_uri\": \"https://oauth2.googleapis.com/token\"\n}"
+		},
+		"read": "keys/shopapp-prod-firebase-adminsdk-x1y2z-3f9a1c2b4d.json",
+		"command": "base64 -w0 keys/shopapp-prod-firebase-adminsdk-x1y2z-3f9a1c2b4d.json",
+		"output": "@@C:ewogICJ0.eXBlIjog.InNlcnZp.Y2VfYWNj.b3VudCIs.CiAgInBy.b2plY3Rf.aWQiOiAi.c2hvcGFw.cC1wcm9k.IiwKICAi.cHJpdmF0.ZV9rZXlf.aWQiOiAi.M2Y5YTFj.MmI0ZDVl.NmY3MDgx.OTJhM2I0.YzVkNmU3.ZjgwOTFh.MmIzYyIs.CiAgInBy.aXZhdGVf.a2V5Ijog.Ii0tLS0t.QkVHSU4g.UFJJVkFU.RSBLRVkt.LS0tLVxu.TUlJRXZR.SUJBREFO.QmdrcWhr.aUc5dzBC.QVFFRkFB.U0NCS2N3.Z2dTakFn.RUFBb0lC.QVFDN3g5.S2YzbVAy.cUw4blJc.bnpUNHZX.NnlCMWNE.NWVGN2dI.OWpLMGxN.Mm5PNHBR.NnJTOHRV.MHZXMnhZ.NHpBNmJD.OGRFMGZH.MmhJNGpL.NmxNOG5c.bi0tLS0t.RU5EIFBS.SVZBVEUg.S0VZLS0t.LS1cbiIs.CiAgImNs.aWVudF9l.bWFpbCI6.ICJmaXJl.YmFzZS1h.ZG1pbnNk.ay14MXky.ekBzaG9w.YXBwLXBy.b2QuaWFt.LmdzZXJ2.aWNlYWNj.b3VudC5j.b20iLAog.ICJjbGll.bnRfaWQi.OiAiMTA0.ODU3Mzky.MDE4NDc1.NjEwMjkz.IiwKICAi.YXV0aF91.cmkiOiAi.aHR0cHM6.Ly9hY2Nv.dW50cy5n.b29nbGUu.Y29tL28v.b2F1dGgy.L2F1dGgi.LAogICJ0.b2tlbl91.cmkiOiAi.aHR0cHM6.Ly9vYXV0.aDIuZ29v.Z2xlYXBp.cy5jb20v.dG9rZW4i.Cn0=@@",
+		"hide": [
+			"@@C:MIIEvQIB.ADANBgkq.hkiG9w0B.AQEFAASC.BKcwggSj.AgEAAoIB.AQC7x9Kf.3mP2qL8n.R@@",
+			"@@C:ewogICJ0.eXBlIjog.InNlcnZp.Y2VfYWNj.b3VudCIs@@"
+		],
+		"keep": [
+			"\"project_id\": \"shopapp-prod\"",
+			"firebase-adminsdk-x1y2z@shopapp-prod.iam.gserviceaccount.com",
+			"https://oauth2.googleapis.com/token"
+		]
+	},
+	{
+		"id": "tfstate-read-sensitive-output-and-random-password",
+		"why": "Local terraform.tfstate: sensitive outputs live under \"value\" and random_password under \"result\" — names that don't say credential",
+		"files": {
+			"infra/terraform.tfstate": "{\n  \"version\": 4,\n  \"terraform_version\": \"1.9.5\",\n  \"serial\": 42,\n  \"lineage\": \"8c1f2a3b-4d5e-6f70-8192-a3b4c5d6e7f8\",\n  \"outputs\": {\n    \"db_endpoint\": {\n      \"value\": \"app-db.cluster-ab12cd34.eu-west-1.rds.amazonaws.com\",\n      \"type\": \"string\"\n    },\n    \"db_password\": {\n      \"value\": \"Tf-0utput-pw!9\",\n      \"type\": \"string\",\n      \"sensitive\": true\n    }\n  },\n  \"resources\": [\n    {\n      \"mode\": \"managed\",\n      \"type\": \"random_password\",\n      \"name\": \"db\",\n      \"provider\": \"provider[\\\"registry.terraform.io/hashicorp/random\\\"]\",\n      \"instances\": [\n        {\n          \"schema_version\": 3,\n          \"attributes\": {\n            \"id\": \"none\",\n            \"length\": 24,\n            \"special\": true,\n            \"result\": \"xK9#mP2$vL5@nQ8!rT3&wZ6*\",\n            \"bcrypt_hash\": \"$2a$10$Jx9kQ2mZ.@@C:Lp4vR8tY.1nW6uE3s.D5fH0jAb.C7xQ2mZ9.pL4vR8tY.1n@@\"\n          },\n          \"sensitive_attributes\": [\n            [\n              {\n                \"type\": \"get_attr\",\n                \"value\": \"result\"\n              }\n            ]\n          ]\n        }\n      ]\n    }\n  ]\n}"
+		},
+		"read": "infra/terraform.tfstate",
+		"hide": [
+			"Tf-0utput-pw!9",
+			"xK9#mP2$vL5@nQ8!rT3&wZ6*"
+		],
+		"keep": [
+			"app-db.cluster-ab12cd34.eu-west-1.rds.amazonaws.com",
+			"\"terraform_version\": \"1.9.5\"",
+			"\"type\": \"random_password\""
+		]
+	},
+	{
+		"id": "terraform-output-json",
+		"why": "`terraform output -json` with a remote backend prints sensitive outputs in clear under \"value\"",
+		"command": "terraform -chdir=infra output -json",
+		"output": "{\n  \"db_endpoint\": {\n    \"sensitive\": false,\n    \"type\": \"string\",\n    \"value\": \"app-db.cluster-ab12cd34.eu-west-1.rds.amazonaws.com\"\n  },\n  \"db_password\": {\n    \"sensitive\": true,\n    \"type\": \"string\",\n    \"value\": \"Tf-0utput-pw!9\"\n  }\n}\n",
+		"hide": [
+			"Tf-0utput-pw!9"
+		],
+		"keep": [
+			"app-db.cluster-ab12cd34.eu-west-1.rds.amazonaws.com",
+			"\"sensitive\": true"
+		]
+	},
+	{
+		"id": "ansible-ini-inventory-cat",
+		"why": "INI inventory host vars ansible_password=/ansible_become_pass= (lowercase names, several per line)",
+		"files": {
+			"inventory/hosts.ini": "[web]\nweb1.example.com ansible_host=10.0.1.11 ansible_user=deploy\n\n[db]\ndb1.example.com ansible_host=10.0.2.21 ansible_user=admin ansible_password=Inv-Ssh-pw-33 ansible_become_pass=Inv-Sudo-pw-44\n\n[all:vars]\nansible_python_interpreter=/usr/bin/python3\n"
+		},
+		"command": "cat inventory/hosts.ini",
+		"output": "[web]\nweb1.example.com ansible_host=10.0.1.11 ansible_user=deploy\n\n[db]\ndb1.example.com ansible_host=10.0.2.21 ansible_user=admin ansible_password=Inv-Ssh-pw-33 ansible_become_pass=Inv-Sudo-pw-44\n\n[all:vars]\nansible_python_interpreter=/usr/bin/python3\n",
+		"hide": [
+			"Inv-Ssh-pw-33",
+			"Inv-Sudo-pw-44"
+		],
+		"keep": [
+			"ansible_host=10.0.2.21 ansible_user=admin",
+			"ansible_python_interpreter=/usr/bin/python3"
+		]
+	},
+	{
+		"id": "ansible-vault-view-and-rpm-key",
+		"why": "Decrypted vault vars are hidden; ordinary module params named `key:` (rpm_key URL, apt key id) are not credentials",
+		"files": {
+			"group_vars/prod/vault.yml": "$ANSIBLE_VAULT;1.1;AES256\@@C:n6162636.46566676.86970717.27374757.6777879@@\n",
+			"roles/repo/tasks/main.yml": "- name: Import Microsoft signing key\n  ansible.builtin.rpm_key:\n    key: https://packages.microsoft.com/keys/microsoft.asc\n    state: present\n- name: Add the Docker apt key\n  ansible.builtin.apt_key:\n    id: @@C:9DC85822.9FC7DD38.854AE2D8.8D81803C.0EBFCD88@@\n    url: https://download.docker.com/linux/ubuntu/gpg\n"
+		},
+		"command": "ansible-vault view group_vars/prod/vault.yml && cat roles/repo/tasks/main.yml",
+		"output": "---\nvault_db_password: Ans1ble-Vlt-db-pw\nvault_api_token: \"av-7Qm2xL9pR4tY8wZ3\"\nvault_smtp_user: alerts@example.com\n- name: Import Microsoft signing key\n  ansible.builtin.rpm_key:\n    key: https://packages.microsoft.com/keys/microsoft.asc\n    state: present\n- name: Add the Docker apt key\n  ansible.builtin.apt_key:\n    id: @@C:9DC85822.9FC7DD38.854AE2D8.8D81803C.0EBFCD88@@\n    url: https://download.docker.com/linux/ubuntu/gpg\n",
+		"hide": [
+			"Ans1ble-Vlt-db-pw",
+			"av-7Qm2xL9pR4tY8wZ3"
+		],
+		"keep": [
+			"vault_smtp_user: alerts@example.com",
+			"key: https://packages.microsoft.com/keys/microsoft.asc",
+			"id: @@C:9DC85822.9FC7DD38.854AE2D8.8D81803C.0EBFCD88@@"
+		]
+	},
+	{
+		"id": "helm-values-secret-key-references",
+		"why": "Bitnami-style values.yaml names *which key* of an existing Secret to use (adminPasswordKey, existingSecretPasswordKey, secretKeyRef.key) and tolerations use `key:`; none of these are credentials",
+		"files": {
+			"charts/app/values.yaml": "postgresql:\n  auth:\n    username: app\n    database: app\n    existingSecret: app-postgres-credentials\n    secretKeys:\n      adminPasswordKey: postgres-password\n      userPasswordKey: password\nredis:\n  auth:\n    existingSecret: app-redis\n    existingSecretPasswordKey: redis-password\napi:\n  env:\n    - name: DATABASE_PASSWORD\n      valueFrom:\n        secretKeyRef:\n          name: app-postgres-credentials\n          key: password\n  tolerations:\n    - key: dedicated\n      operator: Equal\n      value: api\n      effect: NoSchedule\n"
+		},
+		"command": "cat charts/app/values.yaml",
+		"output": "postgresql:\n  auth:\n    username: app\n    database: app\n    existingSecret: app-postgres-credentials\n    secretKeys:\n      adminPasswordKey: postgres-password\n      userPasswordKey: password\nredis:\n  auth:\n    existingSecret: app-redis\n    existingSecretPasswordKey: redis-password\napi:\n  env:\n    - name: DATABASE_PASSWORD\n      valueFrom:\n        secretKeyRef:\n          name: app-postgres-credentials\n          key: password\n  tolerations:\n    - key: dedicated\n      operator: Equal\n      value: api\n      effect: NoSchedule\n",
+		"keep": [
+			"adminPasswordKey: postgres-password",
+			"userPasswordKey: password",
+			"existingSecretPasswordKey: redis-password",
+			"key: password",
+			"- key: dedicated",
+			"existingSecret: app-postgres-credentials"
+		]
+	},
+	{
+		"id": "helm-values-secret-read-and-get-values",
+		"why": "values-secret.yaml read (masked secret file) and `helm get values` echoing the same user-supplied values",
+		"files": {
+			"charts/app/values-secret.yaml": "postgresql:\n  auth:\n    password: H3lm-Pg-pw-2026\n    postgresPassword: H3lm-Pg-admin-77\n    replicationPasswordKey: replication-password\ningress:\n  hostname: app.example.com\n"
+		},
+		"read": "charts/app/values-secret.yaml",
+		"command": "helm get values app -n prod",
+		"output": "USER-SUPPLIED VALUES:\ningress:\n  hostname: app.example.com\npostgresql:\n  auth:\n    password: H3lm-Pg-pw-2026\n    postgresPassword: H3lm-Pg-admin-77\n",
+		"hide": [
+			"H3lm-Pg-pw-2026",
+			"H3lm-Pg-admin-77"
+		],
+		"keep": [
+			"hostname: app.example.com",
+			"USER-SUPPLIED VALUES:"
+		]
+	},
+	{
+		"id": "compose-secrets-file-cat",
+		"why": "Docker Compose `secrets:` points at ./secrets/db_password.txt; catting that file prints the bare password",
+		"files": {
+			"compose.yaml": "services:\n  db:\n    image: postgres:16\n    environment:\n      POSTGRES_USER: app\n      POSTGRES_PASSWORD_FILE: /run/secrets/db_password\n    secrets:\n      - db_password\nsecrets:\n  db_password:\n    file: ./secrets/db_password.txt\n  stripe_key:\n    environment: STRIPE_API_KEY\n",
+			"secrets/db_password.txt": "C0mpose-Db-Secret-pw\n"
+		},
+		"command": "cat compose.yaml secrets/db_password.txt",
+		"output": "services:\n  db:\n    image: postgres:16\n    environment:\n      POSTGRES_USER: app\n      POSTGRES_PASSWORD_FILE: /run/secrets/db_password\n    secrets:\n      - db_password\nsecrets:\n  db_password:\n    file: ./secrets/db_password.txt\n  stripe_key:\n    environment: STRIPE_API_KEY\nC0mpose-Db-Secret-pw\n",
+		"hide": [
+			"C0mpose-Db-Secret-pw"
+		],
+		"keep": [
+			"POSTGRES_PASSWORD_FILE: /run/secrets/db_password",
+			"file: ./secrets/db_password.txt",
+			"environment: STRIPE_API_KEY"
+		]
+	},
+	{
+		"id": "systemctl-cat-unquoted-environment",
+		"why": "systemd unit with Environment=NAME=value unquoted (valid syntax) and EnvironmentFile",
+		"command": "systemctl cat myapp.service",
+		"output": "# /etc/systemd/system/myapp.service\n[Unit]\nDescription=My App\nAfter=network-online.target\n\n[Service]\nUser=myapp\nEnvironmentFile=/etc/myapp/myapp.env\nEnvironment=LOG_LEVEL=info\nEnvironment=DB_PASSWORD=Sysd-Unit-pw-4410\nEnvironment=API_TOKEN=Sysd-Api-tok-88Qz\nExecStart=/opt/myapp/bin/server --port 8080\nRestart=on-failure\n",
+		"hide": [
+			"Sysd-Unit-pw-4410",
+			"Sysd-Api-tok-88Qz"
+		],
+		"keep": [
+			"Environment=LOG_LEVEL=info",
+			"EnvironmentFile=/etc/myapp/myapp.env",
+			"ExecStart=/opt/myapp/bin/server --port 8080"
+		]
+	},
+	{
+		"id": "nginx-htpasswd-cat",
+		"why": "htpasswd apr1 hashes are crackable offline; only the user names should reach the model",
+		"files": {
+			"deploy/nginx/.htpasswd": "admin:$apr1$q8Ft.3Lz$W1xYb7m.N0pQrS2t.Uv3w\nmetrics:$apr1$Zk2.mQ9r$aB3cD.4eF5gH6/iJ7kL8m.\n"
+		},
+		"command": "cat deploy/nginx/.htpasswd",
+		"output": "admin:$apr1$q8Ft.3Lz$W1xYb7m.N0pQrS2t.Uv3w\nmetrics:$apr1$Zk2.mQ9r$aB3cD.4eF5gH6/iJ7kL8m.\n",
+		"hide": [
+			"$apr1$q8Ft.3Lz$W1xYb7m.N0pQrS2t.Uv3w",
+			"$apr1$Zk2.mQ9r$aB3cD.4eF5gH6/iJ7kL8m."
+		],
+		"keep": [
+			"admin:",
+			"metrics:"
+		]
+	},
+	{
+		"id": "mysql-my-cnf-in-project-cat",
+		"why": "my.cnf without the leading dot (docker/mysql/my.cnf, /etc/mysql/debian.cnf) still holds [client] password",
+		"files": {
+			"docker/mysql/my.cnf": "[client]\nuser=root\npassword=MyCnf-R00t-pw-77\nhost=127.0.0.1\ndefault-character-set=utf8mb4\n\n[mysqld]\nmax_connections=500\ninnodb_buffer_pool_size=2G\n"
+		},
+		"command": "cat docker/mysql/my.cnf",
+		"output": "[client]\nuser=root\npassword=MyCnf-R00t-pw-77\nhost=127.0.0.1\ndefault-character-set=utf8mb4\n\n[mysqld]\nmax_connections=500\ninnodb_buffer_pool_size=2G\n",
+		"hide": [
+			"MyCnf-R00t-pw-77"
+		],
+		"keep": [
+			"user=root",
+			"host=127.0.0.1",
+			"default-character-set=utf8mb4",
+			"innodb_buffer_pool_size=2G"
+		]
+	},
+	{
+		"id": "redis-conf-cat-and-config-get",
+		"why": "redis.conf requirepass/masterauth/ACL >password, then redis-cli CONFIG GET reply",
+		"files": {
+			"deploy/redis/redis.conf": "bind 0.0.0.0\nport 6379\nprotected-mode yes\nrequirepass R3dis-Requ1re-pw\nmasterauth R3dis-Master-pw\nmaxmemory 512mb\nmaxmemory-policy allkeys-lru\nuser worker on >R3dis-Acl-worker-pw ~jobs:* +@all\n"
+		},
+		"command": "cat deploy/redis/redis.conf; redis-cli -h cache CONFIG GET requirepass",
+		"output": "bind 0.0.0.0\nport 6379\nprotected-mode yes\nrequirepass R3dis-Requ1re-pw\nmasterauth R3dis-Master-pw\nmaxmemory 512mb\nmaxmemory-policy allkeys-lru\nuser worker on >R3dis-Acl-worker-pw ~jobs:* +@all\n1) \"requirepass\"\n2) \"R3dis-Requ1re-pw\"\n",
+		"hide": [
+			"R3dis-Requ1re-pw",
+			"R3dis-Master-pw",
+			"R3dis-Acl-worker-pw"
+		],
+		"keep": [
+			"bind 0.0.0.0",
+			"port 6379",
+			"maxmemory-policy allkeys-lru",
+			"1) \"requirepass\""
+		]
+	},
+	{
+		"id": "mongo-keyfile-cat",
+		"why": "MongoDB replica-set keyFile (openssl rand -base64 756) is the shared cluster secret; file has no telling extension",
+		"files": {
+			"deploy/mongo/mongod.conf": "security:\n  keyFile: /etc/mongo/mongo-keyfile\n  authorization: enabled\nreplication:\n  replSetName: rs0\n",
+			"deploy/mongo/mongo-keyfile": "@@C:Wk3tPq8v.Lm2xRz7n.B4cY9dF1.gH6jK0sT.5uV2wX8y.Z3aE7bN1.mQ4rS6tU.9vW2xY5z@@\@@C:nA8bC1dE.4fG7hJ0k.L3mN6pQ9.rS2tU5vW.8xY1zA4b.C7dE0fG3.hJ6kL9mN.2pQ5rS8t.U@@\@@C:nV1wX4yZ.7aB0cD3e.F6gH9jK2.lM5nP8qR.1sT4uV7w.X0yZ3aB6.cD9eF2gH.5jK8lM1n.P@@\n"
+		},
+		"command": "cat deploy/mongo/mongod.conf deploy/mongo/mongo-keyfile",
+		"output": "security:\n  keyFile: /etc/mongo/mongo-keyfile\n  authorization: enabled\nreplication:\n  replSetName: rs0\@@C:nWk3tPq8.vLm2xRz7.nB4cY9dF.1gH6jK0s.T5uV2wX8.yZ3aE7bN.1mQ4rS6t.U9vW2xY5.z@@\@@C:nA8bC1dE.4fG7hJ0k.L3mN6pQ9.rS2tU5vW.8xY1zA4b.C7dE0fG3.hJ6kL9mN.2pQ5rS8t.U@@\@@C:nV1wX4yZ.7aB0cD3e.F6gH9jK2.lM5nP8qR.1sT4uV7w.X0yZ3aB6.cD9eF2gH.5jK8lM1n.P@@\n",
+		"hide": [
+			"@@C:Wk3tPq8v.Lm2xRz7n.B4cY9dF1.gH6jK0sT.5uV2wX8y.Z3aE7bN1.mQ4rS6tU.9vW2xY5z@@",
+			"@@C:A8bC1dE4.fG7hJ0kL.3mN6pQ9r.S2tU5vW8.xY1zA4bC.7dE0fG3h.J6kL9mN2.pQ5rS8tU@@"
+		],
+		"keep": [
+			"keyFile: /etc/mongo/mongo-keyfile",
+			"replSetName: rs0"
+		]
+	},
+	{
+		"id": "mongodb-replicaset-uri-and-mongosh",
+		"why": "Multi-host mongodb:// URI with credentials; mongosh's own '<credentials>' placeholder survives",
+		"command": "grep -r MONGO deploy/k8s/api.yaml; mongosh --quiet --eval 'db.runCommand({ping:1})' \"$MONGO_URL\"",
+		"output": "        value: mongodb://api:M0ngo-Rs-pw-8812@mongo-0.mongo:27017,mongo-1.mongo:27017,mongo-2.mongo:27017/app?replicaSet=rs0&authSource=admin\nCurrent Mongosh Log ID:\@@C:t66f1a2b.3c4d5e6f.708192a3.b@@\nConnecting to:\t\tmongodb://<credentials>@mongo-0.mongo:27017,mongo-1.mongo:27017/app?replicaSet=rs0&authSource=admin&appName=mongosh+2.3.1\n{ ok: 1 }\n",
+		"hide": [
+			"M0ngo-Rs-pw-8812"
+		],
+		"keep": [
+			"mongodb://<credentials>@mongo-0.mongo:27017",
+			"replicaSet=rs0&authSource=admin",
+			"{ ok: 1 }"
+		]
+	},
+	{
+		"id": "rails-credentials-show-and-database-yml",
+		"why": "`bin/rails credentials:show` prints decrypted YAML; database.yml ERB references must survive",
+		"files": {
+			"config/master.key": "@@C:3c9a8f1e.2d4b6c7a.9e0f1d2c.3b4a5968@@\n",
+			"config/credentials.yml.enc": "Zm9vYmFyYmF6cXV4--a1b2c3d4e5f6a7b8--c9d0e1f2a3b4c5d6==\n",
+			"config/database.yml": "production:\n  <<: *default\n  database: app_production\n  username: app\n  password: <%= ENV[\"APP_DATABASE_PASSWORD\"] %>\n"
+		},
+		"command": "bin/rails credentials:show && cat config/database.yml",
+		"output": "aws:\n  access_key_id: @@AWS_AKIA@@J7Q2M9X4L8P3R6TZ\n  secret_access_key: @@C:q9Wm2Lx7.Rt4Yp8Zc.3Vn6Bs1K.d5Fg0Hj2.Qa7Ex9Mz@@\nstripe:\n  webhook_secret: @@STRIPE_WHSEC@@@@C:7Qm2xL9p.R4tY8wZ3.vN6bC1dF.5gH0jK2s@@\n\n# Used as the base secret for all MessageVerifiers in Rails, including the one protecting cookies.\nsecret_key_base: @@C:8f3e2d1c.0b9a8f7e.6d5c4b3a.29180f7e.6d5c4b3a.29180f7e.6d5c4b3a.29180f7e.6d5c4b3a.29180f7e.6d5c4b3a.29180f7e.6d5c4b3a.29180f7e.6d5c4b3a.2918@@\nproduction:\n  <<: *default\n  database: app_production\n  username: app\n  password: <%= ENV[\"APP_DATABASE_PASSWORD\"] %>\n",
+		"hide": [
+			"@@C:q9Wm2Lx7.Rt4Yp8Zc.3Vn6Bs1K.d5Fg0Hj2.Qa7Ex9Mz@@",
+			"@@STRIPE_WHSEC@@@@C:7Qm2xL9p.R4tY8wZ3.vN6bC1dF.5gH0jK2s@@",
+			"@@C:8f3e2d1c.0b9a8f7e.6d5c4b3a.29180f7e.6d5c4b3a.29180f7e.6d5c4b3a.29180f7e@@"
+		],
+		"keep": [
+			"password: <%= ENV[\"APP_DATABASE_PASSWORD\"] %>",
+			"database: app_production",
+			"# Used as the base secret for all MessageVerifiers"
+		]
+	},
+	{
+		"id": "prisma-env-and-migrate-output",
+		"why": "Prisma .env DATABASE_URL/DIRECT_URL with pooler creds; prisma's own output names host and schema",
+		"files": {
+			".env": "DATABASE_URL=\"postgresql://postgres.abcdefghijklmnop:Supa-Pr1sma-pw-55@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true\"\nDIRECT_URL=\"postgresql://postgres.abcdefghijklmnop:Supa-Pr1sma-pw-55@aws-0-eu-west-1.pooler.supabase.com:5432/postgres\"\nSUPABASE_URL=https://abcdefghijklmnop.supabase.co\n"
+		},
+		"command": "npx prisma migrate status",
+		"output": "Environment variables loaded from .env\nPrisma schema loaded from prisma/schema.prisma\nDatasource \"db\": PostgreSQL database \"postgres\", schema \"public\" at \"aws-0-eu-west-1.pooler.supabase.com:5432\"\n\n3 migrations found in prisma/migrations\n\nDatabase schema is up to date!\n",
+		"read": ".env",
+		"hide": [
+			"Supa-Pr1sma-pw-55"
+		],
+		"keep": [
+			"schema \"public\" at \"aws-0-eu-west-1.pooler.supabase.com:5432\"",
+			"SUPABASE_URL=https://abcdefghijklmnop.supabase.co",
+			"aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+		]
+	}
+]

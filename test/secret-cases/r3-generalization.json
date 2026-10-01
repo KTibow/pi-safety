@@ -1,0 +1,452 @@
+[
+	{
+		"id": "railway-variables-double-box",
+		"why": "variant of doppler-secrets-box-table: `railway variables` draws its table with ║ outer borders and │ between columns; the table rule only accepts │ or | before the name",
+		"command": "railway variables --service orders-api",
+		"output": "╔═════════════════════════════ Variables for orders-api ═════════════════════════════╗\n║ JWT_SIGNING_SECRET    │ @@C:7c1f0a9e.2b4d48e6.a3f5c8b1.d0e2f4a6.c8e0b2d4.f6a8c0e2@@            ║\n║────────────────────────────────────────────────────────────────────────────────────║\n║ NODE_ENV              │ production                                                  ║\n║────────────────────────────────────────────────────────────────────────────────────║\n║ RAILWAY_PUBLIC_DOMAIN │ orders-api-production.up.railway.app                        ║\n║────────────────────────────────────────────────────────────────────────────────────║\n║ RESEND_API_KEY        │ re_Hq7T2mXk_@@C:9LbPvZ4w.Nc8RdYs3.FgJ1aE5@@                          ║\n╚════════════════════════════════════════════════════════════════════════════════════╝\n",
+		"hide": [
+			"@@C:7c1f0a9e.2b4d48e6.a3f5c8b1.d0e2f4a6.c8e0b2d4.f6a8c0e2@@",
+			"re_Hq7T2mXk_@@C:9LbPvZ4w.Nc8RdYs3.FgJ1aE5@@"
+		],
+		"keep": [
+			"║ NODE_ENV              │ production",
+			"orders-api-production.up.railway.app"
+		]
+	},
+	{
+		"id": "kubectl-describe-configmap-data",
+		"why": "variant of kubectl-deployment-env-and-key-refs: `kubectl describe configmap` prints each data key as `NAME:`, a `----` rule, then the value on its own line, so name and value never share a line",
+		"command": "kubectl describe configmap orders-config -n prod",
+		"output": "Name:         orders-config\nNamespace:    prod\nLabels:       app.kubernetes.io/name=orders\nAnnotations:  <none>\n\nData\n====\nDB_HOST:\n----\norders-pg.prod.svc.cluster.local\nDB_PASSWORD:\n----\nCm-Pg-pw-7Qx2Lk9\nLOG_LEVEL:\n----\ninfo\nPAYMENTS_API_TOKEN:\n----\npt_@@C:4fK8wQ2z.N7xL1vR9.cM3bH6tY@@\n\nBinaryData\n====\n\nEvents:  <none>\n",
+		"hide": [
+			"Cm-Pg-pw-7Qx2Lk9",
+			"pt_@@C:4fK8wQ2z.N7xL1vR9.cM3bH6tY@@"
+		],
+		"keep": [
+			"orders-pg.prod.svc.cluster.local",
+			"Namespace:    prod",
+			"LOG_LEVEL:\n----\ninfo"
+		]
+	},
+	{
+		"id": "az-webapp-appsettings-tsv",
+		"why": "variant of az-storage-account-keys-list: `-o tsv` prints name, slotSetting and value separated by single tabs, with no keys; the table rule needs two spaces or a │",
+		"command": "az webapp config appsettings list -g shop-rg -n shop-web -o tsv",
+		"output": "DB_HOST\tFalse\tshop-sql.database.windows.net\nDB_PASSWORD\tFalse\tAz-W3bApp-Pr0d-pw!\nSMTP_PASSWORD\tTrue\tq8Vd2LkP0xNz4RbT\nWEBSITE_RUN_FROM_PACKAGE\tFalse\t1\n",
+		"hide": [
+			"Az-W3bApp-Pr0d-pw!",
+			"q8Vd2LkP0xNz4RbT"
+		],
+		"keep": [
+			"DB_HOST\tFalse\tshop-sql.database.windows.net",
+			"WEBSITE_RUN_FROM_PACKAGE\tFalse\t1"
+		]
+	},
+	{
+		"id": "az-acr-credential-show-table",
+		"why": "`az acr credential show -o table` is column-oriented: the PASSWORD header is on one line and the values on the next, so no rule pairs a name with its value",
+		"command": "az acr credential show -n acmeregistry -o table",
+		"output": "USERNAME      PASSWORD                                              PASSWORD2\n------------  ----------------------------------------------------  ----------------------------------------------------\nacmeregistry  @@C:Wm3Kp8sQ.2vTz6NbY.1cHf9LrX.4gDj7eA0.uIo5yRtE.+ACRDbXy.2k@@  @@C:Hn5Rt2Lq.8Vx3Mz7B.c1Kw4Pj9.Fg6Ds0Ya.5eNu2iTo.+ACRAm8Q.z4v@@\n",
+		"hide": [
+			"@@C:Wm3Kp8sQ.2vTz6NbY.1cHf9LrX.4gDj7eA0.uIo5yRtE.+ACRDbXy.2k@@",
+			"@@C:Hn5Rt2Lq.8Vx3Mz7B.c1Kw4Pj9.Fg6Ds0Ya.5eNu2iTo.+ACRAm8Q.z4v@@"
+		],
+		"keep": [
+			"acmeregistry",
+			"USERNAME      PASSWORD"
+		]
+	},
+	{
+		"id": "doctl-databases-connection-password-column",
+		"why": "doctl prints the connection as one wide row: the URL password is masked by the URL rule, but the same @@AIVEN@@ password repeated in the Password column has no name beside it and no known format",
+		"command": "doctl databases connection 9cc10173-e9ea-4176-9dbc-a4cee4c4ff30",
+		"output": "URI                                                                                                                                       Database     Host                                                                Port     User       Password                    SSL\npostgresql://doadmin:@@AIVEN@@@@C:k3Jx9QmZ.2pLw7RtY.v4Bn@@@db-postgresql-nyc3-61523-do-user-1902837-0.f.db.ondigitalocean.com:25060/defaultdb?sslmode=require    defaultdb    db-postgresql-nyc3-61523-do-user-1902837-0.f.db.ondigitalocean.com    25060    doadmin    @@AIVEN@@@@C:k3Jx9QmZ.2pLw7RtY.v4Bn@@    true\n",
+		"hide": [
+			"@@AIVEN@@@@C:k3Jx9QmZ.2pLw7RtY.v4Bn@@"
+		],
+		"keep": [
+			"db-postgresql-nyc3-61523-do-user-1902837-0.f.db.ondigitalocean.com",
+			"25060    doadmin"
+		]
+	},
+	{
+		"id": "pulumi-config-show-secrets-namespaced",
+		"why": "variant of vault-kv-get-table: `pulumi config --show-secrets` prints KEY/VALUE columns, but keys are namespaced `project:name`, and the table rule's name pattern doesn't allow ':'",
+		"command": "pulumi config --show-secrets --stack prod",
+		"output": "KEY                    VALUE\naws:region             us-west-2\norders:dbPassword      Pul-Db-pw-8Kx3Qm2z\norders:replicas        3\norders:stripeSecret    rk9_@@C:Vb2Nq7Lx.4Mz8Hc1T.w6Ys3Jf5@@\n",
+		"hide": [
+			"Pul-Db-pw-8Kx3Qm2z",
+			"rk9_@@C:Vb2Nq7Lx.4Mz8Hc1T.w6Ys3Jf5@@"
+		],
+		"keep": [
+			"aws:region             us-west-2",
+			"orders:replicas        3"
+		]
+	},
+	{
+		"id": "aws-ssm-by-path-table",
+		"why": "variant of aws JSON cases: `--output table` prints Name and Value as separate `||  Name  |  … ||` rows, so the credential name (/prod/orders/db_password) is a row above the value",
+		"command": "aws ssm get-parameters-by-path --path /prod/orders --with-decryption --output table",
+		"output": "---------------------------------------------------------------------------------------------\n|                                    GetParametersByPath                                    |\n+-------------------------------------------------------------------------------------------+\n||                                       Parameters                                        ||\n|+-------------------+---------------------------------------------------------------------+|\n||  ARN              |  arn:aws:ssm:us-east-1:123456789012:parameter/prod/orders/db_password ||\n||  DataType         |  text                                                               ||\n||  LastModifiedDate |  2026-08-21T14:02:11.482000+00:00                                   ||\n||  Name             |  /prod/orders/db_password                                           ||\n||  Type             |  SecureString                                                       ||\n||  Value            |  Ssm-Pg-pw-3Vq8Lx2N                                                 ||\n||  Version          |  4                                                                  ||\n|+-------------------+---------------------------------------------------------------------+|\n",
+		"hide": [
+			"Ssm-Pg-pw-3Vq8Lx2N"
+		],
+		"keep": [
+			"/prod/orders/db_password",
+			"SecureString",
+			"||  Version          |  4"
+		]
+	},
+	{
+		"id": "aws-cloudformation-outputs-key-value",
+		"why": "variant of op-item-get-json-value-field / az keyName: CloudFormation names pairs ParameterKey/ParameterValue and OutputKey/OutputValue, which the sibling-name rule (name/label/key/Name/Key + value) doesn't know",
+		"command": "aws cloudformation describe-stacks --stack-name orders-db",
+		"output": "{\n    \"Stacks\": [\n        {\n            \"StackId\": \"arn:aws:cloudformation:us-east-1:123456789012:stack/orders-db/1b2c3d40-5e6f-11ef-8a9b-0affd3c4e5f6\",\n            \"StackName\": \"orders-db\",\n            \"Parameters\": [\n                {\n                    \"ParameterKey\": \"DBInstanceClass\",\n                    \"ParameterValue\": \"db.t4g.medium\"\n                },\n                {\n                    \"ParameterKey\": \"MasterUserPassword\",\n                    \"ParameterValue\": \"Cfn-Mstr-pw-6Tz9Kq\"\n                }\n            ],\n            \"StackStatus\": \"UPDATE_COMPLETE\",\n            \"Outputs\": [\n                {\n                    \"OutputKey\": \"Endpoint\",\n                    \"OutputValue\": \"orders-db.c9akciq32.us-east-1.rds.amazonaws.com\",\n                    \"Description\": \"RDS endpoint\"\n                },\n                {\n                    \"OutputKey\": \"AppUserPassword\",\n                    \"OutputValue\": \"Cfn-App-pw-2Mv7Xr\",\n                    \"Description\": \"Generated app user password\"\n                }\n            ]\n        }\n    ]\n}\n",
+		"hide": [
+			"Cfn-Mstr-pw-6Tz9Kq",
+			"Cfn-App-pw-2Mv7Xr"
+		],
+		"keep": [
+			"db.t4g.medium",
+			"orders-db.c9akciq32.us-east-1.rds.amazonaws.com",
+			"UPDATE_COMPLETE"
+		]
+	},
+	{
+		"id": "gcloud-secrets-access-json-payload",
+		"why": "variant of gcloud-secrets-versions-access: with --format=json the value is base64 under payload.data; the command is known to print a secret but only single-token lines are masked, and the decoded password is not a known value",
+		"command": "gcloud secrets versions access latest --secret=db-password --format=json",
+		"output": "{\n  \"name\": \"@@C:projects./1234567.89012/se.crets/db@@-password/versions/3\",\n  \"payload\": {\n    \"data\": \"@@C:R2NwLVNt.LXB3LTc3.THEheA==@@\",\n    \"dataCrc32c\": \"2849112349\"\n  }\n}\n",
+		"hide": [
+			"@@C:R2NwLVNt.LXB3LTc3.THEheA==@@",
+			"Gcp-Sm-pw-77Lq!x"
+		],
+		"keep": [
+			"@@C:projects./1234567.89012/se.crets/db@@-password/versions/3"
+		]
+	},
+	{
+		"id": "spring-actuator-env-show-values",
+		"why": "Spring Boot /actuator/env (show-values=ALWAYS) nests each property as `\"DB_PASSWORD\":{\"value\":…,\"origin\":…}`: the credential name is the parent key, and jsonPairs only passes on the key of the string itself (`value`)",
+		"command": "curl -s http://localhost:8080/actuator/env",
+		"output": "{\"activeProfiles\":[\"prod\"],\"propertySources\":[{\"name\":\"server.ports\",\"properties\":{\"local.server.port\":{\"value\":8080}}},{\"name\":\"systemEnvironment\",\"properties\":{\"DB_PASSWORD\":{\"value\":\"Spr-Act-pw-5Kq2Wz\",\"origin\":\"System Environment Property \\\"DB_PASSWORD\\\"\"},\"JAVA_HOME\":{\"value\":\"/opt/java/openjdk\",\"origin\":\"System Environment Property \\\"JAVA_HOME\\\"\"},\"OAUTH_CLIENT_SECRET\":{\"value\":\"@@C:Xc9vB2nM.5qL8wK3j.H6gF1dS4@@\",\"origin\":\"System Environment Property \\\"OAUTH_CLIENT_SECRET\\\"\"}}}]}\n",
+		"hide": [
+			"Spr-Act-pw-5Kq2Wz",
+			"@@C:Xc9vB2nM.5qL8wK3j.H6gF1dS4@@"
+		],
+		"keep": [
+			"\"JAVA_HOME\":{\"value\":\"/opt/java/openjdk\"",
+			"\"local.server.port\":{\"value\":8080}"
+		]
+	},
+	{
+		"id": "consul-acl-token-create-secretid",
+		"why": "Consul prints the token as `SecretID:` — the last word is ID, so the name rule treats it as an identifier, and a UUID never looks random",
+		"command": "consul acl token create -description 'orders-api' -policy-name orders-api",
+		"output": "AccessorID:       6a1253d2-1785-24fd-91c2-f8e78c745511\nSecretID:         45a3bd52-07c7-47a4-52fd-0745e0cfe967\nPartition:        default\nNamespace:        default\nDescription:      orders-api\nLocal:            false\nCreate Time:      2026-09-30 10:42:17.48102 +0000 UTC\nPolicies:\n   1b6a2c90-6a3f-4f0d-8d55-3d1a2e0b9f11 - orders-api\n",
+		"hide": [
+			"45a3bd52-07c7-47a4-52fd-0745e0cfe967"
+		],
+		"keep": [
+			"AccessorID:       6a1253d2-1785-24fd-91c2-f8e78c745511",
+			"1b6a2c90-6a3f-4f0d-8d55-3d1a2e0b9f11 - orders-api"
+		]
+	},
+	{
+		"id": "elasticsearch-reset-password-new-value",
+		"why": "elasticsearch-reset-password prints the generated password after `New value:`; neither the label nor the command is known, while the keystore list (names only) must survive",
+		"command": "bin/elasticsearch-reset-password -u elastic -b && bin/elasticsearch-keystore list",
+		"output": "This tool will reset the password of the [elastic] user to an autogenerated value.\nThe password will be printed in the console.\nPassword for the [elastic] user successfully reset.\nNew value: 4fB*Kx2_qZ9mPw=Lr7Tn\nbootstrap.password\nkeystore.seed\nxpack.notification.email.account.work.smtp.secure_password\n",
+		"hide": [
+			"4fB*Kx2_qZ9mPw=Lr7Tn"
+		],
+		"keep": [
+			"Password for the [elastic] user successfully reset.",
+			"keystore.seed",
+			"xpack.notification.email.account.work.smtp.secure_password"
+		]
+	},
+	{
+		"id": "bare-value-getters-other-clis",
+		"why": "variant of the SECRET_COMMANDS list (doppler --plain, vault -field, gcloud access): heroku config:get, wp config get, aws ssm --query Value --output text and az keyvault -o tsv also print only the secret",
+		"command": "heroku config:get STRIPE_WEBHOOK_SIGNING -a acme-billing; wp config get DB_PASSWORD --path=public; aws ssm get-parameter --name /prod/orders/db_password --with-decryption --query Parameter.Value --output text; az keyvault secret show --vault-name acme-kv -n sql-admin --query value -o tsv",
+		"output": "Hk-Whk-9vT2mQ7xL4\nwP-Get-pw!3Kz8\nSsm-Txt-pw-6Rm4Vz\nKv-Sql-adm-8Np2Lw5\n",
+		"hide": [
+			"Hk-Whk-9vT2mQ7xL4",
+			"wP-Get-pw!3Kz8",
+			"Ssm-Txt-pw-6Rm4Vz",
+			"Kv-Sql-adm-8Np2Lw5"
+		],
+		"keep": []
+	},
+	{
+		"id": "kubectl-jsonpath-base64-macos-flag",
+		"why": "variant of kubectl-get-secret-jsonpath: the jsonpath | base64 rule only accepts -d/--decode, but macOS base64 decodes with -D",
+		"command": "kubectl get secret orders-db -n prod -o jsonpath='{.data.password}' | base64 -D",
+		"output": "Kb-Mac-pw-5Wq9Zt3",
+		"hide": [
+			"Kb-Mac-pw-5Wq9Zt3"
+		],
+		"keep": []
+	},
+	{
+		"id": "wp-cli-config-list-csv",
+		"why": "variant of wp-cli-config-list (box table): `--format=csv` prints `NAME,value,type` rows, a separator no rule knows",
+		"command": "wp config list --path=public --format=csv",
+		"output": "name,value,type\ntable_prefix,wp_,variable\nDB_NAME,wordpress,constant\nDB_USER,wp_prod,constant\nDB_PASSWORD,wP-Csv-pw!72Lx,constant\nDB_HOST,mysql.internal:3306,constant\nAUTH_KEY,\"h3$kL9@vQ2#mZ8!xR5^tW1&yN4*bC7(dF0)\",constant\n",
+		"hide": [
+			"wP-Csv-pw!72Lx",
+			"h3$kL9@vQ2#mZ8!xR5^tW1&yN4*bC7(dF0)"
+		],
+		"keep": [
+			"DB_HOST,mysql.internal:3306,constant",
+			"DB_USER,wp_prod,constant"
+		]
+	},
+	{
+		"id": "pgbouncer-userlist-txt",
+		"why": "variant of nginx-htpasswd-cat: pgbouncer's auth_file userlist.txt holds `\"user\" \"password\"` pairs (plaintext or SCRAM verifiers); the file name isn't known and lines have no credential name",
+		"files": {
+			"deploy/pgbouncer/userlist.txt": "\"orders\" \"Pgb-Plain-pw-4Lx9\"\n\"reporting\" \"SCRAM-SHA-256$4096:@@C:c2FsdHlT.YWx0MTIz.NDU2@@$@@C:Wq3Ll2a9.QvBcR1nT.4mXz8KpY.hJ7sDfGe.0uIoPaS6.dF0=@@:@@C:Hn5Rt2Lq.8Vx3Mz7B.c1Kw4Pj9.Fg6Ds0Ya.5eNu2iTo.Am8=@@\"\n",
+			"deploy/pgbouncer/pgbouncer.ini": "[databases]\norders = host=10.0.4.20 port=5432 dbname=orders\n\n[pgbouncer]\nlisten_port = 6432\nauth_type = scram-sha-256\nauth_file = /etc/pgbouncer/userlist.txt\npool_mode = transaction\n"
+		},
+		"command": "cat deploy/pgbouncer/pgbouncer.ini deploy/pgbouncer/userlist.txt",
+		"output": "[databases]\norders = host=10.0.4.20 port=5432 dbname=orders\n\n[pgbouncer]\nlisten_port = 6432\nauth_type = scram-sha-256\nauth_file = /etc/pgbouncer/userlist.txt\npool_mode = transaction\n\"orders\" \"Pgb-Plain-pw-4Lx9\"\n\"reporting\" \"SCRAM-SHA-256$4096:@@C:c2FsdHlT.YWx0MTIz.NDU2@@$@@C:Wq3Ll2a9.QvBcR1nT.4mXz8KpY.hJ7sDfGe.0uIoPaS6.dF0=@@:@@C:Hn5Rt2Lq.8Vx3Mz7B.c1Kw4Pj9.Fg6Ds0Ya.5eNu2iTo.Am8=@@\"\n",
+		"hide": [
+			"Pgb-Plain-pw-4Lx9",
+			"@@C:Wq3Ll2a9.QvBcR1nT.4mXz8KpY.hJ7sDfGe.0uIoPaS6.dF0=@@"
+		],
+		"keep": [
+			"auth_file = /etc/pgbouncer/userlist.txt",
+			"pool_mode = transaction",
+			"\"orders\"",
+			"\"reporting\""
+		]
+	},
+	{
+		"id": "htpasswd-other-file-names",
+		"why": "variant of nginx-htpasswd-cat: the rule matches only files named exactly .htpasswd/htpasswd, but Kibana's nginx guide uses htpasswd.users, Mosquitto keeps `user:$7$…` hashes in passwd, and Apache digest auth uses .htdigest (user:realm:md5)",
+		"files": {
+			"deploy/nginx/htpasswd.users": "kibanaadmin:$apr1$Qx7Lp2Kd$@@C:Vn4Rt8Mz.2Bc6Kw1P.j9Fg3@@.\n",
+			"deploy/mosquitto/passwd": "sensor-gw:$7$101$Zk8Lq2Vx4Nm6Bt1R$@@C:Hc3Wy7Pj.9Fg2Ds5K.a8Qe1Nu4.iTo6Am0R.x3Mz7Bc1.Kw4Pj9Fg.6Ds0Ya5e.Nu2iToAm.8Qz4vLx2.Nq7Rt5Wd.==@@\n",
+			"deploy/apache/.htdigest": "ops:Restricted Area:@@C:5f2b8c9e.1d4a7f3b.6c0e2d9a.8b7c4f1e@@\n"
+		},
+		"command": "cat deploy/nginx/htpasswd.users deploy/mosquitto/passwd deploy/apache/.htdigest",
+		"output": "kibanaadmin:$apr1$Qx7Lp2Kd$@@C:Vn4Rt8Mz.2Bc6Kw1P.j9Fg3@@.\nsensor-gw:$7$101$Zk8Lq2Vx4Nm6Bt1R$@@C:Hc3Wy7Pj.9Fg2Ds5K.a8Qe1Nu4.iTo6Am0R.x3Mz7Bc1.Kw4Pj9Fg.6Ds0Ya5e.Nu2iToAm.8Qz4vLx2.Nq7Rt5Wd.==@@\nops:Restricted Area:@@C:5f2b8c9e.1d4a7f3b.6c0e2d9a.8b7c4f1e@@\n",
+		"hide": [
+			"$apr1$Qx7Lp2Kd$@@C:Vn4Rt8Mz.2Bc6Kw1P.j9Fg3@@.",
+			"@@C:Hc3Wy7Pj.9Fg2Ds5K.a8Qe1Nu4.iTo6Am0R.x3Mz7Bc1.Kw4Pj9Fg.6Ds0Ya5e.Nu2iToAm.8Qz4vLx2.Nq7Rt5Wd.==@@",
+			"@@C:5f2b8c9e.1d4a7f3b.6c0e2d9a.8b7c4f1e@@"
+		],
+		"keep": [
+			"kibanaadmin",
+			"sensor-gw",
+			"ops:Restricted Area"
+		]
+	},
+	{
+		"id": "couchdb-admins-section",
+		"why": "CouchDB's local.ini lists admins as `name = password` under [admins] (plaintext until first start hashes it); the name is a user name, so only the section says it's a credential",
+		"files": {
+			"docker/couchdb/local.ini": "[couchdb]\nsingle_node = true\n\n[chttpd]\nbind_address = 0.0.0.0\nport = 5984\n\n[admins]\nadmin = Cdb-Adm1n-pw-6Hx\n"
+		},
+		"command": "cat docker/couchdb/local.ini",
+		"output": "[couchdb]\nsingle_node = true\n\n[chttpd]\nbind_address = 0.0.0.0\nport = 5984\n\n[admins]\nadmin = Cdb-Adm1n-pw-6Hx\n",
+		"hide": [
+			"Cdb-Adm1n-pw-6Hx"
+		],
+		"keep": [
+			"single_node = true",
+			"bind_address = 0.0.0.0",
+			"[admins]"
+		]
+	},
+	{
+		"id": "clickhouse-users-xml-password-element",
+		"why": "variant of web-config-cat: XML element values (`<password>…</password>`) are masked only inside known secret files; a ClickHouse users.d override (or Maven settings.xml in the repo) is not one",
+		"files": {
+			"deploy/clickhouse/users.d/default-user.xml": "<clickhouse>\n    <users>\n        <default>\n            <password>Ch-Def-pw-9Rz4Kq</password>\n            <networks>\n                <ip>10.0.0.0/8</ip>\n            </networks>\n            <profile>default</profile>\n        </default>\n    </users>\n</clickhouse>\n",
+			"ci/maven-settings.xml": "<settings>\n  <servers>\n    <server>\n      <id>acme-releases</id>\n      <username>ci-deployer</username>\n      <password>Mvn-Rel-pw-3Tq8Vx</password>\n    </server>\n  </servers>\n</settings>\n"
+		},
+		"command": "cat deploy/clickhouse/users.d/default-user.xml ci/maven-settings.xml",
+		"output": "<clickhouse>\n    <users>\n        <default>\n            <password>Ch-Def-pw-9Rz4Kq</password>\n            <networks>\n                <ip>10.0.0.0/8</ip>\n            </networks>\n            <profile>default</profile>\n        </default>\n    </users>\n</clickhouse>\n<settings>\n  <servers>\n    <server>\n      <id>acme-releases</id>\n      <username>ci-deployer</username>\n      <password>Mvn-Rel-pw-3Tq8Vx</password>\n    </server>\n  </servers>\n</settings>\n",
+		"hide": [
+			"Ch-Def-pw-9Rz4Kq",
+			"Mvn-Rel-pw-3Tq8Vx"
+		],
+		"keep": [
+			"<ip>10.0.0.0/8</ip>",
+			"<id>acme-releases</id>",
+			"<username>ci-deployer</username>"
+		]
+	},
+	{
+		"id": "kafka-jaas-user-entries",
+		"why": "Kafka's PlainLoginModule defines broker users as `user_<name>=\"<password>\"`; the `password=` line is masked, but the same password repeats under user_admin and other users' under user_alice, whose names end in the user name",
+		"files": {
+			"config/kafka_server_jaas.conf": "KafkaServer {\n   org.apache.kafka.common.security.plain.PlainLoginModule required\n   username=\"admin\"\n   password=\"Kfk-Adm-pw-5Tz8Wq\"\n   user_admin=\"Kfk-Adm-pw-5Tz8Wq\"\n   user_alice=\"Kfk-Alc-pw-2Mx7Lr\";\n};\n"
+		},
+		"command": "cat config/kafka_server_jaas.conf",
+		"output": "KafkaServer {\n   org.apache.kafka.common.security.plain.PlainLoginModule required\n   username=\"admin\"\n   password=\"Kfk-Adm-pw-5Tz8Wq\"\n   user_admin=\"Kfk-Adm-pw-5Tz8Wq\"\n   user_alice=\"Kfk-Alc-pw-2Mx7Lr\";\n};\n",
+		"hide": [
+			"Kfk-Adm-pw-5Tz8Wq",
+			"Kfk-Alc-pw-2Mx7Lr"
+		],
+		"keep": [
+			"org.apache.kafka.common.security.plain.PlainLoginModule required",
+			"username=\"admin\""
+		]
+	},
+	{
+		"id": "nats-creds-file-nkey-seed",
+		"why": "a NATS .creds file holds a user JWT and an NKEY seed (SU…, 58 base32 chars) between `@@PEM_BEGIN@@USER NKEY SEED-----` lines; the JWT matches the JWT format, the seed is neither a PRIVATE KEY block nor a known format",
+		"files": {
+			"deploy/nats/orders.creds": "@@PEM_BEGIN@@NATS USER JWT-----\n@@JWT@@@@C:0eXAiOiJ.KV1QiLCJ.hbGciOiJ.lZDI1NTE.5LW5rZXk.ifQ@@.@@JWT@@@@C:qdGkiOiJ.YUk1KN0x.RMlQ0Vjh.aM05XIiw.iaWF0Ijo.xNzI3Njk.wMDAwLCJ.pc3MiOiJ.BQkNEIiw.ibmFtZSI.6Im9yZGV.ycyIsInN.1YiI6IlV.BQkMiLCJ.uYXRzIjp.7InB1YiI.6e30sInN.1YiI6e31.9fQ@@.@@C:Zk8Lq2Vx.4Nm6Bt1R.Hc3Wy7Pj.9Fg2Ds5K.a8Qe1Nu4.iTo6Am0R.x3Mz7Bc1.Kw4Pj9Fg.6Ds0Ya5e.Nu2iToAm.8Qz4vLx2.Nq7Rt5Wd@@\n-@@PEM_END@@NATS USER JWT------\n\n************************* IMPORTANT *************************\nNKEY Seed printed below can be used to sign and prove identity.\nNKEYs are sensitive and should be treated as secrets.\n\n@@PEM_BEGIN@@USER NKEY SEED-----\@@C:nSUAIBDP.BAUTWCWB.KIO6XHQN.INK5FWJW.4OHLXC3H.Q2KFE4PE.JUA44CNH.TC4@@\n-@@PEM_END@@USER NKEY SEED------\n\n*************************************************************\n"
+		},
+		"command": "cat deploy/nats/orders.creds",
+		"output": "@@PEM_BEGIN@@NATS USER JWT-----\n@@JWT@@@@C:0eXAiOiJ.KV1QiLCJ.hbGciOiJ.lZDI1NTE.5LW5rZXk.ifQ@@.@@JWT@@@@C:qdGkiOiJ.YUk1KN0x.RMlQ0Vjh.aM05XIiw.iaWF0Ijo.xNzI3Njk.wMDAwLCJ.pc3MiOiJ.BQkNEIiw.ibmFtZSI.6Im9yZGV.ycyIsInN.1YiI6IlV.BQkMiLCJ.uYXRzIjp.7InB1YiI.6e30sInN.1YiI6e31.9fQ@@.@@C:Zk8Lq2Vx.4Nm6Bt1R.Hc3Wy7Pj.9Fg2Ds5K.a8Qe1Nu4.iTo6Am0R.x3Mz7Bc1.Kw4Pj9Fg.6Ds0Ya5e.Nu2iToAm.8Qz4vLx2.Nq7Rt5Wd@@\n-@@PEM_END@@NATS USER JWT------\n\n************************* IMPORTANT *************************\nNKEY Seed printed below can be used to sign and prove identity.\nNKEYs are sensitive and should be treated as secrets.\n\n@@PEM_BEGIN@@USER NKEY SEED-----\@@C:nSUAIBDP.BAUTWCWB.KIO6XHQN.INK5FWJW.4OHLXC3H.Q2KFE4PE.JUA44CNH.TC4@@\n-@@PEM_END@@USER NKEY SEED------\n\n*************************************************************\n",
+		"hide": [
+			"@@C:SUAIBDPB.AUTWCWBK.IO6XHQNI.NK5FWJW4.OHLXC3HQ.2KFE4PEJ.UA44CNHT.C4@@"
+		],
+		"keep": [
+			"NKEY Seed printed below can be used to sign and prove identity."
+		]
+	},
+	{
+		"id": "openvpn-tls-crypt-and-auth-user-pass",
+		"why": "an .ovpn profile inlines a tls-crypt static key (`@@PEM_BEGIN@@OpenVPN Static key V1-----`, hex lines) that isn't a PRIVATE KEY block, and auth-user-pass points at a two-line user/password file with no names",
+		"files": {
+			"vpn/office.ovpn": "client\ndev tun\nproto udp\nremote vpn.acme.example 1194\nauth-user-pass vpn/auth.txt\ncipher AES-256-GCM\n<tls-crypt>\n@@PEM_BEGIN@@OpenVPN Static key V1-----\@@C:n6f1c2b8.e9d4a7f3.b0c5e2d9.a8b7c4f1.e@@\@@C:n3a9d2c7.b1e8f4a6.d0b5c3e9.f2a7d1b8.c@@\@@C:n5e2f9a3.d7c1b8e4.f6a0d2c9.b5e3f7a1.d@@\n@@PEM_END@@OpenVPN Static key V1-----\n</tls-crypt>\n",
+			"vpn/auth.txt": "j.doe\nOvpn-Usr-pw-8Qx3\n"
+		},
+		"command": "cat vpn/office.ovpn vpn/auth.txt",
+		"output": "client\ndev tun\nproto udp\nremote vpn.acme.example 1194\nauth-user-pass vpn/auth.txt\ncipher AES-256-GCM\n<tls-crypt>\n@@PEM_BEGIN@@OpenVPN Static key V1-----\@@C:n6f1c2b8.e9d4a7f3.b0c5e2d9.a8b7c4f1.e@@\@@C:n3a9d2c7.b1e8f4a6.d0b5c3e9.f2a7d1b8.c@@\@@C:n5e2f9a3.d7c1b8e4.f6a0d2c9.b5e3f7a1.d@@\n@@PEM_END@@OpenVPN Static key V1-----\n</tls-crypt>\nj.doe\nOvpn-Usr-pw-8Qx3\n",
+		"hide": [
+			"@@C:6f1c2b8e.9d4a7f3b.0c5e2d9a.8b7c4f1e@@",
+			"@@C:3a9d2c7b.1e8f4a6d.0b5c3e9f.2a7d1b8c@@",
+			"@@C:5e2f9a3d.7c1b8e4f.6a0d2c9b.5e3f7a1d@@",
+			"Ovpn-Usr-pw-8Qx3"
+		],
+		"keep": [
+			"remote vpn.acme.example 1194",
+			"cipher AES-256-GCM",
+			"auth-user-pass vpn/auth.txt"
+		]
+	},
+	{
+		"id": "wireguard-genkey-and-show-private-key",
+		"why": "variant of wireguard-showconf: `wg genkey` and `wg show wg0 private-key` print a bare base64 private key, like `openssl rand`, but aren't in the commands whose output is a secret",
+		"command": "wg genkey; sudo wg show wg0 private-key",
+		"output": "@@C:hiHlZ/yb.IyT1LkHA.b/s8rolN.NEu1ektf.0Hurgs75.4n8=@@\@@C:nyNq7Rt5.Wd2Lx4Mz.8Hc1Tw6Y.s3Jf5Kp9.Vb0Qe2Nu.4iTk=@@\n",
+		"hide": [
+			"@@C:hiHlZ/yb.IyT1LkHA.b/s8rolN.NEu1ektf.0Hurgs75.4n8=@@",
+			"@@C:yNq7Rt5W.d2Lx4Mz8.Hc1Tw6Ys.3Jf5Kp9V.b0Qe2Nu4.iTk=@@"
+		],
+		"keep": []
+	},
+	{
+		"id": "nmcli-show-secrets-wifi-psk",
+		"why": "variant of wireguard-showconf: `nmcli -s connection show` prints `802-11-wireless-security.psk:` — PSK (pre-shared key) isn't a credential word, while the wireguard.private-key line is caught",
+		"command": "nmcli -s connection show office-wifi | grep -E 'ssid|psk|key-mgmt'",
+		"output": "802-11-wireless.ssid:                   AcmeOffice\n802-11-wireless-security.key-mgmt:      wpa-psk\n802-11-wireless-security.psk:           Wifi-Office-pw-6Lx2\n802-11-wireless-security.p@@SK_DASH@@flags:     0 (none)\n",
+		"hide": [
+			"Wifi-Office-pw-6Lx2"
+		],
+		"keep": [
+			"802-11-wireless.ssid:                   AcmeOffice",
+			"802-11-wireless-security.p@@SK_DASH@@flags:     0 (none)"
+		]
+	},
+	{
+		"id": "typed-const-declarations-rust-kotlin-swift-ts",
+		"why": "variant of source-code-credential-assignments: with a type annotation (`NAME: &str = \"…\"`, `val NAME: String = …`) the name is followed by `: Type`, so neither `name = value` nor `name: value` sees the literal",
+		"command": "rg -n 'SECRET|TOKEN|Token' --type-add 'src:*.{rs,kt,swift,ts}' -t src",
+		"output": "crates/billing/src/lib.rs:12:const PAYMENT_API_SECRET: &str = \"pgw_@@C:9KxR2mTq.7VbN4cLz.8HdY3fWs@@\";\@@C:nandroid./app/src./main/ja.va/com/a.cme/shop./Config@@.kt:7:    const val MAPS_SIGNING_SECRET: String = \"@@C:Mq4Zt8Lx.2Rv6Nc0B.j9Hw3Ks7@@\"\nios/Shop/Config.swift:5:    static let analyticsToken: String = \"at_@@C:5Nf8Qw2L.z7Xc4Vb9.Mk3Rj6Hd@@\"\nsrc/lib/partner.ts:3:export const PARTNER_TOKEN: string = \"ptk_@@C:3Hc9Vn6L.q2Zx8Rw5.Tm1Bj7Ks@@\";\nsrc/lib/partner.ts:9:  const headers = { 'X-Partner-Token': PARTNER_TOKEN };\n",
+		"hide": [
+			"pgw_@@C:9KxR2mTq.7VbN4cLz.8HdY3fWs@@",
+			"@@C:Mq4Zt8Lx.2Rv6Nc0B.j9Hw3Ks7@@",
+			"at_@@C:5Nf8Qw2L.z7Xc4Vb9.Mk3Rj6Hd@@",
+			"ptk_@@C:3Hc9Vn6L.q2Zx8Rw5.Tm1Bj7Ks@@"
+		],
+		"keep": [
+			"src/lib/partner.ts:9:  const headers = { 'X-Partner-Token': PARTNER_TOKEN };",
+			"crates/billing/src/lib.rs:12:const PAYMENT_API_SECRET: &str"
+		]
+	},
+	{
+		"id": "subscript-and-setenv-assignments",
+		"why": "variant of source-code-credential-assignments: `os.environ[\"DB_PASSWORD\"] = \"…\"` (Python), `ENV[\"…\"] = \"…\"` (Ruby), `os.Setenv(\"…\", \"…\")` (Go) and Lua `[\"api_key\"] = \"…\"` put a bracket or comma between the name and the value",
+		"command": "grep -rn 'PASSWORD\\|SECRET\\|api_key' scripts/ cmd/ lua/",
+		"output": "scripts/seed_local.py:4:os.environ[\"DB_PASSWORD\"] = \"Py-Env-pw-55Qz\"\nscripts/seed_local.rb:3:ENV[\"SESSION_SECRET\"] = \"Rb-Ses-sec-8Kd3Wq\"\ncmd/smoke/main.go:18:\tos.Setenv(\"SMTP_PASSWORD\", \"Go-Smtp-pw-71Kx\")\nlua/acme/config.lua:6:  [\"api_key\"] = \"lua_7Hq2Vx9Lm4Nz8Rt3\",\n",
+		"hide": [
+			"Py-Env-pw-55Qz",
+			"Rb-Ses-sec-8Kd3Wq",
+			"Go-Smtp-pw-71Kx",
+			"lua_7Hq2Vx9Lm4Nz8Rt3"
+		],
+		"keep": [
+			"scripts/seed_local.py:4:os.environ[\"DB_PASSWORD\"]",
+			"cmd/smoke/main.go:18:"
+		]
+	},
+	{
+		"id": "hash-rocket-dumps-php-ruby",
+		"why": "variant of laravel-artisan-config-show: PHP arrays and older Ruby hashes print `\"password\" => \"…\"`; the `=` rule takes `>` as the value, so the literal after the arrow is never checked (Nextcloud's config.php and a Rails runner dump)",
+		"command": "cat nextcloud/config/config.php; bin/rails runner 'pp ActiveRecord::Base.connection_db_config.configuration_hash'",
+		"output": "<?php\n$CONFIG = array (\n  'instanceid' => 'oc8k2l9q4v7z',\n  'passwordsalt' => '@@C:Qz8Lm2Vx.4Nk6Bt1R.c3Wy7Pj9.Fg2Ds5@@',\n  'secret' => '@@C:Hc3Wy7Pj.9Fg2Ds5K.a8Qe1Nu4.iTo6Am0R.x3Mz7Bc1.Kw4Pj9Fg.6@@',\n  'dbtype' => 'pgsql',\n  'dbhost' => 'db',\n  'dbuser' => 'nextcloud',\n  'dbpassword' => 'Nc-Db-pw-4Rx8Tq',\n);\n{:adapter=>\"postgresql\",\n :encoding=>\"unicode\",\n :host=>\"db\",\n :username=>\"orders\",\n :password=>\"Rb-Pg-pw-9Xc2Lk\",\n :database=>\"orders_production\"}\n",
+		"hide": [
+			"@@C:Qz8Lm2Vx.4Nk6Bt1R.c3Wy7Pj9.Fg2Ds5@@",
+			"@@C:Hc3Wy7Pj.9Fg2Ds5K.a8Qe1Nu4.iTo6Am0R.x3Mz7Bc1.Kw4Pj9Fg.6@@",
+			"Nc-Db-pw-4Rx8Tq",
+			"Rb-Pg-pw-9Xc2Lk"
+		],
+		"keep": [
+			"'dbhost' => 'db',",
+			"'dbuser' => 'nextcloud',",
+			":username=>\"orders\",",
+			":database=>\"orders_production\"}"
+		]
+	},
+	{
+		"id": "erlang-tuple-config",
+		"why": "Erlang terms (RabbitMQ advanced.config, sys.config) write settings as `{default_pass, <<\"…\">>}` tuples: no = or : after the name",
+		"command": "cat deploy/rabbitmq/advanced.config",
+		"output": "[\n {rabbit, [\n   {default_user, <<\"orders\">>},\n   {default_pass, <<\"Rmq-Adv-pw-62Lk\">>},\n   {loopback_users, []}\n ]},\n {rabbitmq_management, [{listener, [{port, 15672}]}]}\n].\n",
+		"hide": [
+			"Rmq-Adv-pw-62Lk"
+		],
+		"keep": [
+			"{default_user, <<\"orders\">>}",
+			"{listener, [{port, 15672}]}"
+		]
+	},
+	{
+		"id": "fused-pass-names-php-ldap",
+		"why": "variant of fused-credential-words-env: CREDENTIAL_SUFFIX lists PASSWORD/PASSWD but not bare PASS or PW fused onto a word, so `$dbpass`, `rootpw` (OpenLDAP) and NixOS Nextcloud's `config.adminpass` are not credential names",
+		"command": "cat legacy/includes/db.php; grep -n rootpw /etc/openldap/slapd.conf; grep -n adminpass hosts/cloud/configuration.nix",
+		"output": "<?php\n$dbhost = 'localhost';\n$dbuser = 'shop';\n$dbpass = 'Php-Db-pw-38Mn';\n$dbname = 'shop';\n57:rootpw          Ldap-R00t-pw-4Vq\n41:    config.adminpass = \"Nix-Adm-pw-7Kz2Lx\";\n",
+		"hide": [
+			"Php-Db-pw-38Mn",
+			"Ldap-R00t-pw-4Vq",
+			"Nix-Adm-pw-7Kz2Lx"
+		],
+		"keep": [
+			"$dbhost = 'localhost';",
+			"$dbname = 'shop';"
+		]
+	},
+	{
+		"id": "deploy-specs-key-value-lines",
+		"why": "variant of kubectl-deployment-env-and-key-refs (`- name:` then `value:`): DigitalOcean app specs and render.yaml use `- key:`, CloudFormation ECS definitions `- Name:`/`Value:`, and the value isn't always on the very next line",
+		"command": "doctl apps spec get 5f1c9a7e-2b3d-4e8f-9a0b-1c2d3e4f5a6b; cat infra/ecs-task.yaml",
+		"output": "name: orders\nregion: nyc\nservices:\n- name: api\n  envs:\n  - key: NODE_ENV\n    scope: RUN_TIME\n    value: production\n  - key: MAILGUN_SMTP_PASSWORD\n    scope: RUN_TIME\n    value: Do-Mg-smtp-pw-4Wk8\nResources:\n  TaskDefinition:\n    Type: AWS::ECS::TaskDefinition\n    Properties:\n      ContainerDefinitions:\n        - Name: orders-api\n          Environment:\n            - Name: NODE_ENV\n              Value: production\n            - Name: DB_PASSWORD\n              Value: Cfn-Ecs-pw-4Rt8xK\n",
+		"hide": [
+			"Do-Mg-smtp-pw-4Wk8",
+			"Cfn-Ecs-pw-4Rt8xK"
+		],
+		"keep": [
+			"  - key: NODE_ENV\n    scope: RUN_TIME\n    value: production",
+			"            - Name: NODE_ENV\n              Value: production"
+		]
+	}
+]

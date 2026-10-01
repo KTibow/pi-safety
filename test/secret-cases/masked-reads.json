@@ -1,0 +1,479 @@
+[
+ {
+  "id": "dotenv-everyday-read",
+  "why": "ordinary .env read: settings stay readable, secrets masked",
+  "files": {
+   ".env": "# App\nNODE_ENV=development\nPORT=3000\nLOG_LEVEL=info\nHOST=0.0.0.0\n\n# Database\nDB_HOST=db.internal\nDB_PORT=5432\nDB_NAME=acme_dev\nDB_USER=acme\nDB_PASSWORD=Vt7qL2mZx9Rk\n\nAPI_KEY=k8Hq2LmZ9xPvR4tN\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n"
+  },
+  "read": ".env",
+  "hide": [
+   "Vt7qL2mZx9Rk",
+   "k8Hq2LmZ9xPvR4tN",
+   "@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@"
+  ],
+  "keep": [
+   "# Database",
+   "NODE_ENV=development",
+   "PORT=3000",
+   "LOG_LEVEL=info",
+   "HOST=0.0.0.0",
+   "DB_HOST=db.internal",
+   "DB_PORT=5432",
+   "DB_NAME=acme_dev",
+   "DB_USER=acme",
+   "DB_PASSWORD=",
+   "API_KEY=",
+   "JWT_SECRET="
+  ]
+ },
+ {
+  "id": "dotenv-export-quoted-read",
+  "why": "export prefixes and quoted values: harmless ones kept, secrets with = and : inside masked",
+  "files": {
+   ".env.production": "export NODE_ENV=\"production\"\nexport PORT='8080'\nexport STRIPE_SECRET_KEY=\"@@STRIPE_SK_LIVE@@@@C:51Hx7Qm2.LpZ9vR4t.N8kW3yB6.c@@\"\nexport SESSION_SECRET='Qm9=xT:4Lp=Zr8:Wv2'\n"
+  },
+  "read": ".env.production",
+  "hide": [
+   "@@STRIPE_SK_LIVE@@@@C:51Hx7Qm2.LpZ9vR4t.N8kW3yB6.c@@",
+   "Qm9=xT:4Lp=Zr8:Wv2",
+   "Qm9=xT"
+  ],
+  "keep": [
+   "export NODE_ENV=\"production\"",
+   "export PORT='8080'",
+   "export STRIPE_SECRET_KEY=",
+   "export SESSION_SECRET="
+  ]
+ },
+ {
+  "id": "dotenv-supabase-db-host",
+  "why": "a managed-database hostname whose project ref is a 20-letter run is still just a hostname",
+  "files": {
+   ".env": "DB_HOST=db.qwertyuiopasdfghjklz.supabase.co\nDB_PORT=5432\nDB_PASSWORD=Vt7qL2mZx9Rk\n"
+  },
+  "read": ".env",
+  "hide": [
+   "Vt7qL2mZx9Rk"
+  ],
+  "keep": [
+   "DB_HOST=db.qwertyuiopasdfghjklz.supabase.co",
+   "DB_PORT=5432"
+  ]
+ },
+ {
+  "id": "dotenv-credentialless-urls",
+  "why": "service URLs without credentials (redis://, postgres://, amqp://) are plain settings",
+  "files": {
+   ".env": "REDIS_URL=redis://localhost:6379/0\nDATABASE_URL=postgres://localhost:5432/acme_dev\nAMQP_URL=amqp://rabbitmq:5672\nAPI_KEY=k8Hq2LmZ9xPvR4tN\n"
+  },
+  "read": ".env",
+  "hide": [
+   "k8Hq2LmZ9xPvR4tN"
+  ],
+  "keep": [
+   "REDIS_URL=redis://localhost:6379/0",
+   "DATABASE_URL=postgres://localhost:5432/acme_dev",
+   "AMQP_URL=amqp://rabbitmq:5672"
+  ]
+ },
+ {
+  "id": "dotenv-inline-comments",
+  "why": "an inline comment after a harmless value should not turn it into a secret",
+  "files": {
+   ".env": "PORT=3000 # dev server port\nLOG_LEVEL=debug  # or info in prod\nAPI_KEY=k8Hq2LmZ9xPvR4tN # rotated 2026-08\n"
+  },
+  "read": ".env",
+  "hide": [
+   "k8Hq2LmZ9xPvR4tN"
+  ],
+  "keep": [
+   "PORT=3000",
+   "LOG_LEVEL=debug"
+  ]
+ },
+ {
+  "id": "dotenv-harmless-values-with-punctuation",
+  "why": "harmless values containing =, spaces, /, commas or @ are masked as if secret",
+  "files": {
+   ".env": "NODE_OPTIONS=\"--max-old-space-size=4096\"\nAPP_NAME=\"Acme Dashboard\"\nTZ=America/New_York\nALLOWED_HOSTS=localhost,127.0.0.1\nMAIL_FROM=noreply@example.com\nSMTP_PASSWORD=Hq4mT8vLz2Rw\n"
+  },
+  "read": ".env",
+  "hide": [
+   "Hq4mT8vLz2Rw"
+  ],
+  "keep": [
+   "--max-old-space-size=4096",
+   "Acme Dashboard",
+   "TZ=America/New_York",
+   "ALLOWED_HOSTS=localhost,127.0.0.1",
+   "MAIL_FROM=noreply@example.com"
+  ]
+ },
+ {
+  "id": "dotenv-settings-under-secretish-names",
+  "why": "TTLs, flags and paths whose names contain TOKEN/SESSION/PASSWORD/KEY/AUTH are settings, not secrets",
+  "files": {
+   ".env": "ACCESS_TOKEN_TTL=900\nSESSION_COOKIE_SECURE=true\nPASSWORD_MIN_LENGTH=12\nJWT_PUBLIC_KEY_PATH=./certs/jwt.pub\nAUTH_PROVIDER=github\nSESSION_SECRET=Zp3kW9xQ7mLt2Rv8\n"
+  },
+  "read": ".env",
+  "hide": [
+   "Zp3kW9xQ7mLt2Rv8"
+  ],
+  "keep": [
+   "ACCESS_TOKEN_TTL=900",
+   "SESSION_COOKIE_SECURE=true",
+   "PASSWORD_MIN_LENGTH=12",
+   "JWT_PUBLIC_KEY_PATH=./certs/jwt.pub",
+   "AUTH_PROVIDER=github"
+  ]
+ },
+ {
+  "id": "dotenv-pgpassword",
+  "why": "libpq's standard PGPASSWORD is one name segment, so it isn't recognized as secret and a word-like value passes as a setting",
+  "files": {
+   ".env": "PGHOST=localhost\nPGUSER=acme\nPGDATABASE=acme_dev\nPGPASSWORD=Xk29fLq7Zr\n"
+  },
+  "read": ".env",
+  "hide": [
+   "Xk29fLq7Zr"
+  ],
+  "keep": [
+   "PGHOST=localhost",
+   "PGUSER=acme",
+   "PGDATABASE=acme_dev"
+  ]
+ },
+ {
+  "id": "yaml-innocent-key-names",
+  "why": "YAML secrets under keys like pw / passphrase with word-like values",
+  "files": {
+   "config/secrets.yaml": "admin:\n  user: ops\n  pw: Qm7vT2xLp9\nbackup:\n  bucket: acme-backups\n  passphrase: Hx4wN8kRz2\n"
+  },
+  "read": "config/secrets.yaml",
+  "hide": [
+   "Qm7vT2xLp9",
+   "Hx4wN8kRz2"
+  ],
+  "keep": [
+   "admin:",
+   "user: ops",
+   "bucket: acme-backups"
+  ]
+ },
+ {
+  "id": "dotenv-url-with-key-in-query",
+  "why": "an http(s) URL is treated as a plain setting even when its query string carries an API key",
+  "files": {
+   ".env": "API_BASE_URL=https://api.example.com/v2\nMETRICS_PUSH_URL=https://push.example.com/api/v1/push?apikey=Xk29fLq7Zr\n"
+  },
+  "read": ".env",
+  "hide": [
+   "Xk29fLq7Zr"
+  ],
+  "keep": [
+   "API_BASE_URL=https://api.example.com/v2"
+  ]
+ },
+ {
+  "id": "dotenv-multiline-pem",
+  "why": "multi-line quoted private key is withheld, settings after it survive",
+  "files": {
+   ".env": "NODE_ENV=production\nPRIVATE_KEY=\"@@PEM_BEGIN@@RSA PRIVATE KEY-----\@@C:nMIIEowI.BAAKCAQE.Au1SU1Lf.VLPHCozM.xH2Mo4lg.OEePzNm0.tRgeLezV.6ffAt0gu.n@@\@@C:nVTLw7on.LRnrq0/I.zW7yWR7Q.krmBL7jT.KEn5u+qK.hbwKfBst.Is+bMY2Z.kp18gnTx.K@@\@@C:nLxoS2tF.czGkPLPg.izskuemM.ghRniWao.Lcyehkd3.qqGElvW/.VDL5AaWT.g0nLVkjR.o@@\n@@PEM_END@@RSA PRIVATE KEY-----\"\nPORT=8080\n"
+  },
+  "read": ".env",
+  "hide": [
+   "@@C:MIIEowIB.AAKCAQEA.u1SU1LfV.LPHCozMx.H2Mo4lgO.EePzNm0t.RgeLezV6.ffAt0gun@@",
+   "@@C:VTLw7onL.Rnrq0/Iz.W7yWR7Qk.rmBL7jTK.En5u+qKh.bwKfBstI.s+bMY2Zk.p18gnTxK@@",
+   "@@C:LxoS2tFc.zGkPLPgi.zskuemMg.hRniWaoL.cyehkd3q.qGElvW/V.DL5AaWTg.0nLVkjRo@@"
+  ],
+  "keep": [
+   "NODE_ENV=production",
+   "PORT=8080"
+  ]
+ },
+ {
+  "id": "dotenv-multiline-json",
+  "why": "multi-line single-quoted JSON value: inner secrets hidden, following settings kept (private_key_id is the key identifier sent in JWT kid headers, not a secret)",
+  "files": {
+   ".env": "GOOGLE_CREDENTIALS='{\n  \"type\": \"@@GCP_SA_TYPE@@\",\n  \"private_key_id\": \"@@C:3f9c2a7b.1e8d4f6a.0c5b9e2d.7a1f4c8b.6e3d0a9f@@\",\n  \"client_secret\": \"Tq8vR3nWx5Lm2Zk7\"\n}'\nPORT=8080\n"
+  },
+  "read": ".env",
+  "hide": [
+   "Tq8vR3nWx5Lm2Zk7"
+  ],
+  "keep": [
+   "PORT=8080"
+  ]
+ },
+ {
+  "id": "json-pretty-oauth-credentials",
+  "why": "pretty-printed JSON credentials.json: values followed by a comma are masked even when harmless",
+  "files": {
+   "credentials.json": "{\n  \"account\": \"\",\n  \"client_id\": \"123456789012-abc123def456.@@GOOG_OAUTH_ID@@\",\n  \"client_secret\": \"@@GOOG_OAUTH_SECRET@@@@C:Qm7vT2xL.p9Hx4wN8.kRz2Lt5@@\",\n  \"quota_project_id\": \"acme-staging\",\n  \"refresh_token\": \"@@GOOG_REFRESH@@@@C:gLxQm7vT.2xLp9CgY.IARAAGBA.SNwF@@-L9IrHx4wN8kRz2Lt5Wq\",\n  \"type\": \"authorized_user\",\n  \"universe_domain\": \"googleapis.com\"\n}\n"
+  },
+  "read": "credentials.json",
+  "hide": [
+   "@@GOOG_OAUTH_SECRET@@@@C:Qm7vT2xL.p9Hx4wN8.kRz2Lt5@@",
+   "@@GOOG_REFRESH@@@@C:gLxQm7vT.2xLp9CgY.IARAAGBA.SNwF@@-L9IrHx4wN8kRz2Lt5Wq"
+  ],
+  "keep": [
+   "\"quota_project_id\": \"acme-staging\"",
+   "\"type\": \"authorized_user\"",
+   "\"universe_domain\": \"googleapis.com\""
+  ]
+ },
+ {
+  "id": "json-nested-secrets",
+  "why": "nested JSON: object keys and harmless values are structure the agent needs, the password is secret",
+  "files": {
+   "config/secrets.json": "{\n  \"database\": {\n    \"host\": \"db.internal\",\n    \"port\": 5432,\n    \"password\": \"Vt7qL2mZx9Rk\"\n  },\n  \"region\": \"eu-west-1\"\n}\n"
+  },
+  "read": "config/secrets.json",
+  "hide": [
+   "Vt7qL2mZx9Rk"
+  ],
+  "keep": [
+   "\"database\": {",
+   "\"host\": \"db.internal\"",
+   "\"port\": 5432",
+   "\"region\": \"eu-west-1\""
+  ]
+ },
+ {
+  "id": "ini-aws-credentials",
+  "why": "INI profiles and region stay, secret access keys masked",
+  "files": {
+   "~/.aws/credentials": "[default]\naws_access_key_id = @@AWS_AKIA@@Q7XKM2LP9VT4NWZ8\naws_secret_access_key = @@C:q9Zt3Lm8.Vx2Rk7Wn.4Pb6Ys1H.c5Jd0Fg8.Ta3Ue6Ko@@\nregion = us-east-1\n\n[staging]\naws_access_key_id = @@AWS_AKIA@@Z3RT8WQ5LM2KX7VN\naws_secret_access_key = @@C:Hc5Jd0Fg.8Ta3Ue6K.oq9Zt3Lm.8Vx2Rk7W.n4Pb6Ys1@@\n"
+  },
+  "read": "~/.aws/credentials",
+  "hide": [
+   "@@C:q9Zt3Lm8.Vx2Rk7Wn.4Pb6Ys1H.c5Jd0Fg8.Ta3Ue6Ko@@",
+   "@@C:Hc5Jd0Fg.8Ta3Ue6K.oq9Zt3Lm.8Vx2Rk7W.n4Pb6Ys1@@"
+  ],
+  "keep": [
+   "[default]",
+   "[staging]",
+   "region = us-east-1"
+  ]
+ },
+ {
+  "id": "npmrc-registry-and-env-ref",
+  "why": ".npmrc: scoped registries and ${VAR} token references are harmless, a literal token is not",
+  "files": {
+   ".npmrc": "registry=https://registry.npmjs.org/\n@acme:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}\n//registry.npmjs.org/:_authToken=@@NPM@@@@C:Qm7vT2xL.p9Hx4wN8.kRz2Lt5W.q3Yc6Jd8.Zt0Ab@@\n"
+  },
+  "read": ".npmrc",
+  "hide": [
+   "@@NPM@@@@C:Qm7vT2xL.p9Hx4wN8.kRz2Lt5W.q3Yc6Jd8.Zt0Ab@@"
+  ],
+  "keep": [
+   "registry=https://registry.npmjs.org/",
+   "@acme:registry=https://npm.pkg.github.com",
+   "${GITHUB_TOKEN}"
+  ]
+ },
+ {
+  "id": "netrc-read-and-cat",
+  "why": "netrc isn't KEY=VALUE: masked read loses machine names, and cat prints the password unredacted",
+  "files": {
+   "~/.netrc": "machine api.heroku.com\n  login dev@example.com\n  password Hk9Lw2Qz7v\nmachine github.com login octo password Tq8vR3nWx5\n"
+  },
+  "read": "~/.netrc",
+  "output": "machine api.heroku.com\n  login dev@example.com\n  password Hk9Lw2Qz7v\nmachine github.com login octo password Tq8vR3nWx5\n",
+  "hide": [
+   "Hk9Lw2Qz7v",
+   "Tq8vR3nWx5"
+  ],
+  "keep": [
+   "machine api.heroku.com"
+  ]
+ },
+ {
+  "id": "envrc-directives",
+  "why": "direnv directives in .envrc are harmless commands, not secret values",
+  "files": {
+   ".envrc": "use flake\nlayout python3\ndotenv_if_exists .env.local\nexport AWS_PROFILE=dev\nexport GITHUB_TOKEN=@@GH_P@@@@C:Qm7vT2xL.p9Hx4wN8.kRz2Lt5W.q3Yc6Jd8.Zt0A@@\n"
+  },
+  "read": ".envrc",
+  "hide": [
+   "@@GH_P@@@@C:Qm7vT2xL.p9Hx4wN8.kRz2Lt5W.q3Yc6Jd8.Zt0A@@"
+  ],
+  "keep": [
+   "use flake",
+   "layout python3",
+   "dotenv_if_exists .env.local",
+   "export AWS_PROFILE=dev"
+  ]
+ },
+ {
+  "id": "kubeconfig-read",
+  "why": "~/.kube/config holds client keys and tokens but is exempted by the /config rule",
+  "files": {
+   "~/.kube/config": "apiVersion: v1\nclusters:\n- cluster:\n    server: https://10.0.0.1:6443\n  name: prod\ncontexts:\n- context:\n    cluster: prod\n    user: admin\n  name: prod\ncurrent-context: prod\nkind: Config\nusers:\n- name: admin\n  user:\n    client-key-data: @@C:LS0tLS1C.RUdJTiBS.U0EgUFJJ.VkFURSBL.RVktLS0t.LQpNSUlF.b3dJQkFB.S0NBUUVB.dTFTVTFM.ZlZMUEhD.b3pNeEgy.TW80bGdP.RWVQek5t.MHRSZ2VM.ZXpWNmZm.QXQwZ3Vu.ClZUTHc3.b25MUm5y.cTAvSXpX.N3lXUjdR.a3JtQkw3.alRLRW41.dStxS2hi.d0tmQnN0.SXMrYk1Z.MlprcDE4.Z25UeEsK.THhvUzJ0.RmN6R2tQ.TFBnaXpz.a3VlbU1n.aFJuaVdh.b0xjeWVo.a2QzcXFH.RWx2Vy9W.REw1QWFX.VGcwbkxW.a2pSbwot.LS0tLUVO.RCBSU0Eg.UFJJVkFU.RSBLRVkt.LS0tLQo=@@\n    token: 7f3kq9.x2m8vn4pl6rt0wz1\n"
+  },
+  "read": "~/.kube/config",
+  "hide": [
+   "@@C:LS0tLS1C.RUdJTiBS.U0EgUFJJ.VkFURSBL.RVktLS0t.LQpNSUlF.b3dJQkFB.S0NBUUVB.dTFTVTFM.ZlZMUEhD.b3pNeEgy.TW80bGdP.RWVQek5t.MHRSZ2VM.ZXpWNmZm.QXQwZ3Vu.ClZUTHc3.b25MUm5y.cTAvSXpX.N3lXUjdR.a3JtQkw3.alRLRW41.dStxS2hi.d0tmQnN0.SXMrYk1Z.MlprcDE4.Z25UeEsK.THhvUzJ0.RmN6R2tQ.TFBnaXpz.a3VlbU1n.aFJuaVdh.b0xjeWVo.a2QzcXFH.RWx2Vy9W.REw1QWFX.VGcwbkxW.a2pSbwot.LS0tLUVO.RCBSU0Eg.UFJJVkFU.RSBLRVkt.LS0tLQo=@@",
+   "7f3kq9.x2m8vn4pl6rt0wz1"
+  ],
+  "keep": [
+   "server: https://10.0.0.1:6443",
+   "current-context: prod"
+  ]
+ },
+ {
+  "id": "grep-rn-project",
+  "why": "grep -rn across the project: .env line masked, source lines intact",
+  "files": {
+   ".env": "NODE_ENV=development\nAPI_KEY=k8Hq2LmZ9xPvR4tN\n",
+   "src/config.ts": "export const config = {\n  apiKey: process.env.API_KEY,\n};\n",
+   "README.md": "Set API_KEY in .env\n"
+  },
+  "output": "./.env:2:API_KEY=k8Hq2LmZ9xPvR4tN\n./src/config.ts:2:  apiKey: process.env.API_KEY,\n./README.md:1:Set API_KEY in .env\n",
+  "hide": [
+   "k8Hq2LmZ9xPvR4tN"
+  ],
+  "keep": [
+   "./.env:2:API_KEY=",
+   "./src/config.ts:2:  apiKey: process.env.API_KEY,",
+   "./README.md:1:Set API_KEY in .env"
+  ]
+ },
+ {
+  "id": "grep-context-lines",
+  "why": "grep -rn -C1: short secret on a match line masked, harmless context lines kept",
+  "files": {
+   ".env": "NODE_ENV=development\nDB_PASSWORD=pw9Q2\nPORT=3000\n",
+   "docker-compose.yml": "services:\n  db:\n    image: postgres:16\n    ports:\n      - 5432:5432\n    env_file: .env\n    environment:\n      - DB_PASSWORD=${DB_PASSWORD}\n"
+  },
+  "output": "./.env-1-NODE_ENV=development\n./.env:2:DB_PASSWORD=pw9Q2\n./.env-3-PORT=3000\n--\n./docker-compose.yml-7-    environment:\n./docker-compose.yml:8:      - DB_PASSWORD=${DB_PASSWORD}\n",
+  "hide": [
+   "pw9Q2"
+  ],
+  "keep": [
+   "./.env-1-NODE_ENV=development",
+   "./.env-3-PORT=3000",
+   "- DB_PASSWORD=${DB_PASSWORD}"
+  ]
+ },
+ {
+  "id": "grep-single-file-no-filename",
+  "why": "grep on one file prints no filename; the command names the file, so its output is masked",
+  "files": {
+   ".env": "NODE_ENV=development\nDB_PASSWORD=pw9Q2\n"
+  },
+  "output": "2:DB_PASSWORD=pw9Q2\n",
+  "hide": [
+   "pw9Q2"
+  ],
+  "command": "grep -n PASSWORD .env"
+ },
+ {
+  "id": "rg-heading",
+  "why": "rg --heading groups matches under a path line, so match lines carry no path",
+  "files": {
+   ".env": "NODE_ENV=development\nDB_PASSWORD=pw9Q2\n",
+   "src/db.ts": "const a = 1;\nconst b = 2;\nconst c = 3;\nconst d = 4;\nconst pw = process.env.DB_PASSWORD;\n"
+  },
+  "output": ".env\n2:DB_PASSWORD=pw9Q2\n\nsrc/db.ts\n5:const pw = process.env.DB_PASSWORD;\n",
+  "hide": [
+   "pw9Q2"
+  ],
+  "keep": [
+   "5:const pw = process.env.DB_PASSWORD;"
+  ]
+ },
+ {
+  "id": "git-grep-revision",
+  "why": "git grep against a revision prefixes rev: to the path, defeating attribution",
+  "files": {
+   ".env": "NODE_ENV=development\nDB_PASSWORD=pw9Q2\n"
+  },
+  "output": "HEAD~1:.env:2:DB_PASSWORD=pw9Q2\n",
+  "hide": [
+   "pw9Q2"
+  ]
+ },
+ {
+  "id": "grep-path-with-dash-digits",
+  "why": "a secret file whose name contains -N- is mis-split as path-N- context syntax",
+  "files": {
+   "deploy/web-2-staging.env": "NODE_ENV=staging\nDB_PASS=pw9Q2\n"
+  },
+  "output": "deploy/web-2-staging.env:2:DB_PASS=pw9Q2\n",
+  "hide": [
+   "pw9Q2"
+  ],
+  "keep": [
+   "deploy/web-2-staging.env:2:DB_PASS="
+  ]
+ },
+ {
+  "id": "grep-path-with-colon",
+  "why": "a path containing a colon (timestamped backup dir) breaks attribution",
+  "files": {
+   "backups/2026-09-01T10:30/.env": "NODE_ENV=production\nDB_PASSWORD=pw9Q2\n"
+  },
+  "output": "backups/2026-09-01T10:30/.env:2:DB_PASSWORD=pw9Q2\n",
+  "hide": [
+   "pw9Q2"
+  ]
+ },
+ {
+  "id": "compose-config-inline-comment",
+  "why": "the stored value includes the inline comment, so the bare secret printed by docker compose config isn't redacted",
+  "files": {
+   ".env": "API_KEY=k8Hq2LmZ9xPvR4tN # rotated 2026-08\n",
+   "compose.yaml": "services:\n  api:\n    image: acme/api:1.4\n    environment:\n      API_KEY: ${API_KEY}\n"
+  },
+  "output": "name: project\nservices:\n  api:\n    environment:\n      API_KEY: k8Hq2LmZ9xPvR4tN\n    image: acme/api:1.4\n    networks:\n      default: null\nnetworks:\n  default:\n    name: project_default\n",
+  "hide": [
+   "k8Hq2LmZ9xPvR4tN"
+  ],
+  "keep": [
+   "image: acme/api:1.4",
+   "name: project_default"
+  ]
+ },
+ {
+  "id": "redis-url-password-no-user",
+  "why": "redis://:password@host has an empty user, which neither value extraction nor URL_PASSWORD handles",
+  "files": {
+   ".env": "REDIS_URL=redis://:p4ssW0rdXYZ@cache:6379/0\n"
+  },
+  "read": ".env",
+  "output": "REDIS_URL=redis://:p4ssW0rdXYZ@cache:6379/0\n",
+  "hide": [
+   "p4ssW0rdXYZ"
+  ],
+  "keep": [
+   "REDIS_URL="
+  ]
+ },
+ {
+  "id": "pgpass-read",
+  "why": "~/.pgpass (host:port:db:user:password) is a standard credential file but isn't recognized",
+  "files": {
+   "~/.pgpass": "localhost:5432:acme_dev:acme:Vt7qL2mZx9Rk\ndb.internal:5432:*:acme:Hq4mT8vLz2Rw\n"
+  },
+  "read": "~/.pgpass",
+  "hide": [
+   "Vt7qL2mZx9Rk",
+   "Hq4mT8vLz2Rw"
+  ]
+ },
+ {
+  "id": "maven-settings-xml",
+  "why": "XML credentials in ~/.m2/settings.xml are neither recognized nor masked",
+  "files": {
+   "~/.m2/settings.xml": "<settings>\n  <servers>\n    <server>\n      <id>acme-releases</id>\n      <username>deploy</username>\n      <password>Qm7vT2xLp9</password>\n    </server>\n  </servers>\n</settings>\n"
+  },
+  "read": "~/.m2/settings.xml",
+  "hide": [
+   "Qm7vT2xLp9"
+  ],
+  "keep": [
+   "<id>acme-releases</id>"
+  ]
+ }
+]

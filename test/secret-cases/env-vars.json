@@ -1,0 +1,586 @@
+[
+ {
+  "id": "laptop-printenv",
+  "why": "macOS dev laptop printenv: API tokens hidden, secret-sounding harmless vars (PWD, SSH_AUTH_SOCK, GPG_TTY, PASSWORD_STORE_DIR, TOKENIZERS_PARALLELISM) kept",
+  "env": {
+   "HOME": "/Users/dana",
+   "SHELL": "/bin/zsh",
+   "PWD": "/Users/dana/src/webapp",
+   "OLDPWD": "/Users/dana/src",
+   "SSH_AUTH_SOCK": "/private/tmp/com.apple.launchd.@@C:Xk2mPq9L.rT/Liste.ners@@",
+   "GPG_TTY": "/dev/ttys004",
+   "PASSWORD_STORE_DIR": "/Users/dana/.password-store",
+   "TOKENIZERS_PARALLELISM": "false",
+   "TERM_SESSION_ID": "w0t0p0:F25EC84D-1F2E-4C3B-9A8D-8DBC74254770",
+   "SECRET_SCANNING_ENABLED": "true",
+   "KEYMAP": "us",
+   "HOMEBREW_PREFIX": "/opt/homebrew",
+   "HOMEBREW_GITHUB_API_TOKEN": "@@GH_P@@@@C:u8jzPde0.IgxLd6Gn.cfBAepfJ.Bd0Kh8oO.OL8d@@",
+   "OPENAI_API_KEY": "@@SK_PROJ@@@@C:KLzdocJ2.isAjIhKt.J0RlgLKO.mxgJTeKd.NnFRIBXu.DL7DxtpY@@",
+   "ANTHROPIC_API_KEY": "@@SK_ANT@@api03-@@C:lSXpfKtH.F4vUCsMe.hGAkWvj7.FAc9QeWJ.KY40uvSw.MFLZDe1f.8rESQedU.StPKR0Cs.Ty4Qwb8D.wkNhFdnX@@-siVpzzAA",
+   "EDITOR": "nvim",
+   "LANG": "en_US.UTF-8"
+  },
+  "output": "HOME=/Users/dana\nSHELL=/bin/zsh\nPWD=/Users/dana/src/webapp\nOLDPWD=/Users/dana/src\nSSH_AUTH_SOCK=/private/tmp/com.apple.launchd.@@C:Xk2mPq9L.rT/Liste.ners@@\nGPG_TTY=/dev/ttys004\nPASSWORD_STORE_DIR=/Users/dana/.password-store\nTOKENIZERS_PARALLELISM=false\nTERM_SESSION_ID=w0t0p0:F25EC84D-1F2E-4C3B-9A8D-8DBC74254770\nSECRET_SCANNING_ENABLED=true\nKEYMAP=us\nHOMEBREW_PREFIX=/opt/homebrew\nHOMEBREW_GITHUB_API_TOKEN=@@GH_P@@@@C:u8jzPde0.IgxLd6Gn.cfBAepfJ.Bd0Kh8oO.OL8d@@\nOPENAI_API_KEY=@@SK_PROJ@@@@C:KLzdocJ2.isAjIhKt.J0RlgLKO.mxgJTeKd.NnFRIBXu.DL7DxtpY@@\nANTHROPIC_API_KEY=@@SK_ANT@@api03-@@C:lSXpfKtH.F4vUCsMe.hGAkWvj7.FAc9QeWJ.KY40uvSw.MFLZDe1f.8rESQedU.StPKR0Cs.Ty4Qwb8D.wkNhFdnX@@-siVpzzAA\nEDITOR=nvim\nLANG=en_US.UTF-8\n",
+  "hide": [
+   "@@GH_P@@@@C:u8jzPde0.IgxLd6Gn.cfBAepfJ.Bd0Kh8oO.OL8d@@",
+   "@@SK_PROJ@@@@C:KLzdocJ2.isAjIhKt.J0RlgLKO.mxgJTeKd.NnFRIBXu.DL7DxtpY@@",
+   "@@SK_ANT@@api03-@@C:lSXpfKtH.F4vUCsMe.hGAkWvj7.FAc9QeWJ.KY40uvSw.MFLZDe1f.8rESQedU.StPKR0Cs.Ty4Qwb8D.wkNhFdnX@@-siVpzzAA"
+  ],
+  "keep": [
+   "PWD=/Users/dana/src/webapp",
+   "OLDPWD=/Users/dana/src",
+   "SSH_AUTH_SOCK=/private/tmp/com.apple.launchd.@@C:Xk2mPq9L.rT/Liste.ners@@",
+   "GPG_TTY=/dev/ttys004",
+   "PASSWORD_STORE_DIR=/Users/dana/.password-store",
+   "TOKENIZERS_PARALLELISM=false",
+   "TERM_SESSION_ID=w0t0p0:F25EC84D-1F2E-4C3B-9A8D-8DBC74254770",
+   "SECRET_SCANNING_ENABLED=true",
+   "KEYMAP=us",
+   "HOMEBREW_PREFIX=/opt/homebrew",
+   "HOMEBREW_GITHUB_API_TOKEN=",
+   "OPENAI_API_KEY="
+  ]
+ },
+ {
+  "id": "github-actions-env",
+  "why": "env dump in a GitHub Actions step: GITHUB_TOKEN and runtime JWT hidden, repo/sha/ref/workspace kept",
+  "env": {
+   "CI": "true",
+   "GITHUB_ACTIONS": "true",
+   "GITHUB_REPOSITORY": "acme/billing-service",
+   "GITHUB_SHA": "@@C:b23c6f5d.a2cec255.404e4fb4.40034d66.08697a8d@@",
+   "GITHUB_REF": "refs/pull/482/merge",
+   "GITHUB_WORKSPACE": "/home/runner/work/billing-service/billing-service",
+   "RUNNER_OS": "Linux",
+   "RUNNER_TEMP": "/home/runner/work/_temp",
+   "GITHUB_TOKEN": "@@GH_S@@@@C:F1Llqsaj.AIxNKu8i.S2G8NPRV.dD53X83R.ZJzz@@",
+   "ACTIONS_RUNTIME_TOKEN": "@@JWT@@@@C:0eXAiOiJ.KV1QiLCJ.hbGciOiJ.SUzI1NiI.sIng1dCI.6IkzzgEO.zdmenCkh.vMdgaKj@@.@@JWT@@@@C:uYW1laWQ.iOiJkZGR.kZGRkZC1.kZGRkLWR.kZGQtZGR.kZC1kZGR.kZGRkZGR.kZGQiLCJ.zY3AiOiJ.BY3Rpb25.zLlJlc3V.sdHMIg8x.Nbe3nNyj.Oq9wMxEh.h2FDEEtf.jgVvVqE1.SkHb@@.@@C:n88HxjSI.6bWHtP3f.S2qHx6kw.XoIIXGvO.oNZYW2mZ.p0zVZomH.FwUbbYrE.qmSM9wCZ.7Uw9xfog.oEmvnEN5.N1aE6P@@",
+   "GITHUB_RUN_ID": "11823349012",
+   "GITHUB_EVENT_NAME": "pull_request"
+  },
+  "output": "ACTIONS_RUNTIME_TOKEN=@@JWT@@@@C:0eXAiOiJ.KV1QiLCJ.hbGciOiJ.SUzI1NiI.sIng1dCI.6IkzzgEO.zdmenCkh.vMdgaKj@@.@@JWT@@@@C:uYW1laWQ.iOiJkZGR.kZGRkZC1.kZGRkLWR.kZGQtZGR.kZC1kZGR.kZGRkZGR.kZGQiLCJ.zY3AiOiJ.BY3Rpb25.zLlJlc3V.sdHMIg8x.Nbe3nNyj.Oq9wMxEh.h2FDEEtf.jgVvVqE1.SkHb@@.@@C:n88HxjSI.6bWHtP3f.S2qHx6kw.XoIIXGvO.oNZYW2mZ.p0zVZomH.FwUbbYrE.qmSM9wCZ.7Uw9xfog.oEmvnEN5.N1aE6P@@\nCI=true\nGITHUB_ACTIONS=true\nGITHUB_EVENT_NAME=pull_request\nGITHUB_REF=refs/pull/482/merge\nGITHUB_REPOSITORY=acme/billing-service\nGITHUB_RUN_ID=11823349012\nGITHUB_SHA=@@C:b23c6f5d.a2cec255.404e4fb4.40034d66.08697a8d@@\nGITHUB_TOKEN=@@GH_S@@@@C:F1Llqsaj.AIxNKu8i.S2G8NPRV.dD53X83R.ZJzz@@\nGITHUB_WORKSPACE=/home/runner/work/billing-service/billing-service\nRUNNER_OS=Linux\nRUNNER_TEMP=/home/runner/work/_temp\n",
+  "hide": [
+   "@@GH_S@@@@C:F1Llqsaj.AIxNKu8i.S2G8NPRV.dD53X83R.ZJzz@@",
+   "@@JWT@@@@C:0eXAiOiJ.KV1QiLCJ.hbGciOiJ.SUzI1NiI.sIng1dCI.6IkzzgEO.zdmenCkh.vMdgaKj@@.@@JWT@@@@C:uYW1laWQ.iOiJkZGR.kZGRkZC1.kZGRkLWR.kZGQtZGR.kZC1kZGR.kZGRkZGR.kZGQiLCJ.zY3AiOiJ.BY3Rpb25.zLlJlc3V.sdHMIg8x.Nbe3nNyj.Oq9wMxEh.h2FDEEtf.jgVvVqE1.SkHb@@.@@C:n88HxjSI.6bWHtP3f.S2qHx6kw.XoIIXGvO.oNZYW2mZ.p0zVZomH.FwUbbYrE.qmSM9wCZ.7Uw9xfog.oEmvnEN5.N1aE6P@@"
+  ],
+  "keep": [
+   "GITHUB_REPOSITORY=acme/billing-service",
+   "GITHUB_SHA=@@C:b23c6f5d.a2cec255.404e4fb4.40034d66.08697a8d@@",
+   "GITHUB_REF=refs/pull/482/merge",
+   "GITHUB_WORKSPACE=/home/runner/work/billing-service/billing-service",
+   "RUNNER_OS=Linux",
+   "GITHUB_RUN_ID=11823349012",
+   "GITHUB_TOKEN=",
+   "ACTIONS_RUNTIME_TOKEN="
+  ]
+ },
+ {
+  "id": "gitlab-ci-printenv",
+  "why": "GitLab CI printenv: CI_JOB_TOKEN/CI_REGISTRY_PASSWORD hidden, project path, sha, registry host kept",
+  "env": {
+   "CI_JOB_TOKEN": "@@GL_CI_JOB@@64_@@C:1id6Vw5D.QL05HA06.4GiI@@",
+   "CI_REGISTRY_PASSWORD": "@@GL_CI_JOB@@64_@@C:1id6Vw5D.QL05HA06.4GiI@@",
+   "CI_REGISTRY_USER": "gitlab-ci-token",
+   "CI_REGISTRY": "registry.gitlab.com",
+   "CI_PROJECT_PATH": "acme/platform/api",
+   "CI_COMMIT_SHA": "@@C:40e50454.f31af317.6813e02e.a68ef786.e4d3cea2@@",
+   "CI_COMMIT_REF_NAME": "main",
+   "CI_PIPELINE_ID": "1438829071",
+   "CI_SERVER_HOST": "gitlab.com",
+   "CI_PROJECT_DIR": "/builds/acme/platform/api",
+   "GITLAB_CI": "true"
+  },
+  "output": "CI_JOB_TOKEN=@@GL_CI_JOB@@64_@@C:1id6Vw5D.QL05HA06.4GiI@@\nCI_REGISTRY_PASSWORD=@@GL_CI_JOB@@64_@@C:1id6Vw5D.QL05HA06.4GiI@@\nCI_REGISTRY_USER=gitlab-ci-token\nCI_REGISTRY=registry.gitlab.com\nCI_PROJECT_PATH=acme/platform/api\nCI_COMMIT_SHA=@@C:40e50454.f31af317.6813e02e.a68ef786.e4d3cea2@@\nCI_COMMIT_REF_NAME=main\nCI_PIPELINE_ID=1438829071\nCI_SERVER_HOST=gitlab.com\nCI_PROJECT_DIR=/builds/acme/platform/api\nGITLAB_CI=true\n",
+  "hide": [
+   "@@GL_CI_JOB@@64_@@C:1id6Vw5D.QL05HA06.4GiI@@"
+  ],
+  "keep": [
+   "CI_REGISTRY_USER=gitlab-ci-token",
+   "CI_REGISTRY=registry.gitlab.com",
+   "CI_PROJECT_PATH=acme/platform/api",
+   "CI_COMMIT_SHA=@@C:40e50454.f31af317.6813e02e.a68ef786.e4d3cea2@@",
+   "CI_COMMIT_REF_NAME=main",
+   "CI_PIPELINE_ID=1438829071",
+   "CI_PROJECT_DIR=/builds/acme/platform/api",
+   "CI_JOB_TOKEN="
+  ]
+ },
+ {
+  "id": "circleci-export-p",
+  "why": "CircleCI bash export -p: CIRCLE_TOKEN hidden, branch, sha, build URL kept",
+  "env": {
+   "CIRCLECI": "true",
+   "CIRCLE_BRANCH": "feature/invoice-pdf",
+   "CIRCLE_SHA1": "@@C:fa2815d2.80282728.3e0ad841.73581569.969e58b0@@",
+   "CIRCLE_BUILD_URL": "https://app.circleci.@@C:com/pipe.lines/gi.thub/acm.e/web/51.21/workf.lows/0b6.f7e2a@@-1c3d-4e5f-8a9b-@@C:0c1d2e3f.4a5b/job.s/88231@@",
+   "CIRCLE_PROJECT_REPONAME": "web",
+   "CIRCLE_TOKEN": "CCIPAT_@@C:QpBenQtY.h5Xj8TPQ.xjq4i9@@_@@C:e73cf575.dcad6ba2.b0aee0ca.92373288.1584d8c4@@",
+   "CIRCLE_WORKING_DIRECTORY": "~/project"
+  },
+  "output": "declare -x CIRCLECI=\"true\"\ndeclare -x CIRCLE_BRANCH=\"feature/invoice-pdf\"\ndeclare -x CIRCLE_BUILD_URL=\"https://app.circleci.@@C:com/pipe.lines/gi.thub/acm.e/web/51.21/workf.lows/0b6.f7e2a@@-1c3d-4e5f-8a9b-@@C:0c1d2e3f.4a5b/job.s/88231@@\"\ndeclare -x CIRCLE_PROJECT_REPONAME=\"web\"\ndeclare -x CIRCLE_SHA1=\"@@C:fa2815d2.80282728.3e0ad841.73581569.969e58b0@@\"\ndeclare -x CIRCLE_TOKEN=\"CCIPAT_@@C:QpBenQtY.h5Xj8TPQ.xjq4i9@@_@@C:e73cf575.dcad6ba2.b0aee0ca.92373288.1584d8c4@@\"\ndeclare -x CIRCLE_WORKING_DIRECTORY=\"~/project\"\n",
+  "hide": [
+   "CCIPAT_@@C:QpBenQtY.h5Xj8TPQ.xjq4i9@@_@@C:e73cf575.dcad6ba2.b0aee0ca.92373288.1584d8c4@@"
+  ],
+  "keep": [
+   "CIRCLE_BRANCH=\"feature/invoice-pdf\"",
+   "CIRCLE_SHA1=\"@@C:fa2815d2.80282728.3e0ad841.73581569.969e58b0@@\"",
+   "https://app.circleci.@@C:com/pipe.lines/gi.thub/acm.e/web/51.21/workf.lows/0b6.f7e2a@@-1c3d-4e5f-8a9b-@@C:0c1d2e3f.4a5b/job.s/88231@@",
+   "CIRCLE_PROJECT_REPONAME=\"web\"",
+   "CIRCLE_WORKING_DIRECTORY=\"~/project\""
+  ]
+ },
+ {
+  "id": "buildkite-env",
+  "why": "Buildkite agent env: agent access token and API token hidden, pipeline metadata kept",
+  "env": {
+   "BUILDKITE": "true",
+   "BUILDKITE_AGENT_ACCESS_TOKEN": "@@C:6i76bofb.cixgy29d.b8p5qa3e.68f7e4qe.qpno35ye.4scmejvq.ti@@",
+   "BUILDKITE_BRANCH": "main",
+   "BUILDKITE_COMMIT": "@@C:8baa7196.b50ac2f8.6702824c.1c099724.caf4941d@@",
+   "BUILDKITE_PIPELINE_SLUG": "monorepo-deploy",
+   "BUILDKITE_AGENT_NAME": "ci-agent-i-0a1b2c3d4e5f-1",
+   "BUILDKITE_BUILD_URL": "https://buildkite.com/acme/monorepo-deploy/builds/9912",
+   "BUILDKITE_API_TOKEN": "bkua_@@C:81006f7e.3dfc967a.64cb1402.8d512c97.91e558e0@@"
+  },
+  "output": "BUILDKITE=true\nBUILDKITE_AGENT_ACCESS_TOKEN=@@C:6i76bofb.cixgy29d.b8p5qa3e.68f7e4qe.qpno35ye.4scmejvq.ti@@\nBUILDKITE_BRANCH=main\nBUILDKITE_COMMIT=@@C:8baa7196.b50ac2f8.6702824c.1c099724.caf4941d@@\nBUILDKITE_PIPELINE_SLUG=monorepo-deploy\nBUILDKITE_AGENT_NAME=ci-agent-i-0a1b2c3d4e5f-1\nBUILDKITE_BUILD_URL=https://buildkite.com/acme/monorepo-deploy/builds/9912\nBUILDKITE_API_TOKEN=bkua_@@C:81006f7e.3dfc967a.64cb1402.8d512c97.91e558e0@@\n",
+  "hide": [
+   "@@C:6i76bofb.cixgy29d.b8p5qa3e.68f7e4qe.qpno35ye.4scmejvq.ti@@",
+   "bkua_@@C:81006f7e.3dfc967a.64cb1402.8d512c97.91e558e0@@"
+  ],
+  "keep": [
+   "BUILDKITE_BRANCH=main",
+   "BUILDKITE_COMMIT=@@C:8baa7196.b50ac2f8.6702824c.1c099724.caf4941d@@",
+   "BUILDKITE_PIPELINE_SLUG=monorepo-deploy",
+   "BUILDKITE_AGENT_NAME=ci-agent-i-0a1b2c3d4e5f-1",
+   "BUILDKITE_BUILD_URL=https://buildkite.com/acme/monorepo-deploy/builds/9912"
+  ]
+ },
+ {
+  "id": "aws-cloudshell-env",
+  "why": "AWS CloudShell `env | grep AWS`: access key, secret key and session token hidden; region and execution env kept",
+  "env": {
+   "AWS_ACCESS_KEY_ID": "@@AWS_ASIA@@A4D5RGN5S7S333H9",
+   "AWS_SECRET_ACCESS_KEY": "@@C:zNk8cL6j.5IXAAjls.HUqJoUDx.+Ydua+5Z.Ms1SWOpQ@@",
+   "AWS_SESSION_TOKEN": "@@C:IQoJb3Jp.Z2luX2Vj.EaPRYpzb.LGViYXjU.2JgJngKt.FI3OyV2d.ZAkg05rK.+gqv81RK.MGHZEM9Y.pvujA/C5.Q52ryFlw.RlOEVHzc.0X0AWIRh./JUqBlIF.XZ53Ncqe.28+ajY75.FnCttn6k.faqDeMqG.3omjMyXH.CabM6JOF.8EFd0Nhc.y/1kGD2V.D/eR1UYz.aLiA/zNy.D7CHLn/x.C+1hsYgB.ds1ghxY5.OokvQyx7.eNWVQ4vn.akJkS1pA.WTN3lg8z.V5yPU8d0.FZfWe7ih.GyiRUIQf.HOJMaidD.n87XG3/q./xbMtEPO.6UkzYuF0.ie9Pu2nj.HkAm1@@",
+   "AWS_REGION": "us-west-2",
+   "AWS_DEFAULT_REGION": "us-west-2",
+   "AWS_EXECUTION_ENV": "CloudShell",
+   "AWS_CONTAINER_CREDENTIALS_FULL_URI": "http://localhost:1338/latest/meta-data/container/security-credentials"
+  },
+  "output": "AWS_ACCESS_KEY_ID=@@AWS_ASIA@@A4D5RGN5S7S333H9\nAWS_SECRET_ACCESS_KEY=@@C:zNk8cL6j.5IXAAjls.HUqJoUDx.+Ydua+5Z.Ms1SWOpQ@@\nAWS_SESSION_TOKEN=@@C:IQoJb3Jp.Z2luX2Vj.EaPRYpzb.LGViYXjU.2JgJngKt.FI3OyV2d.ZAkg05rK.+gqv81RK.MGHZEM9Y.pvujA/C5.Q52ryFlw.RlOEVHzc.0X0AWIRh./JUqBlIF.XZ53Ncqe.28+ajY75.FnCttn6k.faqDeMqG.3omjMyXH.CabM6JOF.8EFd0Nhc.y/1kGD2V.D/eR1UYz.aLiA/zNy.D7CHLn/x.C+1hsYgB.ds1ghxY5.OokvQyx7.eNWVQ4vn.akJkS1pA.WTN3lg8z.V5yPU8d0.FZfWe7ih.GyiRUIQf.HOJMaidD.n87XG3/q./xbMtEPO.6UkzYuF0.ie9Pu2nj.HkAm1@@\nAWS_REGION=us-west-2\nAWS_DEFAULT_REGION=us-west-2\nAWS_EXECUTION_ENV=CloudShell\nAWS_CONTAINER_CREDENTIALS_FULL_URI=http://localhost:1338/latest/meta-data/container/security-credentials\n",
+  "hide": [
+   "@@AWS_ASIA@@A4D5RGN5S7S333H9",
+   "@@C:zNk8cL6j.5IXAAjls.HUqJoUDx.+Ydua+5Z.Ms1SWOpQ@@",
+   "@@C:IQoJb3Jp.Z2luX2Vj.EaPRYpzb.LGViYXjU.2JgJngKt.FI3OyV2d.ZAkg05rK.+gqv81RK.MGHZEM9Y.pvujA/C5.Q52ryFlw.RlOEVHzc.0X0AWIRh./JUqBlIF.XZ53Ncqe.28+ajY75.FnCttn6k.faqDeMqG.3omjMyXH.CabM6JOF.8EFd0Nhc.y/1kGD2V.D/eR1UYz.aLiA/zNy.D7CHLn/x.C+1hsYgB.ds1ghxY5.OokvQyx7.eNWVQ4vn.akJkS1pA.WTN3lg8z.V5yPU8d0.FZfWe7ih.GyiRUIQf.HOJMaidD.n87XG3/q./xbMtEPO.6UkzYuF0.ie9Pu2nj.HkAm1@@"
+  ],
+  "keep": [
+   "AWS_REGION=us-west-2",
+   "AWS_DEFAULT_REGION=us-west-2",
+   "AWS_EXECUTION_ENV=CloudShell"
+  ]
+ },
+ {
+  "id": "aws-secret-key-leading-slash",
+  "why": "AWS secret access keys are base64-alphabet and ~1 in 64 start with '/'; such a key in the env must still be hidden",
+  "env": {
+   "AWS_ACCESS_KEY_ID": "@@AWS_AKIA@@XCSOHDMMEX6L2QAG",
+   "AWS_SECRET_ACCESS_KEY": "@@C://5wDr16.EpLLJIVG.Hz4FxFEt.KyPiYGFD.m7ena8D5@@",
+   "AWS_REGION": "eu-central-1"
+  },
+  "output": "AWS_REGION=eu-central-1\nAWS_SECRET_ACCESS_KEY=@@C://5wDr16.EpLLJIVG.Hz4FxFEt.KyPiYGFD.m7ena8D5@@\n",
+  "hide": [
+   "@@C://5wDr16.EpLLJIVG.Hz4FxFEt.KyPiYGFD.m7ena8D5@@"
+  ],
+  "keep": [
+   "AWS_REGION=eu-central-1"
+  ]
+ },
+ {
+  "id": "pgpassword-env",
+  "why": "libpq's PGPASSWORD is a password whose name has no separator before PASSWORD; printenv must not leak it",
+  "env": {
+   "PGHOST": "db.staging.internal",
+   "PGPORT": "5432",
+   "PGUSER": "app_rw",
+   "PGDATABASE": "orders",
+   "PGPASSWORD": "@@C:Vh3xOMTN.wncxvjcn.qcMU@@"
+  },
+  "output": "PGHOST=db.staging.internal\nPGPORT=5432\nPGUSER=app_rw\nPGDATABASE=orders\nPGPASSWORD=@@C:Vh3xOMTN.wncxvjcn.qcMU@@\n",
+  "hide": [
+   "@@C:Vh3xOMTN.wncxvjcn.qcMU@@"
+  ],
+  "keep": [
+   "PGHOST=db.staging.internal",
+   "PGPORT=5432",
+   "PGUSER=app_rw",
+   "PGDATABASE=orders"
+  ]
+ },
+ {
+  "id": "mysql-pwd-env",
+  "why": "MYSQL_PWD is the mysql client's password variable; PWD is a credential segment here, not the working dir",
+  "env": {
+   "MYSQL_HOST": "mysql.prod.internal",
+   "MYSQL_TCP_PORT": "3306",
+   "MYSQL_PWD": "m7Q!P6n0a0uARxlNte",
+   "PWD": "/srv/app"
+  },
+  "output": "MYSQL_HOST=mysql.prod.internal\nMYSQL_TCP_PORT=3306\nMYSQL_PWD=m7Q!P6n0a0uARxlNte\nPWD=/srv/app\n",
+  "hide": [
+   "m7Q!P6n0a0uARxlNte"
+  ],
+  "keep": [
+   "MYSQL_HOST=mysql.prod.internal",
+   "MYSQL_TCP_PORT=3306",
+   "PWD=/srv/app"
+  ]
+ },
+ {
+  "id": "npm-config-auth-env",
+  "why": "@@NPM@@config__auth / NPM_CONFIG__AUTH holds base64 user:password for the registry",
+  "env": {
+   "NPM_CONFIG__AUTH": "@@C:Y2ktcHVi.bGlzaGVy.Om5jWUZK.RWVBZ1l6.UUpqT0lm.UGt6@@",
+   "NPM_CONFIG_REGISTRY": "https://npm.pkg.example.com/",
+   "NPM_CONFIG_ALWAYS_AUTH": "true"
+  },
+  "output": "NPM_CONFIG_ALWAYS_AUTH=true\nNPM_CONFIG_REGISTRY=https://npm.pkg.example.com/\nNPM_CONFIG__AUTH=@@C:Y2ktcHVi.bGlzaGVy.Om5jWUZK.RWVBZ1l6.UUpqT0lm.UGt6@@\n",
+  "hide": [
+   "@@C:Y2ktcHVi.bGlzaGVy.Om5jWUZK.RWVBZ1l6.UUpqT0lm.UGt6@@"
+  ],
+  "keep": [
+   "NPM_CONFIG_REGISTRY=https://npm.pkg.example.com/",
+   "NPM_CONFIG_ALWAYS_AUTH=true"
+  ]
+ },
+ {
+  "id": "pulumi-passphrase-env",
+  "why": "PULUMI_CONFIG_PASSPHRASE decrypts every stack secret; PASSPHRASE is a secret word",
+  "env": {
+   "PULUMI_CONFIG_PASSPHRASE": "correct-horse-SrAsQtA9dtVK",
+   "PULUMI_BACKEND_URL": "s3://acme-pulumi-state",
+   "PULUMI_SKIP_UPDATE_CHECK": "true"
+  },
+  "output": "PULUMI_BACKEND_URL=s3://acme-pulumi-state\nPULUMI_CONFIG_PASSPHRASE=correct-horse-SrAsQtA9dtVK\nPULUMI_SKIP_UPDATE_CHECK=true\n",
+  "hide": [
+   "correct-horse-SrAsQtA9dtVK"
+  ],
+  "keep": [
+   "PULUMI_BACKEND_URL=s3://acme-pulumi-state",
+   "PULUMI_SKIP_UPDATE_CHECK=true"
+  ]
+ },
+ {
+  "id": "azure-storage-connection-string",
+  "why": "AZURE_STORAGE_CONNECTION_STRING embeds the storage AccountKey; client secret hidden; tenant/client ids kept",
+  "env": {
+   "AZURE_TENANT_ID": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+   "AZURE_CLIENT_ID": "3c1f5d2e-8a4b-4c6d-9e0f-1a2b3c4d5e6f",
+   "AZURE_CLIENT_SECRET": "Q8Z8Q~@@C:Zmti18c6.EudM7Oyf.5TNS05kO.Y2oNzN2m.1E@@",
+   "AZURE_STORAGE_CONNECTION_STRING": "DefaultEndpointsProtocol=https;AccountName=stacmeprod01;AccountKey=@@C:4ltqagTd.xP/NXaQy.ZLpnNPEB.b+YobB3S.F2eT4l11.xSkhAw2N.JKTO6GUW.kp/tXryB.KyVZSCmF.K+wRG2J9.wM7K9w==@@;EndpointSuffix=core.windows.net"
+  },
+  "output": "AZURE_TENANT_ID=72f988bf-86f1-41af-91ab-2d7cd011db47\nAZURE_CLIENT_ID=3c1f5d2e-8a4b-4c6d-9e0f-1a2b3c4d5e6f\nAZURE_CLIENT_SECRET=Q8Z8Q~@@C:Zmti18c6.EudM7Oyf.5TNS05kO.Y2oNzN2m.1E@@\nAZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=stacmeprod01;AccountKey=@@C:4ltqagTd.xP/NXaQy.ZLpnNPEB.b+YobB3S.F2eT4l11.xSkhAw2N.JKTO6GUW.kp/tXryB.KyVZSCmF.K+wRG2J9.wM7K9w==@@;EndpointSuffix=core.windows.net\n",
+  "hide": [
+   "Q8Z8Q~@@C:Zmti18c6.EudM7Oyf.5TNS05kO.Y2oNzN2m.1E@@",
+   "@@C:4ltqagTd.xP/NXaQy.ZLpnNPEB.b+YobB3S.F2eT4l11.xSkhAw2N.JKTO6GUW.kp/tXryB.KyVZSCmF.K+wRG2J9.wM7K9w==@@"
+  ],
+  "keep": [
+   "AZURE_TENANT_ID=72f988bf-86f1-41af-91ab-2d7cd011db47",
+   "AZURE_CLIENT_ID=3c1f5d2e-8a4b-4c6d-9e0f-1a2b3c4d5e6f"
+  ]
+ },
+ {
+  "id": "redis-url-empty-username",
+  "why": "redis://:password@host (no username) is the standard Redis URL form; password must be hidden, host kept",
+  "env": {
+   "REDIS_URL": "redis://:@@C:lKncz8Hk.ywhjpU05.mc4J1WRc@@@redis-master.cache.svc.cluster.local:6379/0",
+   "NODE_ENV": "production",
+   "PORT": "8080"
+  },
+  "output": "NODE_ENV=production\nPORT=8080\nREDIS_URL=redis://:@@C:lKncz8Hk.ywhjpU05.mc4J1WRc@@@redis-master.cache.svc.cluster.local:6379/0\n",
+  "hide": [
+   "@@C:lKncz8Hk.ywhjpU05.mc4J1WRc@@"
+  ],
+  "keep": [
+   "NODE_ENV=production",
+   "PORT=8080",
+   "redis-master.cache.svc.cluster.local:6379/0"
+  ]
+ },
+ {
+  "id": "gitlab-docker-auth-config",
+  "why": "GitLab's DOCKER_AUTH_CONFIG holds base64 user:password registry auth inside JSON",
+  "env": {
+   "DOCKER_AUTH_CONFIG": "{\"auths\":{\"registry.acme.io\":{\"auth\":\"@@C:Y2ktcHVs.bDpSZ1Ex.dWh5TURK.Mk9YdFBB.dExwQg==@@\"}}}",
+   "DOCKER_HOST": "tcp://docker:2376",
+   "DOCKER_TLS_CERTDIR": "/certs"
+  },
+  "output": "DOCKER_AUTH_CONFIG={\"auths\":{\"registry.acme.io\":{\"auth\":\"@@C:Y2ktcHVs.bDpSZ1Ex.dWh5TURK.Mk9YdFBB.dExwQg==@@\"}}}\nDOCKER_HOST=tcp://docker:2376\nDOCKER_TLS_CERTDIR=/certs\n",
+  "hide": [
+   "@@C:Y2ktcHVs.bDpSZ1Ex.dWh5TURK.Mk9YdFBB.dExwQg==@@"
+  ],
+  "keep": [
+   "DOCKER_HOST=tcp://docker:2376",
+   "DOCKER_TLS_CERTDIR=/certs",
+   "registry.acme.io"
+  ]
+ },
+ {
+  "id": "slack-webhook-url-env",
+  "why": "An incoming-webhook URL is a bearer capability: anyone with it can post to the channel",
+  "env": {
+   "SLACK_WEBHOOK_URL": "@@SLACK_WEBHOOK@@@@C:T024BE7L.D/B07QJ3.K2M9P/yQ.xCGClbaN.FDpCWNX0.D1lZEz@@",
+   "SLACK_CHANNEL": "#deploys"
+  },
+  "output": "SLACK_CHANNEL=#deploys\nSLACK_WEBHOOK_URL=@@SLACK_WEBHOOK@@@@C:T024BE7L.D/B07QJ3.K2M9P/yQ.xCGClbaN.FDpCWNX0.D1lZEz@@\n",
+  "hide": [
+   "@@C:yQxCGClb.aNFDpCWN.X0D1lZEz@@"
+  ],
+  "keep": [
+   "SLACK_CHANNEL=#deploys",
+   "@@SLACK_WEBHOOK@@"
+  ]
+ },
+ {
+  "id": "docker-inspect-container-env",
+  "why": "docker inspect of a container started by CI prints its env; the password is not in this shell's env or any local file",
+  "output": "[\n    {\n        \"Id\": \"@@C:21c40236.4f9572b8.5a8e48f6.87ab165c.58ac5831.be38cb8c.b4ba2e75.1989a017@@\",\n        \"Created\": \"2026-09-29T14:02:11.482913Z\",\n        \"Path\": \"docker-entrypoint.sh\",\n        \"Args\": [\n            \"postgres\"\n        ],\n        \"Name\": \"/billing-db-1\",\n        \"Config\": {\n            \"Hostname\": \"21c402364f95\",\n            \"Env\": [\n                \"POSTGRES_DB=billing\",\n                \"POSTGRES_USER=billing\",\n                \"POSTGRES_PASSWORD=@@C:ZpgeiwBx.fZCGGQcc.Oif7UuXU@@\",\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:@@C:/usr/lib./postgre.sql/16/b.in@@\",\n                \"PG_MAJOR=16\",\n                \"PGDATA=/var/lib/postgresql/data\"\n            ],\n            \"Image\": \"postgres:16-alpine\"\n        }\n    }\n]\n",
+  "hide": [
+   "@@C:ZpgeiwBx.fZCGGQcc.Oif7UuXU@@"
+  ],
+  "keep": [
+   "\"POSTGRES_DB=billing\"",
+   "\"PGDATA=/var/lib/postgresql/data\"",
+   "\"Image\": \"postgres:16-alpine\"",
+   "\"POSTGRES_PASSWORD="
+  ]
+ },
+ {
+  "id": "docker-inspect-env-known",
+  "why": "docker inspect where the same password is also in this process env (docker compose run): hidden via the env registry",
+  "env": {
+   "POSTGRES_PASSWORD": "@@C:KcjsNOBA.Gx5diFoN.PcbdaKwt@@",
+   "COMPOSE_PROJECT_NAME": "billing"
+  },
+  "output": "[\n    {\n        \"Id\": \"@@C:21c40236.4f9572b8.5a8e48f6.87ab165c.58ac5831.be38cb8c.b4ba2e75.1989a017@@\",\n        \"Created\": \"2026-09-29T14:02:11.482913Z\",\n        \"Path\": \"docker-entrypoint.sh\",\n        \"Args\": [\n            \"postgres\"\n        ],\n        \"Name\": \"/billing-db-1\",\n        \"Config\": {\n            \"Hostname\": \"21c402364f95\",\n            \"Env\": [\n                \"POSTGRES_DB=billing\",\n                \"POSTGRES_USER=billing\",\n                \"POSTGRES_PASSWORD=@@C:KcjsNOBA.Gx5diFoN.PcbdaKwt@@\",\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:@@C:/usr/lib./postgre.sql/16/b.in@@\",\n                \"PG_MAJOR=16\",\n                \"PGDATA=/var/lib/postgresql/data\"\n            ],\n            \"Image\": \"postgres:16-alpine\"\n        }\n    }\n]\n",
+  "hide": [
+   "@@C:KcjsNOBA.Gx5diFoN.PcbdaKwt@@"
+  ],
+  "keep": [
+   "\"POSTGRES_DB=billing\"",
+   "\"PGDATA=/var/lib/postgresql/data\"",
+   "\"Image\": \"postgres:16-alpine\""
+  ]
+ },
+ {
+  "id": "bash-export-p-dollar-password",
+  "why": "bash export -p backslash-escapes $ \" \\ ` inside double quotes, so a password with $ prints differently from its raw value",
+  "env": {
+   "DATABASE_PASSWORD": "p4$$w0rd-Kx92mqT",
+   "DATABASE_HOST": "pg.internal"
+  },
+  "output": "declare -x DATABASE_HOST=\"pg.internal\"\ndeclare -x DATABASE_PASSWORD=\"p4\\$\\$w0rd-Kx92mqT\"\ndeclare -x HOME=\"/home/dev\"\n",
+  "hide": [
+   "p4\\$\\$w0rd-Kx92mqT",
+   "w0rd-Kx92mqT"
+  ],
+  "keep": [
+   "DATABASE_HOST=\"pg.internal\"",
+   "HOME=\"/home/dev\""
+  ]
+ },
+ {
+  "id": "bash-set-single-quote-password",
+  "why": "bash `set` prints a value containing ' as 'a'\\''b', splitting the password around the quote",
+  "env": {
+   "SMTP_PASSWORD": "Tr0ub4dor's-Horse&92",
+   "SMTP_HOST": "smtp.mailgun.org"
+  },
+  "output": "SMTP_HOST=smtp.mailgun.org\nSMTP_PASSWORD='Tr0ub4dor'\\''s-Horse&92'\nSHLVL=1\n",
+  "hide": [
+   "Tr0ub4dor'\\''s-Horse&92",
+   "s-Horse&92"
+  ],
+  "keep": [
+   "SMTP_HOST=smtp.mailgun.org",
+   "SHLVL=1"
+  ]
+ },
+ {
+  "id": "dev-default-postgres-password",
+  "why": "docker-compose dev env with POSTGRES_PASSWORD=postgres: the word 'postgres' must not be redacted from image names, users and commands",
+  "env": {
+   "POSTGRES_PASSWORD": "postgres",
+   "POSTGRES_USER": "postgres",
+   "POSTGRES_DB": "app_dev"
+  },
+  "output": "NAME            IMAGE                COMMAND                  SERVICE   STATUS         PORTS\napp-db-1        postgres:16-alpine   \"docker-entrypoint.s\u2026\"   db        Up 2 minutes   0.0.0.0:5432->5432/tcp\n$ psql -U postgres -h localhost app_dev\npsql (16.4)\napp_dev=#\n",
+  "keep": [
+   "postgres:16-alpine",
+   "psql -U postgres -h localhost app_dev"
+  ]
+ },
+ {
+  "id": "cookie-domain-env",
+  "why": "COOKIE_DOMAIN=.example.com is a public setting; registering it as a secret mangles every example.com hostname in output",
+  "env": {
+   "COOKIE_DOMAIN": ".example.com",
+   "SESSION_COOKIE_NAME": "sid",
+   "APP_URL": "https://app.example.com"
+  },
+  "output": "$ curl -sI https://api.example.com/health\nHTTP/2 200\nset-cookie: sid=abc; Domain=.example.com; Path=/; HttpOnly; Secure\nserver: nginx\n",
+  "keep": [
+   "https://api.example.com/health",
+   "Domain=.example.com",
+   "server: nginx"
+  ]
+ },
+ {
+  "id": "secret-identifiers-not-secrets",
+  "why": "Names of secrets and key IDs (KMS key ARN, Secrets Manager secret name, Key Vault name) are identifiers the agent needs, not secret values",
+  "env": {
+   "AWS_KMS_KEY_ID": "arn:aws:kms:us-east-1:123456789012:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+   "AWS_SECRET_NAME": "prod/billing/db",
+   "AZURE_KEY_VAULT_NAME": "kv-billing-prod"
+  },
+  "output": "$ aws secretsmanager describe-secret --secret-id prod/billing/db\n{\n    \"ARN\": \"arn:aws:secretsmanager:us-east-1:123456789012:secret:prod/billing/db-AbCdEf\",\n    \"Name\": \"prod/billing/db\",\n    \"KmsKeyId\": \"arn:aws:kms:us-east-1:123456789012:key/1234abcd-12ab-34cd-56ef-1234567890ab\",\n    \"LastChangedDate\": \"2026-08-14T10:22:31.112000+00:00\"\n}\n$ az keyvault show --name kv-billing-prod --query properties.vaultUri\n\"https://kv-billing-prod.vault.azure.net/\"\n",
+  "keep": [
+   "\"Name\": \"prod/billing/db\"",
+   "arn:aws:kms:us-east-1:123456789012:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+   "https://kv-billing-prod.vault.azure.net/"
+  ]
+ },
+ {
+  "id": "token-url-and-header-names",
+  "why": "OAUTH_TOKEN_URL and API_KEY_HEADER hold an endpoint and a header name; registering them blanks them out of source code the agent greps",
+  "env": {
+   "OAUTH_TOKEN_URL": "https://auth.example.com/oauth/token",
+   "API_KEY_HEADER": "X-Api-Key"
+  },
+  "output": "src/client.ts:12:const TOKEN_URL = process.env.OAUTH_TOKEN_URL ?? \"https://auth.example.com/oauth/token\";\nsrc/client.ts:31:    headers: { \"X-Api-Key\": apiKey },\n",
+  "keep": [
+   "\"https://auth.example.com/oauth/token\"",
+   "\"X-Api-Key\""
+  ]
+ },
+ {
+  "id": "envrc-read",
+  "why": "direnv .envrc read: stdlib commands and harmless exports must survive masking; the API key is hidden",
+  "files": {
+   ".envrc": "use flake\ndotenv_if_exists .env.local\nPATH_add bin\nexport AWS_PROFILE=dev\nexport KUBECONFIG=$PWD/.kube/config\nexport ANTHROPIC_API_KEY=@@SK_ANT@@api03-@@C:gHwIoALt.LinxN1Ek.ia7ZpTjC.geOj3QYr.zZq9adP0.J5wMPLCM.7HUFpk5a.cdIbzlpk.d6XgaNJQ.8mjAmHMP@@-GPPA0NAA\n"
+  },
+  "read": ".envrc",
+  "hide": [
+   "@@SK_ANT@@api03-@@C:gHwIoALt.LinxN1Ek.ia7ZpTjC.geOj3QYr.zZq9adP0.J5wMPLCM.7HUFpk5a.cdIbzlpk.d6XgaNJQ.8mjAmHMP@@-GPPA0NAA"
+  ],
+  "keep": [
+   "use flake",
+   "dotenv_if_exists .env.local",
+   "PATH_add bin",
+   "AWS_PROFILE=dev",
+   "KUBECONFIG=$PWD/.kube/config",
+   "ANTHROPIC_API_KEY="
+  ]
+ },
+ {
+  "id": "dotenv-read-harmless-settings",
+  "why": "masked .env read must keep ordinary settings (timezone, local redis URL, CORS list, Node options, session lifetime, Auth0 domain) and hide real secrets",
+  "files": {
+   ".env": "NODE_ENV=development\nPORT=3000\nTZ=America/New_York\nREDIS_URL=redis://localhost:6379/0\nCORS_ORIGINS=http://localhost:3000,https://app.example.com\nNODE_OPTIONS=--max-old-space-size=4096\nSESSION_LIFETIME=120\nAUTH_DOMAIN=acme-dev.us.auth0.com\nAUTH_CLIENT_SECRET=@@C:lGtetOd4.UYETIay2.BV6DfVPC.logqoPch.v5V7S82q.TdrOJRBR@@\n"
+  },
+  "read": ".env",
+  "hide": [
+   "@@C:lGtetOd4.UYETIay2.BV6DfVPC.logqoPch.v5V7S82q.TdrOJRBR@@"
+  ],
+  "keep": [
+   "NODE_ENV=development",
+   "PORT=3000",
+   "TZ=America/New_York",
+   "REDIS_URL=redis://localhost:6379/0",
+   "CORS_ORIGINS=http://localhost:3000,https://app.example.com",
+   "NODE_OPTIONS=--max-old-space-size=4096",
+   "SESSION_LIFETIME=120",
+   "AUTH_DOMAIN=acme-dev.us.auth0.com",
+   "AUTH_CLIENT_SECRET="
+  ]
+ },
+ {
+  "id": "laravel-session-driver",
+  "why": "Laravel 11's default .env has SESSION_DRIVER=database; the word 'database' must not be redacted from ls/artisan output",
+  "files": {
+   ".env": "APP_NAME=Laravel\nAPP_ENV=local\nAPP_KEY=base64:@@C:yeqF+ENL.pO335DcV.4YEDK0Ln.PNe+M/Eo.v+pTMeFj.VJk=@@\nAPP_DEBUG=true\nDB_CONNECTION=sqlite\nSESSION_DRIVER=database\nSESSION_LIFETIME=120\nQUEUE_CONNECTION=database\nCACHE_STORE=database\n",
+   "database/database.sqlite": ""
+  },
+  "output": "$ ls\napp  artisan  bootstrap  composer.json  config  database  public  resources  routes  storage  tests  vendor\n$ php artisan migrate:status\n  Migration name .............................................. Batch / Status\n  0001_01_01_000000_create_users_table ................................ [1] Ran\n  0001_01_01_000001_create_cache_table ................................ [1] Ran\n",
+  "hide": [
+   "base64:@@C:yeqF+ENL.pO335DcV.4YEDK0Ln.PNe+M/Eo.v+pTMeFj.VJk=@@"
+  ],
+  "keep": [
+   "config  database  public",
+   "create_users_table"
+  ]
+ },
+ {
+  "id": "actions-checkout-extraheader",
+  "why": "actions/checkout persists the token as a base64 basic-auth extraheader in git config; `git config --list` prints it",
+  "output": "core.repositoryformatversion=0\ncore.bare=false\nremote.origin.url=https://github.com/acme/billing-service\nremote.origin.fetch=+refs/heads/*:refs/remotes/origin/*\nhttp.https://github.com/.extraheader=AUTHORIZATION: basic @@C:eC1hY2Nl.c3MtdG9r.ZW46Z2hz.X3B5NjJP.NlNRMUlF.RTFIU2Ey.YkI5VW9L.NHRZbnpO.TGVLNmtq.Yw==@@\n",
+  "hide": [
+   "@@C:eC1hY2Nl.c3MtdG9r.ZW46Z2hz.X3B5NjJP.NlNRMUlF.RTFIU2Ey.YkI5VW9L.NHRZbnpO.TGVLNmtq.Yw==@@"
+  ],
+  "keep": [
+   "remote.origin.url=https://github.com/acme/billing-service",
+   "http.https://github.com/.extraheader=AUTHORIZATION: basic "
+  ]
+ },
+ {
+  "id": "gitlab-ssh-private-key-var",
+  "why": "GitLab CI file-less SSH_PRIVATE_KEY variable printed by env is a multi-line key; known_hosts setting kept",
+  "env": {
+   "SSH_PRIVATE_KEY": "@@PEM_BEGIN@@OPENSSH PRIVATE KEY-----\@@C:ndonuSsd.dfrfifiU.ziXnFAAo.eelK9mqm.ALOR2HcS.GKgVP8Kd.0d3mS8gB.lKv3azKg.a@@\@@C:nS+m+x/S.HuKBD/vo.k+nPTmZY.l2dVAMH2.vWD6qeSP.t5Pv74GD.qQ7EyIMt.tFPSuEPy.H@@\@@C:nnvnzXts.MM3JznnJ.AX7ebZ3C.L7csGZaF.31DDxp63.OHm1FZuG.296c0xPb.X+neGBuz.S@@\@@C:nm6A8cVR.06AxYpTh.GJWZhbj1.1THnCMZC.Y7Bvqiy8.CsT07Lq8.TDIWG2x9.aJTFMP9+.2@@\@@C:nkUtMXhk.PrSbbAjL.GmsDx5St.AZvlMz/B.k4opH1Dr.8/h97s+F./vauP7/L.7V21jxUd.c@@\@@C:nfQm9+se.B1qRmUR8.AK3R2GgL.LT/ZQISA./pQyOMql.fZZgZMna.fy8hWskB.f6wmxe1m.b@@\n@@PEM_END@@OPENSSH PRIVATE KEY-----",
+   "SSH_KNOWN_HOSTS": "gitlab.com ssh-ed25519 @@C:AAAAC3Nz.aC1lZDI1.NTE5AAAA.IAfuCHKV.Tjquxvt6.CM6tdG4S.Lp1Btn/n.OeHHE5UO.zRdf@@",
+   "CI_SERVER_HOST": "gitlab.com"
+  },
+  "output": "CI_SERVER_HOST=gitlab.com\nSSH_PRIVATE_KEY=@@PEM_BEGIN@@OPENSSH PRIVATE KEY-----\@@C:ndonuSsd.dfrfifiU.ziXnFAAo.eelK9mqm.ALOR2HcS.GKgVP8Kd.0d3mS8gB.lKv3azKg.a@@\@@C:nS+m+x/S.HuKBD/vo.k+nPTmZY.l2dVAMH2.vWD6qeSP.t5Pv74GD.qQ7EyIMt.tFPSuEPy.H@@\@@C:nnvnzXts.MM3JznnJ.AX7ebZ3C.L7csGZaF.31DDxp63.OHm1FZuG.296c0xPb.X+neGBuz.S@@\@@C:nm6A8cVR.06AxYpTh.GJWZhbj1.1THnCMZC.Y7Bvqiy8.CsT07Lq8.TDIWG2x9.aJTFMP9+.2@@\@@C:nkUtMXhk.PrSbbAjL.GmsDx5St.AZvlMz/B.k4opH1Dr.8/h97s+F./vauP7/L.7V21jxUd.c@@\@@C:nfQm9+se.B1qRmUR8.AK3R2GgL.LT/ZQISA./pQyOMql.fZZgZMna.fy8hWskB.f6wmxe1m.b@@\n@@PEM_END@@OPENSSH PRIVATE KEY-----\nSSH_KNOWN_HOSTS=gitlab.com ssh-ed25519 @@C:AAAAC3Nz.aC1lZDI1.NTE5AAAA.IAfuCHKV.Tjquxvt6.CM6tdG4S.Lp1Btn/n.OeHHE5UO.zRdf@@\n",
+  "hide": [
+   "@@C:donuSsdd.frfifiUz.iXnFAAoe.elK9mqmA.LOR2HcSG.KgVP8Kd0.d3mS8gBl.Kv3azKga@@",
+   "@@C:S+m+x/SH.uKBD/vok.+nPTmZYl.2dVAMH2v.WD6qeSPt.5Pv74GDq.Q7EyIMtt.FPSuEPyH@@",
+   "@@C:nvnzXtsM.M3JznnJA.X7ebZ3CL.7csGZaF3.1DDxp63O.Hm1FZuG2.96c0xPbX.+neGBuzS@@",
+   "@@C:m6A8cVR0.6AxYpThG.JWZhbj11.THnCMZCY.7Bvqiy8C.sT07Lq8T.DIWG2x9a.JTFMP9+2@@",
+   "@@C:kUtMXhkP.rSbbAjLG.msDx5StA.ZvlMz/Bk.4opH1Dr8./h97s+F/.vauP7/L7.V21jxUdc@@",
+   "@@C:fQm9+seB.1qRmUR8A.K3R2GgLL.T/ZQISA/.pQyOMqlf.ZZgZMnaf.y8hWskBf.6wmxe1mb@@"
+  ],
+  "keep": [
+   "CI_SERVER_HOST=gitlab.com",
+   "SSH_KNOWN_HOSTS=gitlab.com ssh-ed25519"
+  ]
+ },
+ {
+  "id": "stripe-@@SK_DASH@@env",
+  "why": "STRIPE_SK (no KEY/SECRET word) is still a Stripe secret key by format; publishable key and webhook path kept",
+  "env": {
+   "STRIPE_SK": "@@STRIPE_SK_LIVE@@@@C:51x30iYt.JTq3tlAc.ubBKPL76.dFKHc0hX.ZAKS6zCe.aRyML8Qj.EXAJgfPE.n5jOaBaa.RQh92fn3.hiEbrUKp.CUVl7dxX.VTS2jUWf.sO@@",
+   "STRIPE_PK": "pk_live_@@C:51JTFDQ7.4q69dTca.da4PR0Nf.yttUMk93.1FMdux8K.UC@@",
+   "STRIPE_WEBHOOK_PATH": "/webhooks/stripe"
+  },
+  "output": "STRIPE_SK=@@STRIPE_SK_LIVE@@@@C:51x30iYt.JTq3tlAc.ubBKPL76.dFKHc0hX.ZAKS6zCe.aRyML8Qj.EXAJgfPE.n5jOaBaa.RQh92fn3.hiEbrUKp.CUVl7dxX.VTS2jUWf.sO@@\nSTRIPE_WEBHOOK_PATH=/webhooks/stripe\n",
+  "hide": [
+   "@@STRIPE_SK_LIVE@@@@C:51x30iYt.JTq3tlAc.ubBKPL76.dFKHc0hX.ZAKS6zCe.aRyML8Qj.EXAJgfPE.n5jOaBaa.RQh92fn3.hiEbrUKp.CUVl7dxX.VTS2jUWf.sO@@"
+  ],
+  "keep": [
+   "STRIPE_WEBHOOK_PATH=/webhooks/stripe",
+   "STRIPE_SK="
+  ]
+ },
+ {
+  "id": "printenv-piped-base64",
+  "why": "`printenv DATABASE_PASSWORD | base64` (trailing newline included) must not leak the encoded password",
+  "env": {
+   "DATABASE_PASSWORD": "@@C:WqERkj9Z.hx9PkOZA.EyXYC8rY@@"
+  },
+  "output": "@@C:V3FFUmtq.OVpoeDlQ.a09aQUV5.WFlDOHJZ.Cg==@@\n",
+  "hide": [
+   "@@C:V3FFUmtq.OVpoeDlQ.a09aQUV5.WFlDOHJZ.Cg==@@",
+   "@@C:WqERkj9Z.hx9PkOZA.EyXYC8rY@@"
+  ]
+ }
+]

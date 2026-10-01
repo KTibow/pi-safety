@@ -1,0 +1,437 @@
+[
+ {
+  "id": "db-debug-pytest-locals-libpq-dsn",
+  "why": "pytest -l on a failing DB test: the agent needs host, port, dbname, user, sslmode and the error; the password (fetched from Vault at runtime, so in no file or env var) appears in a libpq key=value conninfo and a dict repr",
+  "command": "pytest tests/integration/test_orders_db.py -l -x",
+  "output": "============================= test session starts ==============================\nplatform linux -- Python 3.12.4, pytest-8.3.2, pluggy-1.5.0\nrootdir: /home/dev/orders-service\nconfigfile: pyproject.toml\ncollected 7 items\n\ntests/integration/test_orders_db.py F\n\n=================================== FAILURES ===================================\n____________________________ test_can_connect __________________________________\n\nvault_client = <hvac.v1.Client object at 0x7f3a2c1b9d50>\n\n    def test_can_connect(vault_client):\n        creds = vault_client.secrets.kv.v2.read_secret_version(path=\"orders/db\")[\"data\"][\"data\"]\n        conninfo = (\n            f\"host=orders-db.internal port=5432 dbname=orders user={creds['username']} \"\n            f\"password={creds['password']} sslmode=verify-full\"\n        )\n>       conn = psycopg.connect(conninfo, connect_timeout=5)\n\nconninfo   = 'host=orders-db.internal port=5432 dbname=orders user=orders_app password=Vlt-Rot8-qZx4mK2pW sslmode=verify-full'\ncreds      = {'password': 'Vlt-Rot8-qZx4mK2pW', 'username': 'orders_app'}\nvault_client = <hvac.v1.Client object at 0x7f3a2c1b9d50>\n\ntests/integration/test_orders_db.py:14:\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nE           psycopg.OperationalError: connection failed: connection to server at \"10.20.0.15\", port 5432 failed: FATAL:  password authentication failed for user \"orders_app\"\n\n.venv/lib/python3.12/site-packages/psycopg/connection.py:119: OperationalError\n=========================== short test summary info ============================\nFAILED tests/integration/test_orders_db.py::test_can_connect - psycopg.OperationalError: connection failed: connection to server at \"10.20.0.15\", port 5432 failed: FATAL:  password authentication failed for user \"orders_app\"\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n============================== 1 failed in 0.84s ===============================\n",
+  "hide": [
+   "Vlt-Rot8-qZx4mK2pW"
+  ],
+  "keep": [
+   "host=orders-db.internal port=5432 dbname=orders user=orders_app",
+   "sslmode=verify-full",
+   "password authentication failed for user \"orders_app\"",
+   "'username': 'orders_app'",
+   "1 failed in 0.84s"
+  ]
+ },
+ {
+  "id": "db-debug-env-read-and-psql-error",
+  "why": "regression guard: masked read of .env during DB debugging keeps host, port, db, user and sslmode of DATABASE_URL; the password is hidden",
+  "files": {
+   ".env": "NODE_ENV=development\nDATABASE_URL=postgresql://orders_app:Pg-Dev-7xQm2Lr9Tz@orders-db.internal:5432/orders?sslmode=require&connect_timeout=10\nDB_POOL_MAX=10\nPGSSLROOTCERT=./certs/rds-ca-2019-root.pem\n"
+  },
+  "read": ".env",
+  "hide": [
+   "Pg-Dev-7xQm2Lr9Tz"
+  ],
+  "keep": [
+   "@orders-db.internal:5432/orders?sslmode=require&connect_timeout=10",
+   "postgresql://orders_app:",
+   "DB_POOL_MAX=10",
+   "PGSSLROOTCERT=./certs/rds-ca-2019-root.pem"
+  ]
+ },
+ {
+  "id": "node-pg-pool-options-inspect",
+  "why": "regression guard: console.log of a pg Pool's options in a Node script (util.inspect format); password hidden, connection settings kept",
+  "command": "node scripts/check-db.mjs",
+  "output": "Pool options: {\n  host: 'orders-db.internal',\n  port: 5432,\n  database: 'orders',\n  user: 'orders_app',\n  password: 'Vlt-Rot8-qZx4mK2pW',\n  ssl: { rejectUnauthorized: true },\n  max: 10,\n  idleTimeoutMillis: 30000,\n  connectionTimeoutMillis: 5000\n}\nError: connect ETIMEDOUT 10.20.0.15:5432\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1607:16) {\n  errno: -110,\n  code: 'ETIMEDOUT',\n  syscall: 'connect',\n  address: '10.20.0.15',\n  port: 5432\n}\n",
+  "hide": [
+   "Vlt-Rot8-qZx4mK2pW"
+  ],
+  "keep": [
+   "host: 'orders-db.internal',",
+   "database: 'orders',",
+   "user: 'orders_app',",
+   "Error: connect ETIMEDOUT 10.20.0.15:5432",
+   "code: 'ETIMEDOUT',"
+  ]
+ },
+ {
+  "id": "ps-aux-password-flags",
+  "why": "debugging a stuck backup: ps shows command lines with mysql's -p<password> and a Spring Boot --spring.datasource.password=… flag; neither value is in any local file",
+  "command": "ps aux | grep -E 'mysqldump|java' | grep -v grep",
+  "output": "backup     41822  2.1  0.3 112340 26412 ?        S    02:00   0:41 mysqldump --single-transaction -h db.internal -u backup -pBkp-Pw-55xZqT9m orders\napp        39110 11.4  8.7 5123448 712204 ?      Sl   Sep29  97:12 java -Xmx2g -jar /opt/orders/orders.jar --spring.datasource.url=jdbc:mysql://db.internal:3306/orders --spring.datasource.username=orders --spring.datasource.password=Spr1ng-Ds-pw-77LqZ --server.port=8080\n",
+  "hide": [
+   "Bkp-Pw-55xZqT9m",
+   "Spr1ng-Ds-pw-77LqZ"
+  ],
+  "keep": [
+   "mysqldump --single-transaction -h db.internal -u backup",
+   "--spring.datasource.url=jdbc:mysql://db.internal:3306/orders",
+   "--spring.datasource.username=orders",
+   "--server.port=8080"
+  ]
+ },
+ {
+  "id": "nextjs-env-local-public-keys",
+  "why": "NEXT_PUBLIC_ variables are compiled into the browser bundle; Stripe pk_live_, PostHog phc_ and reCAPTCHA site keys are public by design and the agent needs them to wire the client. The server-side secrets beside them must stay hidden",
+  "files": {
+   ".env.local": "# Public (shipped to the browser)\nNEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_@@C:51PqR7sL.kdF3xYz9.WbN2mT4u.Va8cE6gH.1jK0lM3n.O5pQ7rS9.tU2vW4xY.6zA8bC0d.E2fG4hI6.jK8lM0nO.2pQ4rS6t.U00aBcDe.Fg@@\nNEXT_PUBLIC_POSTHOG_KEY=phc_@@C:q8Zr3TnV.w5Kx2Lm9.Pb7Yc4Hs.6Jd1Fg0A.e3Ri8Uo5.Wl@@\nNEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com\nNEXT_PUBLIC_RECAPTCHA_SITE_KEY=@@C:6LcR4xQp.AAAAAJk2.mN8vB3cT.7yH1wZ9d.E5fG0aL@@\n# Server only\nSTRIPE_SECRET_KEY=@@STRIPE_SK_LIVE@@@@C:51PqR7sL.kdF3xYz9.WbN2mT4u.Vc1Xa9Ze.7Rt5Yq3W.p0Om8Ln6.Kb4Jv2Hc.0Gx8Fd6E.s4Dr2Ct0.Bq8Ap6Zo.4Yn2Xm00.Lk3Mn4Op@@\nSTRIPE_WEBHOOK_SECRET=@@STRIPE_WHSEC@@@@C:9fK2qLm7.Xz4Tb8Nc.1Vw6Rp3Y.h5Sj0Gd2@@\nRECAPTCHA_SECRET_KEY=@@C:6LcR4xQp.AAAAAPz7.Kd3mQ9vL.2bX8nT5w.C1yR6hF0@@\n"
+  },
+  "read": ".env.local",
+  "hide": [
+   "@@STRIPE_SK_LIVE@@@@C:51PqR7sL.kdF3xYz9.WbN2mT4u.Vc1Xa9Ze.7Rt5Yq3W.p0Om8Ln6.Kb4Jv2Hc.0Gx8Fd6E.s4Dr2Ct0.Bq8Ap6Zo.4Yn2Xm00.Lk3Mn4Op@@",
+   "@@STRIPE_WHSEC@@@@C:9fK2qLm7.Xz4Tb8Nc.1Vw6Rp3Y.h5Sj0Gd2@@",
+   "@@C:6LcR4xQp.AAAAAPz7.Kd3mQ9vL.2bX8nT5w.C1yR6hF0@@"
+  ],
+  "keep": [
+   "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_@@C:51PqR7sL.kdF3xYz9.WbN2mT4u.Va8cE6gH.1jK0lM3n.O5pQ7rS9.tU2vW4xY.6zA8bC0d.E2fG4hI6.jK8lM0nO.2pQ4rS6t.U00aBcDe.Fg@@",
+   "NEXT_PUBLIC_POSTHOG_KEY=phc_@@C:q8Zr3TnV.w5Kx2Lm9.Pb7Yc4Hs.6Jd1Fg0A.e3Ri8Uo5.Wl@@",
+   "NEXT_PUBLIC_RECAPTCHA_SITE_KEY=@@C:6LcR4xQp.AAAAAJk2.mN8vB3cT.7yH1wZ9d.E5fG0aL@@",
+   "NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com"
+  ]
+ },
+ {
+  "id": "pk-live-hardcoded-in-checkout-component",
+  "why": "the same publishable key is hardcoded in a client component; once .env.local is registered it is replaced as a known value in ordinary source the agent is editing",
+  "files": {
+   ".env.local": "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_@@C:51PqR7sL.kdF3xYz9.WbN2mT4u.Va8cE6gH.1jK0lM3n.O5pQ7rS9.tU2vW4xY.6zA8bC0d.E2fG4hI6.jK8lM0nO.2pQ4rS6t.U00aBcDe.Fg@@\nSTRIPE_SECRET_KEY=@@STRIPE_SK_LIVE@@@@C:51PqR7sL.kdF3xYz9.WbN2mT4u.Vc1Xa9Ze.7Rt5Yq3W.p0Om8Ln6.Kb4Jv2Hc.0Gx8Fd6E.s4Dr2Ct0.Bq8Ap6Zo.4Yn2Xm00.Lk3Mn4Op@@\n",
+   "src/components/Checkout.tsx": "\"use client\";\nimport { loadStripe } from \"@stripe/stripe-js\";\nimport { Elements } from \"@stripe/react-stripe-js\";\n\n// TODO: move to NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY\nconst stripePromise = loadStripe(\"pk_live_@@C:51PqR7sL.kdF3xYz9.WbN2mT4u.Va8cE6gH.1jK0lM3n.O5pQ7rS9.tU2vW4xY.6zA8bC0d.E2fG4hI6.jK8lM0nO.2pQ4rS6t.U00aBcDe.Fg@@\");\n\nexport function Checkout({ clientSecret }: { clientSecret: string }) {\n  return <Elements stripe={stripePromise} options={{ clientSecret }} />;\n}\n"
+  },
+  "read": "src/components/Checkout.tsx",
+  "keep": [
+   "loadStripe(\"pk_live_@@C:51PqR7sL.kdF3xYz9.WbN2mT4u.Va8cE6gH.1jK0lM3n.O5pQ7rS9.tU2vW4xY.6zA8bC0d.E2fG4hI6.jK8lM0nO.2pQ4rS6t.U00aBcDe.Fg@@\")",
+   "export function Checkout({ clientSecret }: { clientSecret: string })"
+  ]
+ },
+ {
+  "id": "sentry-dsn-in-frontend-instrumentation",
+  "why": "a browser Sentry DSN carries only the public key (Sentry documents it as safe to expose); the agent editing instrumentation needs to see which project it points at",
+  "files": {
+   "src/instrumentation-client.ts": "import * as Sentry from \"@sentry/nextjs\";\n\nSentry.init({\n  dsn: \"https:@@C://3f8a1c.9e2b7d4e.6f8a0b1c.2d3e4f5a.6b@@@o4507123456789012.ingest.us.sentry.io/4507123456789999\",\n  tracesSampleRate: 0.1,\n  replaysSessionSampleRate: 0,\n  replaysOnErrorSampleRate: 1.0,\n  integrations: [Sentry.replayIntegration()],\n});\n"
+  },
+  "read": "src/instrumentation-client.ts",
+  "keep": [
+   "dsn: \"https:@@C://3f8a1c.9e2b7d4e.6f8a0b1c.2d3e4f5a.6b@@@o4507123456789012.ingest.us.sentry.io/4507123456789999\",",
+   "tracesSampleRate: 0.1,"
+  ]
+ },
+ {
+  "id": "firebase-web-config-fields",
+  "why": "regression guard: the non-key fields of a Firebase web config (authDomain, projectId, bucket, sender id, appId) are public identifiers the agent needs; apiKey is deliberately unlabeled",
+  "files": {
+   "src/lib/firebase.ts": "import { initializeApp } from \"firebase/app\";\n\nconst firebaseConfig = {\n  apiKey: \"@@GOOG_API@@@@C:SyD3x8Qw.2Lm9Kp4T.z7Vb1Nc6.Rf0Hj5Yg.2Ue@@\",\n  authDomain: \"acme-shop-prod.firebaseapp.com\",\n  projectId: \"acme-shop-prod\",\n  storageBucket: \"acme-shop-prod.appspot.com\",\n  messagingSenderId: \"784512309876\",\n  appId: \"1:784512309876:web:@@C:9c3f1e7a.2b5d8f04.e6a1c2@@\",\n  measurementId: \"G-7QX2K9LM4P\",\n};\n\nexport const app = initializeApp(firebaseConfig);\n"
+  },
+  "read": "src/lib/firebase.ts",
+  "keep": [
+   "authDomain: \"acme-shop-prod.firebaseapp.com\",",
+   "projectId: \"acme-shop-prod\",",
+   "storageBucket: \"acme-shop-prod.appspot.com\",",
+   "messagingSenderId: \"784512309876\",",
+   "appId: \"1:784512309876:web:@@C:9c3f1e7a.2b5d8f04.e6a1c2@@\",",
+   "measurementId: \"G-7QX2K9LM4P\","
+  ]
+ },
+ {
+  "id": "ts-client-wiring-env-names-and-types",
+  "why": "wiring OpenAI/Stripe clients: source passes env var NAMES through a typed env object and declares credential-named fields with types; none of it is a value, and the agent must see it to edit the code",
+  "files": {
+   "src/lib/clients.ts": "import OpenAI from \"openai\";\nimport Stripe from \"stripe\";\nimport { env } from \"@/env\";\n\nexport interface BillingConfig {\n  secretKey: string;\n  webhookSecret: string;\n  apiVersion: Stripe.LatestApiVersion;\n}\n\nexport const billing: BillingConfig = {\n  secretKey: env.STRIPE_SECRET_KEY,\n  webhookSecret: env.STRIPE_WEBHOOK_SECRET,\n  apiVersion: \"2024-06-20\",\n};\n\nexport const openai = new OpenAI({\n  apiKey: env.OPENAI_API_KEY,\n  organization: env.OPENAI_ORG_ID,\n});\n"
+  },
+  "read": "src/lib/clients.ts",
+  "keep": [
+   "  secretKey: string;",
+   "  webhookSecret: string;",
+   "  secretKey: env.STRIPE_SECRET_KEY,",
+   "  webhookSecret: env.STRIPE_WEBHOOK_SECRET,",
+   "  apiKey: env.OPENAI_API_KEY,",
+   "  organization: env.OPENAI_ORG_ID,"
+  ]
+ },
+ {
+  "id": "pydantic-settings-field-declarations",
+  "why": "a pydantic-settings class declares credential fields by type; type names and empty defaults are code, not values",
+  "files": {
+   "app/settings.py": "from pydantic import PostgresDsn, SecretStr\nfrom pydantic_settings import BaseSettings, SettingsConfigDict\n\n\nclass Settings(BaseSettings):\n    model_config = SettingsConfigDict(env_file=\".env\", extra=\"ignore\")\n\n    database_url: PostgresDsn\n    openai_api_key: SecretStr\n    stripe_secret_key: str = \"\"\n    jwt_secret: SecretStr\n    jwt_algorithm: str = \"HS256\"\n    access_token_expire_minutes: int = 30\n\n\nsettings = Settings()\n"
+  },
+  "read": "app/settings.py",
+  "keep": [
+   "    openai_api_key: SecretStr",
+   "    stripe_secret_key: str = \"\"",
+   "    jwt_secret: SecretStr",
+   "    jwt_algorithm: str = \"HS256\""
+  ]
+ },
+ {
+  "id": "env-example-placeholders",
+  "why": "editing .env.example: its placeholders (USER:PASSWORD in a URL, change-me values, @@STRIPE_SK_TEST@@... stubs) are documentation the agent must see to keep them consistent",
+  "files": {
+   ".env.example": "# Copy to .env and fill in real values\nDATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/orders_dev\nREDIS_URL=redis://localhost:6379/0\nJWT_SECRET=change-me-in-production\nSTRIPE_SECRET_KEY=@@STRIPE_SK_TEST@@...\nSTRIPE_WEBHOOK_SECRET=@@STRIPE_WHSEC@@...\nOPENAI_API_KEY=\nSMTP_HOST=localhost\nSMTP_PORT=1025\n"
+  },
+  "read": ".env.example",
+  "keep": [
+   "DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/orders_dev",
+   "JWT_SECRET=change-me-in-production",
+   "STRIPE_SECRET_KEY=@@STRIPE_SK_TEST@@...",
+   "STRIPE_WEBHOOK_SECRET=@@STRIPE_WHSEC@@...",
+   "REDIS_URL=redis://localhost:6379/0"
+  ]
+ },
+ {
+  "id": "docker-compose-written-by-agent",
+  "why": "regression guard: a compose file the agent just wrote, reading credentials from the environment and secret files; every reference must come back intact",
+  "files": {
+   "docker-compose.yml": "services:\n  db:\n    image: postgres:16-alpine\n    environment:\n      POSTGRES_USER: orders_app\n      POSTGRES_DB: orders\n      POSTGRES_PASSWORD_FILE: /run/secrets/db_password\n    secrets:\n      - db_password\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U orders_app -d orders\"]\n      interval: 5s\n  cache:\n    image: redis:7-alpine\n    command: redis-server --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD}\n  api:\n    build: .\n    environment:\n      DATABASE_URL: postgresql://orders_app:${DB_PASSWORD}@db:5432/orders\n      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}\n    depends_on:\n      db:\n        condition: service_healthy\n\nsecrets:\n  db_password:\n    file: ./secrets/db_password.txt\n"
+  },
+  "read": "docker-compose.yml",
+  "keep": [
+   "POSTGRES_PASSWORD_FILE: /run/secrets/db_password",
+   "command: redis-server --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD}",
+   "DATABASE_URL: postgresql://orders_app:${DB_PASSWORD}@db:5432/orders",
+   "STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}",
+   "file: ./secrets/db_password.txt",
+   "secrets:\n  db_password:\n    file:",
+   "    secrets:\n      - db_password\n"
+  ]
+ },
+ {
+  "id": "gh-actions-log-masked-guard",
+  "why": "regression guard: a GitHub Actions log (gh run view --log-failed) with timestamps and *** masks; the env block, step names and test failure must survive",
+  "command": "gh run view 11234567890 --log-failed",
+  "output": "test\tRun tests\t2026-09-30T14:02:11.4419210Z ##[group]Run npm test -- --reporter=dot\ntest\tRun tests\t2026-09-30T14:02:11.4419876Z npm test -- --reporter=dot\ntest\tRun tests\t2026-09-30T14:02:11.4420330Z shell: /usr/bin/bash -e {0}\ntest\tRun tests\t2026-09-30T14:02:11.4420512Z env:\ntest\tRun tests\t2026-09-30T14:02:11.4420781Z   DATABASE_URL: ***\ntest\tRun tests\t2026-09-30T14:02:11.4420999Z   STRIPE_SECRET_KEY: ***\ntest\tRun tests\t2026-09-30T14:02:11.4421203Z   NODE_ENV: test\ntest\tRun tests\t2026-09-30T14:02:11.4421410Z ##[endgroup]\ntest\tRun tests\t2026-09-30T14:02:19.8812004Z  FAIL  src/billing/webhook.test.ts > rejects bad signature\ntest\tRun tests\t2026-09-30T14:02:19.8812553Z AssertionError: expected 200 to be 400 // Object.is equality\ntest\tRun tests\t2026-09-30T14:02:19.9120018Z ##[error]Process completed with exit code 1.\n",
+  "keep": [
+   "2026-09-30T14:02:11.4421203Z   NODE_ENV: test",
+   "DATABASE_URL: ***",
+   "FAIL  src/billing/webhook.test.ts > rejects bad signature",
+   "AssertionError: expected 200 to be 400",
+   "##[error]Process completed with exit code 1."
+  ]
+ },
+ {
+  "id": "kubectl-logs-pino-config-dump",
+  "why": "one-line JSON logs (pino) from a pod that dumps its resolved config at startup; the credential-named JSON fields hold values from a cluster Secret that is not in any local file",
+  "command": "kubectl logs deploy/orders-api --tail=4",
+  "output": "{\"level\":30,\"time\":1727704931221,\"pid\":1,\"hostname\":\"orders-api-7c9f8d6b5-x2kqp\",\"msg\":\"starting orders-api v2.14.0\"}\n{\"level\":20,\"time\":1727704931230,\"pid\":1,\"hostname\":\"orders-api-7c9f8d6b5-x2kqp\",\"config\":{\"db\":{\"host\":\"orders-db.internal\",\"port\":5432,\"database\":\"orders\",\"user\":\"orders_app\",\"password\":\"K8s-Sec-pw-3Rt9xLq2V\"},\"stripe\":{\"apiVersion\":\"2024-06-20\",\"webhookSecret\":\"@@STRIPE_WHSEC@@@@C:Qm8Xr2Lp.5Tz9Wb3N.c7Vy1Kd4.Hs6Jf0Ga@@\"},\"mailgun\":{\"domain\":\"mg.acme.example\",\"apiKey\":\"@@C:9c1e7b3a.5d2f48e6.a0b4c8d2.e6f1a3b5@@-2c4e6f8a-1b3d5f7a\"}},\"msg\":\"resolved config\"}\n{\"level\":50,\"time\":1727704936118,\"pid\":1,\"hostname\":\"orders-api-7c9f8d6b5-x2kqp\",\"err\":{\"type\":\"Error\",\"message\":\"password authentication failed for user \\\"orders_app\\\"\",\"code\":\"28P01\"},\"msg\":\"db connect failed\"}\n",
+  "hide": [
+   "K8s-Sec-pw-3Rt9xLq2V",
+   "@@STRIPE_WHSEC@@@@C:Qm8Xr2Lp.5Tz9Wb3N.c7Vy1Kd4.Hs6Jf0Ga@@",
+   "@@C:9c1e7b3a.5d2f48e6.a0b4c8d2.e6f1a3b5@@-2c4e6f8a-1b3d5f7a"
+  ],
+  "keep": [
+   "\"host\":\"orders-db.internal\",\"port\":5432,\"database\":\"orders\",\"user\":\"orders_app\"",
+   "\"code\":\"28P01\"",
+   "\"msg\":\"db connect failed\"",
+   "\"domain\":\"mg.acme.example\""
+  ]
+ },
+ {
+  "id": "terraform-plan-lambda-env-plaintext",
+  "why": "terraform plan prints (sensitive value) for schema-sensitive fields but a Lambda's environment map in plain text when the variable feeding it isn't marked sensitive; the password came from CI, not a local tfvars",
+  "command": "terraform plan -no-color",
+  "output": "Terraform used the selected providers to generate the following execution\nplan. Resource actions are indicated with the following symbols:\n  + create\n\nTerraform will perform the following actions:\n\n  # aws_db_instance.orders will be created\n  + resource \"aws_db_instance\" \"orders\" {\n      + db_name                = \"orders\"\n      + endpoint               = (known after apply)\n      + engine                 = \"postgres\"\n      + engine_version         = \"16.3\"\n      + password               = (sensitive value)\n      + username               = \"orders_app\"\n    }\n\n  # aws_lambda_function.reconcile will be created\n  + resource \"aws_lambda_function\" \"reconcile\" {\n      + function_name = \"orders-reconcile\"\n      + handler       = \"index.handler\"\n      + runtime       = \"nodejs20.x\"\n\n      + environment {\n          + variables = {\n              + \"DB_HOST\"     = \"orders.cluster-c9x2kq.us-east-1.rds.amazonaws.com\"\n              + \"DB_NAME\"     = \"orders\"\n              + \"DB_PASSWORD\" = \"Tf-Lambda-pw-8812xQz\"\n              + \"DB_USER\"     = \"orders_app\"\n            }\n        }\n    }\n\nPlan: 2 to add, 0 to change, 0 to destroy.\n",
+  "hide": [
+   "Tf-Lambda-pw-8812xQz"
+  ],
+  "keep": [
+   "+ password               = (sensitive value)",
+   "+ \"DB_HOST\"     = \"orders.cluster-c9x2kq.us-east-1.rds.amazonaws.com\"",
+   "+ username               = \"orders_app\"",
+   "Plan: 2 to add, 0 to change, 0 to destroy."
+  ]
+ },
+ {
+  "id": "npm-ci-build-test-guard",
+  "why": "regression guard: npm ci, vite build and vitest output with hashed asset names, while the env holds API keys",
+  "env": {
+   "OPENAI_API_KEY": "@@SK_PROJ@@@@C:Xq7Lm2Rt.9Vb4Nc8W.z1Kp5Yh3.Jd6Fg0Sa.2Ue4Io8@@",
+   "STRIPE_SECRET_KEY": "@@STRIPE_SK_TEST@@@@C:51PqR7sL.kdF3xYz9.WbN2mT4u.Vz0Yx9Wv.8Ut7Sr6Q.p5On4Ml3.Kj2Ih1Gf.0Ed9Cb8A.z7Yx6Wv5.Ut4Sr3Qp.2On1Ml00.Ab@@"
+  },
+  "command": "npm ci && npm run build && npx vitest run",
+  "output": "npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it.\nnpm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported\n\nadded 812 packages, and audited 813 packages in 14s\n\n164 packages are looking for funding\n  run `npm fund` for details\n\nfound 0 vulnerabilities\n\n> orders-web@2.14.0 build\n> tsc -b && vite build\n\nvite v5.4.8 building for production...\n✓ 1423 modules transformed.\ndist/index.html                   0.62 kB │ gzip:  0.38 kB\ndist/assets/index-BxK9mQ2a.css   18.40 kB │ gzip:  4.12 kB\ndist/assets/index-D4fR7tLp.js   412.77 kB │ gzip: 131.05 kB\n✓ built in 4.81s\n\n RUN  v2.1.1 /home/dev/orders-web\n\n ✓ src/lib/money.test.ts (12 tests) 9ms\n ✓ src/billing/webhook.test.ts (6 tests) 31ms\n ✓ src/auth/token.test.ts (9 tests) 14ms\n\n Test Files  3 passed (3)\n      Tests  27 passed (27)\n   Start at  14:22:08\n   Duration  1.32s (transform 211ms, setup 0ms, collect 402ms, tests 54ms, environment 1ms, prepare 288ms)\n",
+  "keep": [
+   "added 812 packages, and audited 813 packages in 14s",
+   "dist/assets/index-D4fR7tLp.js   412.77 kB",
+   "✓ src/auth/token.test.ts (9 tests) 14ms",
+   "Tests  27 passed (27)"
+  ]
+ },
+ {
+  "id": "git-diff-hardcoded-password-added",
+  "why": "reviewing a config change with git diff: the added (+) line hardcodes a password; the removed (-) line and context are harmless",
+  "command": "git diff HEAD~1 -- config/database.yml",
+  "output": "diff --git a/config/database.yml b/config/database.yml\nindex 3c1f2a9..8e7d4b0 100644\n--- a/config/database.yml\n+++ b/config/database.yml\n@@ -18,8 +18,8 @@ production:\n   <<: *default\n   database: orders_production\n   username: orders_app\n-  host: <%= ENV[\"DATABASE_HOST\"] %>\n-  password: <%= ENV[\"DATABASE_PASSWORD\"] %>\n+  host: orders-db.internal\n+  password: Hardc0ded-Db-pw-91Zq\n   sslmode: verify-full\n",
+  "hide": [
+   "Hardc0ded-Db-pw-91Zq"
+  ],
+  "keep": [
+   "-  password: <%= ENV[\"DATABASE_PASSWORD\"] %>",
+   "+  host: orders-db.internal",
+   "   sslmode: verify-full",
+   "   username: orders_app"
+  ]
+ },
+ {
+  "id": "curl-v-x-api-key-header",
+  "why": "curl -v echoes request headers with a '> ' prefix; an x-api-key fetched from 1Password at call time (not in env or files) is sent in clear",
+  "command": "curl -v -H \"x-api-key: $(op read op://dev/acme-geo/credential)\" 'https://api.acme-geo.example/v2/lookup?ip=203.0.113.7'",
+  "output": "*   Trying 198.51.100.24:443...\n* Connected to api.acme-geo.example (198.51.100.24) port 443\n* ALPN: curl offers h2,http/1.1\n* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384 / X25519 / RSASSA-PSS\n* Server certificate:\n*  subject: CN=api.acme-geo.example\n*  issuer: C=US; O=Let's Encrypt; CN=R11\n* using HTTP/2\n> GET /v2/lookup?ip=203.0.113.7 HTTP/2\n> Host: api.acme-geo.example\n> User-Agent: curl/8.5.0\n> Accept: */*\n> x-api-key: ag_live_@@C:7Hq2Xm9L.r4Tb8Wz1.Nc5Vy3Kd.6Pf0Js2U.e@@\n>\n< HTTP/2 403\n< content-type: application/json\n< x-request-id: @@C:01J8ZK4Q.7R2M9X3T.5V6W8Y0A.1B@@\n<\n{\"error\":\"key_not_enabled_for_endpoint\",\"endpoint\":\"/v2/lookup\"}\n* Connection #0 to host api.acme-geo.example left intact\n",
+  "hide": [
+   "ag_live_@@C:7Hq2Xm9L.r4Tb8Wz1.Nc5Vy3Kd.6Pf0Js2U.e@@"
+  ],
+  "keep": [
+   "> GET /v2/lookup?ip=203.0.113.7 HTTP/2",
+   "> Host: api.acme-geo.example",
+   "< HTTP/2 403",
+   "< x-request-id: @@C:01J8ZK4Q.7R2M9X3T.5V6W8Y0A.1B@@",
+   "{\"error\":\"key_not_enabled_for_endpoint\",\"endpoint\":\"/v2/lookup\"}"
+  ]
+ },
+ {
+  "id": "har-snippet-headers-and-cookies",
+  "why": "a browser HAR exported to debug a 401: headers and cookies are name/value objects, so the bearer token and session cookie sit under \"value\"",
+  "files": {
+   "debug/cart-401.har": "{\n  \"log\": {\n    \"version\": \"1.2\",\n    \"entries\": [\n      {\n        \"request\": {\n          \"method\": \"POST\",\n          \"url\": \"https://api.shop.example.com/v1/cart/items\",\n          \"headers\": [\n            {\n              \"name\": \"content-type\",\n              \"value\": \"application/json\"\n            },\n            {\n              \"name\": \"authorization\",\n              \"value\": \"Bearer at_@@C:8f2Kq9Xm.4Lr7Tb1W.z5Nc3Vy6.Hd0Pj2Gs@@\"\n            },\n            {\n              \"name\": \"cookie\",\n              \"value\": \"sid=s%@@C:3Ar7Ytq2.LmX9wZ4k.P8vN3cB6.hJ1dF5gS.0a@@.@@C:Qm8Xr2Lp.5Tz9Wb3N.c7Vy1Kd4.Hs6Jf0Ga.E@@; theme=dark\"\n            }\n          ],\n          \"cookies\": [\n            {\n              \"name\": \"sid\",\n              \"value\": \"s%@@C:3Ar7Ytq2.LmX9wZ4k.P8vN3cB6.hJ1dF5gS.0a@@.@@C:Qm8Xr2Lp.5Tz9Wb3N.c7Vy1Kd4.Hs6Jf0Ga.E@@\"\n            }\n          ]\n        },\n        \"response\": {\n          \"status\": 401,\n          \"statusText\": \"Unauthorized\",\n          \"headers\": [\n            {\n              \"name\": \"www-authenticate\",\n              \"value\": \"Bearer error=\\\"invalid_token\\\", error_description=\\\"token expired\\\"\"\n            }\n          ]\n        }\n      }\n    ]\n  }\n}\n"
+  },
+  "read": "debug/cart-401.har",
+  "hide": [
+   "at_@@C:8f2Kq9Xm.4Lr7Tb1W.z5Nc3Vy6.Hd0Pj2Gs@@",
+   "@@C:r7Ytq2Lm.X9wZ4kP8.vN3cB6hJ.1dF5gS0a@@"
+  ],
+  "keep": [
+   "\"url\": \"https://api.shop.example.com/v1/cart/items\"",
+   "\"status\": 401",
+   "\"value\": \"application/json\"",
+   "error_description=\\\"token expired\\\""
+  ]
+ },
+ {
+  "id": "curl-oauth-token-response-oneline",
+  "why": "testing an OAuth client-credentials flow with curl -s: the token endpoint returns compact one-line JSON with opaque (non-JWT) access and refresh tokens",
+  "command": "curl -s -X POST https://auth.acme.example/oauth/token -d grant_type=client_credentials -d client_id=orders-svc -d \"client_secret=$(op read op://dev/orders-svc/secret)\"",
+  "output": "{\"access_token\":\"at_@@C:2YotnFZF.Ejr1zCsi.cMWpAAx9.Lq7@@\",\"token_type\":\"Bearer\",\"expires_in\":3600,\"refresh_token\":\"rt_@@C:tGzv3JOk.F0XG5Qx2.TlKWIA9q.Zr4@@\",\"scope\":\"orders:read orders:write\"}\n",
+  "hide": [
+   "at_@@C:2YotnFZF.Ejr1zCsi.cMWpAAx9.Lq7@@",
+   "rt_@@C:tGzv3JOk.F0XG5Qx2.TlKWIA9q.Zr4@@"
+  ],
+  "keep": [
+   "\"token_type\":\"Bearer\"",
+   "\"expires_in\":3600",
+   "\"scope\":\"orders:read orders:write\""
+  ]
+ },
+ {
+  "id": "aws-s3api-list-keys-and-next-token",
+  "why": "listing S3 objects: \"Key\" is an object path and \"NextToken\" a pagination cursor the agent must pass back with --starting-token; neither is a credential",
+  "command": "aws s3api list-objects-v2 --bucket acme-invoices --prefix uploads/2026/09/ --max-items 2",
+  "output": "{\n    \"Contents\": [\n        {\n            \"Key\": \"@@C:uploads/.2026/09/.invoice@@-4411.pdf\",\n            \"LastModified\": \"2026-09-30T08:12:44+00:00\",\n            \"ETag\": \"\\\"@@C:9b2cf535.f27731c9.74343645.a3985328@@\\\"\",\n            \"Size\": 48213,\n            \"StorageClass\": \"STANDARD\"\n        },\n        {\n            \"Key\": \"@@C:uploads/.2026/09/.invoice@@-4412.pdf\",\n            \"LastModified\": \"2026-09-30T08:14:02+00:00\",\n            \"ETag\": \"\\\"@@C:c4ca4238.a0b92382.0dcc509a.6f75849b@@\\\"\",\n            \"Size\": 51007,\n            \"StorageClass\": \"STANDARD\"\n        }\n    ],\n    \"RequestCharged\": null,\n    \"NextToken\": \"@@JWT@@@@C:Db250aW5.1YXRpb25.Ub2tlbiI.6ICIxcFh.xN0xyMm0.5VmJUM0t.jTjh3WWZ.aMGFIc0p.kVWVHaSI.sICJib3R.vX3RydW5.jYXRlX2F.tb3VudCI.6IDJ9@@\"\n}\n",
+  "keep": [
+   "\"Key\": \"@@C:uploads/.2026/09/.invoice@@-4411.pdf\"",
+   "\"Key\": \"@@C:uploads/.2026/09/.invoice@@-4412.pdf\"",
+   "\"NextToken\": \"@@JWT@@@@C:Db250aW5.1YXRpb25.Ub2tlbiI.6ICIxcFh.xN0xyMm0.5VmJUM0t.jTjh3WWZ.aMGFIc0p.kVWVHaSI.sICJib3R.vX3RydW5.jYXRlX2F.tb3VudCI.6IDJ9@@\""
+  ]
+ },
+ {
+  "id": "dynamodb-single-table-items-pk-sk",
+  "why": "single-table DynamoDB design names its keys PK and SK; a debug script prints items with util.inspect and the sort keys are what the agent is debugging",
+  "command": "node scripts/dump-orders.mjs c_8812",
+  "output": "[\n  {\n    PK: 'CUSTOMER#c_8812',\n    SK: 'ORDER#2026-09-30#o_4411',\n    status: 'PAID',\n    total: 4999,\n    currency: 'usd'\n  },\n  {\n    PK: 'CUSTOMER#c_8812',\n    SK: 'PROFILE',\n    email: 'pat@example.com',\n    plan: 'pro'\n  }\n]\n",
+  "keep": [
+   "SK: 'ORDER#2026-09-30#o_4411',",
+   "SK: 'PROFILE',",
+   "PK: 'CUSTOMER#c_8812',"
+  ]
+ },
+ {
+  "id": "kubectl-deployment-env-and-key-refs",
+  "why": "kubectl get deploy -o yaml: a plain env value under name: DB_PASSWORD is a secret (the name is on the line above); secretKeyRef/affinity 'key:' fields are references the agent needs",
+  "command": "kubectl get deploy orders-api -o yaml",
+  "output": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: orders-api\n  namespace: shop\nspec:\n  replicas: 3\n  template:\n    spec:\n      affinity:\n        podAntiAffinity:\n          @@C:preferre.dDuringS.chedulin.gIgnored.DuringEx.ecution@@:\n          - podAffinityTerm:\n              labelSelector:\n                matchExpressions:\n                - key: app.kubernetes.io/name\n                  operator: In\n                  values:\n                  - orders-api\n              topologyKey: kubernetes.io/hostname\n            weight: 100\n      containers:\n      - env:\n        - name: DB_HOST\n          value: orders-db.internal\n        - name: DB_PASSWORD\n          value: K8s-Plain-pw-6Tq2xWm\n        - name: STRIPE_SECRET_KEY\n          valueFrom:\n            secretKeyRef:\n              key: secret-key\n              name: stripe\n        image: ghcr.io/acme/orders-api:2.14.0\n        name: orders-api\n",
+  "hide": [
+   "K8s-Plain-pw-6Tq2xWm"
+  ],
+  "keep": [
+   "- key: app.kubernetes.io/name",
+   "value: orders-db.internal",
+   "key: secret-key",
+   "topologyKey: kubernetes.io/hostname",
+   "image: ghcr.io/acme/orders-api:2.14.0"
+  ]
+ },
+ {
+  "id": "helm-values-secret-references",
+  "why": "Helm values that reference credentials by Secret name and key (Bitnami existingSecret, External Secrets remoteRef) hold no credentials; the agent wiring the chart needs every one",
+  "files": {
+   "charts/orders/values.yaml": "postgresql:\n  auth:\n    username: orders_app\n    database: orders\n    existingSecret: orders-db-credentials\n    secretKeys:\n      userPasswordKey: password\n\nexternalSecrets:\n  refreshInterval: 1h\n  data:\n    - secretKey: STRIPE_SECRET_KEY\n      remoteRef:\n        key: prod/orders/stripe\n        property: secret_key\n\n# Redis subchart\nredis:\n  architecture: standalone\n\n  auth:\n    enabled: true\n    existingSecret: orders-redis\n"
+  },
+  "read": "charts/orders/values.yaml",
+  "keep": [
+   "existingSecret: orders-db-credentials",
+   "userPasswordKey: password",
+   "secretKey: STRIPE_SECRET_KEY",
+   "key: prod/orders/stripe",
+   "property: secret_key",
+   "  refreshInterval: 1h",
+   "  auth:\n    enabled: true\n"
+  ]
+ },
+ {
+  "id": "gh-workflow-secrets-inherit",
+  "why": "a release workflow passes secrets to a reusable workflow with the keyword 'inherit' and caches by a literal key; both are config",
+  "files": {
+   ".github/workflows/release.yml": "name: release\non:\n  push:\n    tags: [\"v*\"]\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/cache@v4\n        with:\n          path: ~/.npm\n          key: npm-cache-v3\n      - run: npm ci && npm run build\n  deploy:\n    needs: build\n    uses: ./.github/workflows/deploy.yml\n    secrets: inherit\n"
+  },
+  "read": ".github/workflows/release.yml",
+  "keep": [
+   "    secrets: inherit",
+   "          key: npm-cache-v3"
+  ]
+ },
+ {
+  "id": "aws-ec2-describe-key-pairs-public-key",
+  "why": "aws ec2 describe-key-pairs --include-public-key: the public half of an SSH key is meant to be shared (the agent needs it for authorized_keys)",
+  "command": "aws ec2 describe-key-pairs --key-names ci-deploy --include-public-key",
+  "output": "{\n    \"KeyPairs\": [\n        {\n            \"KeyPairId\": \"key-0a1b2c3d4e5f67890\",\n            \"KeyFingerprint\": \"SHA256:@@C:Rk3x9Qm2.Lt7Vb4Nc.8Wz1Kp5Y.h3Jd6Fg0.Sa2UeIo8.Pq@@\",\n            \"KeyName\": \"ci-deploy\",\n            \"KeyType\": \"ed25519\",\n            \"Tags\": [],\n            \"PublicKey\": \"ssh-ed25519 @@C:AAAAC3Nz.aC1lZDI1.NTE5AAAA.IHq7Lm2R.t9Vb4Nc8.Wz1Kp5Yh.3Jd6Fg0S.a2Ue4Io8.PqXr@@ ci-deploy\",\n            \"CreateTime\": \"2026-03-14T10:22:31.000Z\"\n        }\n    ]\n}\n",
+  "keep": [
+   "\"PublicKey\": \"ssh-ed25519 @@C:AAAAC3Nz.aC1lZDI1.NTE5AAAA.IHq7Lm2R.t9Vb4Nc8.Wz1Kp5Yh.3Jd6Fg0S.a2Ue4Io8.PqXr@@ ci-deploy\"",
+   "\"KeyName\": \"ci-deploy\""
+  ]
+ },
+ {
+  "id": "python-image-gpg-key-fingerprint-env",
+  "why": "official python images set GPG_KEY to the release manager's public key fingerprint, used to verify the tarball; it is public and shows up in every docker env listing",
+  "command": "docker run --rm python:3.12-slim env",
+  "output": "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\nHOSTNAME=4f2a9c1e7b3d\nLANG=C.UTF-8\nGPG_KEY=@@C:7169605F.62C75135.6D054A26.A821E680.E5FA6305@@\nPYTHON_VERSION=3.12.6\nPYTHON_SHA256=@@C:19996582.98cf2fb8.37dffed8.ff3c033e.f0c49e4e.7a8b2f3b.4b0e2f1c.1b7e9d3a@@\nHOME=/root\n",
+  "keep": [
+   "GPG_KEY=@@C:7169605F.62C75135.6D054A26.A821E680.E5FA6305@@",
+   "PYTHON_VERSION=3.12.6"
+  ]
+ },
+ {
+  "id": "mongo-stacktrace-srv-url-guard",
+  "why": "regression guard: a Mongoose connection error prints the SRV URL; the password is hidden, cluster host and options kept",
+  "command": "npm run dev",
+  "output": "> orders-api@2.14.0 dev\n> tsx watch src/server.ts\n\nMongoServerSelectionError: connection <monitor> to 10.0.4.17:27017 closed\n    at Topology.selectServer (/home/dev/orders-api/node_@@C:modules/.mongodb/.lib/sdam./topolog.y@@.js:303:38)\n    at async connect (/home/dev/orders-api/src/db.ts:12:3) {\n  reason: TopologyDescription {\n    type: 'ReplicaSetNoPrimary',\n    setName: 'atlas-x1y2z3-shard-0',\n  },\n  code: undefined,\n  [Symbol(errorLabels)]: Set(0) {}\n}\nFailed to connect to mongodb+srv://orders_app:Mg-Atl4s-pw-Qx72Lm@cluster0.ab1cd.mongodb.net/orders?retryWrites=true&w=majority&appName=orders-api\n",
+  "hide": [
+   "Mg-Atl4s-pw-Qx72Lm"
+  ],
+  "keep": [
+   "@cluster0.ab1cd.mongodb.net/orders?retryWrites=true&w=majority&appName=orders-api",
+   "MongoServerSelectionError: connection <monitor> to 10.0.4.17:27017 closed",
+   "setName: 'atlas-x1y2z3-shard-0',"
+  ]
+ },
+ {
+  "id": "node-s3-nosuchkey-error-inspect",
+  "why": "an AWS SDK v3 S3 error printed by Node names the missing object under Key; the agent needs it to find the bad path",
+  "command": "node scripts/fetch-invoice.mjs 4411",
+  "output": "NoSuchKey: The specified key does not exist.\n    at de_NoSuchKeyRes (/home/dev/orders-api/node_modules/@aws-sdk/client-s3/dist-cjs/index.js:8243:21)\n    at async /home/dev/orders-api/node_modules/@smithy/middleware-serde/dist-cjs/index.js:35:20 {\n  '$fault': 'client',\n  '$metadata': {\n    httpStatusCode: 404,\n    requestId: 'Q8X2K9LM4PRT7V1W',\n    extendedRequestId: '@@C:p3Vx9Lm2.Tq7Rb4Nc.8Wz1Kd5Y.h3Jf6Gs0.Ae2Ui4Oo.8Pq1Rs3T.u5Vw7Xy9.Za=@@',\n    attempts: 1,\n    totalRetryDelay: 0\n  },\n  Code: 'NoSuchKey',\n  Key: '@@C:uploads/.2026/09/.invoice@@-4411.pdf',\n  RequestId: 'Q8X2K9LM4PRT7V1W',\n  HostId: '@@C:p3Vx9Lm2.Tq7Rb4Nc.8Wz1Kd5Y.h3Jf6Gs0.Ae2Ui4Oo.8Pq1Rs3T.u5Vw7Xy9.Za=@@'\n}\n",
+  "keep": [
+   "NoSuchKey: The specified key does not exist.",
+   "Key: '@@C:uploads/.2026/09/.invoice@@-4411.pdf',",
+   "Code: 'NoSuchKey',",
+   "httpStatusCode: 404,"
+  ]
+ },
+ {
+  "id": "curl-html-template-blank-lines",
+  "why": "curl of a server-rendered page: a template loop with untrimmed blocks emits hundreds of consecutive whitespace-only lines, which ordinary HTML often contains",
+  "command": "curl -s http://localhost:8000/checkout/",
+  "output": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <title>Checkout</title>\n  </head>\n  <body>\n    <ul class=\"cart\">\n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n      <li class=\"item\">Widget x 2 — $49.98</li>\n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n        \n    </ul>\n    <p class=\"error\">CSRF verification failed. Request aborted.</p>\n  </body>\n</html>\n",
+  "keep": [
+   "<title>Checkout</title>",
+   "CSRF verification failed. Request aborted."
+  ]
+ }
+]

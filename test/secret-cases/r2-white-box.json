@@ -1,0 +1,515 @@
+[
+ {
+  "id": "ps-aux-cli-password-flags",
+  "why": "redactNamedValues only knows NAME=value with an upper-case name, `name: value` at line start, URL passwords and Authorization headers; lower-case --password=, curl -u user:pass and redis-cli -a in argv pass through",
+  "command": "ps aux | grep -E 'mysqldump|curl|redis-cli'",
+  "output": "backup     41822  2.1  0.4 112340 18232 ?        S    02:00   0:03 /usr/bin/mysqldump --user=backup --password=Qm7vR2xK9pLs!z --single-transaction shop\ndeploy     41907  0.0  0.1  24580  9120 ?        S    02:00   0:00 curl -fsS -u ci-bot:Hx3vN8qL2mZ7kR4t https://nexus.internal.example.com/repository/releases/\nredis      42011  0.0  0.0  12844  4096 pts/2    S+   02:01   0:00 redis-cli -h cache.internal -a Zr8Kq2Lm9XvT4pN7 --no-auth-warning INFO\n",
+  "hide": [
+   "Qm7vR2xK9pLs!z",
+   "Hx3vN8qL2mZ7kR4t",
+   "Zr8Kq2Lm9XvT4pN7"
+  ],
+  "keep": [
+   "/usr/bin/mysqldump --user=backup",
+   "--single-transaction shop",
+   "https://nexus.internal.example.com/repository/releases/",
+   "redis-cli -h cache.internal"
+  ]
+ },
+ {
+  "id": "java-properties-lowercase-names",
+  "why": "Java .properties use dotted/camelCase names (spring.datasource.password=, ossrhPassword=); redactNamedValues' NAME=value rule requires an upper-case first letter, neither file is a secret file, and ~/.gradle/gradle.properties (the standard home of Maven Central signing/publishing credentials) isn't in HOME_SECRETS",
+  "files": {
+   "src/main/resources/application.properties": "spring.application.name=orders\nserver.port=8080\nspring.datasource.url=jdbc:postgresql://db.internal:5432/orders\nspring.datasource.username=orders_app\nspring.datasource.password=Wq4!tZ8vLm2#Rk9p\nspring.mail.password=fT6yBn3Qx8Rw1Kp\napp.jwt.secret=@@C:V2hhdCBh.IGxvdmVs.eSBkYXkg.Zm9yIGEg.and0@@\nlogging.level.org.hibernate.SQL=DEBUG\n",
+   "~/.gradle/gradle.properties": "org.gradle.jvmargs=-Xmx4g -XX:+UseParallelGC\norg.gradle.caching=true\nsigning.keyId=24875D73\nsigning.password=Tr0ub4dor&3-sign\nsigning.secretKeyRingFile=/home/dev/.gnupg/secring.gpg\nossrhUsername=jdoe\nossrhPassword=pL9#xV2qR7!mKt4w\n"
+  },
+  "command": "cat src/main/resources/application.properties && cat ~/.gradle/gradle.properties",
+  "output": "spring.application.name=orders\nserver.port=8080\nspring.datasource.url=jdbc:postgresql://db.internal:5432/orders\nspring.datasource.username=orders_app\nspring.datasource.password=Wq4!tZ8vLm2#Rk9p\nspring.mail.password=fT6yBn3Qx8Rw1Kp\napp.jwt.secret=@@C:V2hhdCBh.IGxvdmVs.eSBkYXkg.Zm9yIGEg.and0@@\nlogging.level.org.hibernate.SQL=DEBUG\norg.gradle.jvmargs=-Xmx4g -XX:+UseParallelGC\norg.gradle.caching=true\nsigning.keyId=24875D73\nsigning.password=Tr0ub4dor&3-sign\nsigning.secretKeyRingFile=/home/dev/.gnupg/secring.gpg\nossrhUsername=jdoe\nossrhPassword=pL9#xV2qR7!mKt4w\n",
+  "hide": [
+   "Wq4!tZ8vLm2#Rk9p",
+   "fT6yBn3Qx8Rw1Kp",
+   "@@C:V2hhdCBh.IGxvdmVs.eSBkYXkg.Zm9yIGEg.and0@@",
+   "Tr0ub4dor&3-sign",
+   "pL9#xV2qR7!mKt4w"
+  ],
+  "keep": [
+   "spring.application.name=orders",
+   "server.port=8080",
+   "spring.datasource.url=jdbc:postgresql://db.internal:5432/orders",
+   "spring.datasource.username=orders_app",
+   "logging.level.org.hibernate.SQL=DEBUG",
+   "org.gradle.jvmargs=-Xmx4g -XX:+UseParallelGC",
+   "signing.keyId=24875D73",
+   "ossrhUsername=jdoe",
+   "signing.secretKeyRingFile=/home/dev/.gnupg/secring.gpg"
+  ]
+ },
+ {
+  "id": "source-code-credential-assignments",
+  "why": "redactNamedValues knows only NAME=value with no spaces, `name: value` at line start, URL passwords and headers; Python's `SECRET_KEY = '...'`, PHP's define('DB_PASSWORD', '...') and .NET's <add key=\"ApiKey\" value=\"...\"/> all slip past, and maskLine's XML rule only handles <name>value</name>",
+  "files": {
+   "shop/settings.py": "from pathlib import Path\n\nBASE_DIR = Path(__file__).resolve().parent.parent\n\nSECRET_KEY = 'k#9x!v2q@z7m$w4r^t8p&b3n*c6d(f1g)h5j-l0s+e'\n\nDEBUG = False\nALLOWED_HOSTS = ['shop.example.com']\n\nEMAIL_HOST = 'smtp.mailgun.org'\nEMAIL_HOST_USER = 'postmaster@mg.example.com'\nEMAIL_HOST_PASSWORD = 'Bq7!mZ2xT9vR4kLp'\n",
+   "wp-config.php": "<?php\ndefine( 'DB_NAME', 'wordpress' );\ndefine( 'DB_USER', 'wp_user' );\ndefine( 'DB_PASSWORD', 'R7v!Kq2#zLm9xT4w' );\ndefine( 'DB_HOST', 'localhost' );\ndefine( 'AUTH_KEY',         'Fp<3a]Zq!9vL@x2m#Tk7^Rw4&Bn8*Cs1(Dj6)Gh5' );\ndefine( 'SECURE_AUTH_SALT', 'Yt2%Mn7@Qr4!Vx9#Lk3^Pw8&Hs5*Jd1(Fb6)Cg0' );\n$table_prefix = 'wp_';\ndefine( 'WP_DEBUG', false );\n",
+   "Web.config": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<configuration>\n  <appSettings>\n    <add key=\"Environment\" value=\"Production\" />\n    <add key=\"SendGridApiKey\" value=\"@@C:Hq8vZ3mK.2xR9tL4w.Pb7nC5dF.1gJ6sY0e@@\" />\n    <add key=\"PaymentGatewaySecret\" value=\"m4Tq!8zXv2#Lr7Kp\" />\n  </appSettings>\n  <system.web>\n    <compilation debug=\"false\" targetFramework=\"4.8\" />\n  </system.web>\n</configuration>\n"
+  },
+  "command": "cat shop/settings.py && cat wp-config.php && cat Web.config",
+  "output": "from pathlib import Path\n\nBASE_DIR = Path(__file__).resolve().parent.parent\n\nSECRET_KEY = 'k#9x!v2q@z7m$w4r^t8p&b3n*c6d(f1g)h5j-l0s+e'\n\nDEBUG = False\nALLOWED_HOSTS = ['shop.example.com']\n\nEMAIL_HOST = 'smtp.mailgun.org'\nEMAIL_HOST_USER = 'postmaster@mg.example.com'\nEMAIL_HOST_PASSWORD = 'Bq7!mZ2xT9vR4kLp'\n<?php\ndefine( 'DB_NAME', 'wordpress' );\ndefine( 'DB_USER', 'wp_user' );\ndefine( 'DB_PASSWORD', 'R7v!Kq2#zLm9xT4w' );\ndefine( 'DB_HOST', 'localhost' );\ndefine( 'AUTH_KEY',         'Fp<3a]Zq!9vL@x2m#Tk7^Rw4&Bn8*Cs1(Dj6)Gh5' );\ndefine( 'SECURE_AUTH_SALT', 'Yt2%Mn7@Qr4!Vx9#Lk3^Pw8&Hs5*Jd1(Fb6)Cg0' );\n$table_prefix = 'wp_';\ndefine( 'WP_DEBUG', false );\n<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<configuration>\n  <appSettings>\n    <add key=\"Environment\" value=\"Production\" />\n    <add key=\"SendGridApiKey\" value=\"@@C:Hq8vZ3mK.2xR9tL4w.Pb7nC5dF.1gJ6sY0e@@\" />\n    <add key=\"PaymentGatewaySecret\" value=\"m4Tq!8zXv2#Lr7Kp\" />\n  </appSettings>\n  <system.web>\n    <compilation debug=\"false\" targetFramework=\"4.8\" />\n  </system.web>\n</configuration>\n",
+  "hide": [
+   "k#9x!v2q@z7m$w4r^t8p&b3n*c6d(f1g)h5j-l0s+e",
+   "Bq7!mZ2xT9vR4kLp",
+   "R7v!Kq2#zLm9xT4w",
+   "Fp<3a]Zq!9vL@x2m#Tk7^Rw4&Bn8*Cs1(Dj6)Gh5",
+   "Yt2%Mn7@Qr4!Vx9#Lk3^Pw8&Hs5*Jd1(Fb6)Cg0",
+   "@@C:Hq8vZ3mK.2xR9tL4w.Pb7nC5dF.1gJ6sY0e@@",
+   "m4Tq!8zXv2#Lr7Kp"
+  ],
+  "keep": [
+   "DEBUG = False",
+   "ALLOWED_HOSTS = ['shop.example.com']",
+   "EMAIL_HOST = 'smtp.mailgun.org'",
+   "EMAIL_HOST_USER = 'postmaster@mg.example.com'",
+   "define( 'DB_NAME', 'wordpress' );",
+   "define( 'DB_USER', 'wp_user' );",
+   "define( 'DB_HOST', 'localhost' );",
+   "$table_prefix = 'wp_';",
+   "<add key=\"Environment\" value=\"Production\" />",
+   "<compilation debug=\"false\" targetFramework=\"4.8\" />"
+  ]
+ },
+ {
+  "id": "oauth-token-response-minified",
+  "why": "a token endpoint answers with one-line JSON; the `name: value` rule is anchored at line start and NAME= needs upper case, so opaque access/refresh tokens in {\"access_token\":\"...\"} pass; the implicit-flow #access_token= fragment isn't a [?&] query either",
+  "command": "curl -s -X POST https://auth.example.com/oauth/token -d grant_type=client_credentials -d client_id=reports-svc -d client_secret=$CLIENT_SECRET",
+  "output": "{\"access_token\":\"@@C:Rk7mQ2xZ.9vT4pL8w.Hn3bYc6d.F1gJ5sKa@@\",\"token_type\":\"Bearer\",\"expires_in\":3600,\"refresh_token\":\"@@C:Tz4pN7wB.3cY6dF1g.H5jQ0sXk.9vR2mL8q@@\",\"scope\":\"reports:read\"}\nRedirected to https://app.example.com/callback#access_token=@@C:Vb2nM8xQ.4zK7tR1w.Py5cL9dH.3gF6sJ0a@@&token_type=bearer&expires_in=3600\n",
+  "hide": [
+   "@@C:Rk7mQ2xZ.9vT4pL8w.Hn3bYc6d.F1gJ5sKa@@",
+   "@@C:Tz4pN7wB.3cY6dF1g.H5jQ0sXk.9vR2mL8q@@",
+   "@@C:Vb2nM8xQ.4zK7tR1w.Py5cL9dH.3gF6sJ0a@@"
+  ],
+  "keep": [
+   "\"token_type\":\"Bearer\"",
+   "\"expires_in\":3600",
+   "\"scope\":\"reports:read\"",
+   "https://app.example.com/callback"
+  ]
+ },
+ {
+  "id": "curl-v-custom-auth-schemes",
+  "why": "curl -v prefixes request headers with `> `, which the `name: value` rule doesn't allow (only the cookie rule does), and the Authorization rule knows Bearer/Basic/Token/Bot/Digest but not Elastic's ApiKey or Okta's SSWS",
+  "command": "curl -v -H \"Authorization: ApiKey $ES_KEY\" https://es.internal:9200/_cluster/health; curl -v -H \"Authorization: SSWS $OKTA_TOKEN\" https://acme.okta.com/api/v1/users/me; curl -v -H \"X-API-Key: $PARTNER_KEY\" https://api.partner.example.com/v2/orders",
+  "output": "*   Trying 10.0.4.12:9200...\n* Connected to es.internal (10.0.4.12) port 9200\n> GET /_cluster/health HTTP/1.1\n> Host: es.internal:9200\n> User-Agent: curl/8.5.0\n> Accept: */*\n> Authorization: ApiKey @@C:VnVhQ2ZH.Y0JDZGJr.UW0tZTVh.T3g6dWky.bHAyYXhU.Tm1zeWFr.dzl0dk5u.dw==@@\n>\n< HTTP/1.1 200 OK\n< content-type: application/json\n> GET /api/v1/users/me HTTP/1.1\n> Host: acme.okta.com\n> Authorization: SSWS @@C:00Qx9vR2.mK7tL4wP.b8nC5dF1.gJ6sY3eH.a0zU2iO@@\n> GET /v2/orders HTTP/1.1\n> Host: api.partner.example.com\n> X-API-Key: @@C:pk9Zr8Kq.2Lm9XvT4.pN7wB3cY.6dF1gH5j@@\n< HTTP/1.1 200 OK\n",
+  "hide": [
+   "@@C:VnVhQ2ZH.Y0JDZGJr.UW0tZTVh.T3g6dWky.bHAyYXhU.Tm1zeWFr.dzl0dk5u.dw==@@",
+   "@@C:00Qx9vR2.mK7tL4wP.b8nC5dF1.gJ6sY3eH.a0zU2iO@@",
+   "@@C:pk9Zr8Kq.2Lm9XvT4.pN7wB3cY.6dF1gH5j@@"
+  ],
+  "keep": [
+   "> Host: es.internal:9200",
+   "> User-Agent: curl/8.5.0",
+   "< HTTP/1.1 200 OK",
+   "> GET /v2/orders HTTP/1.1"
+  ]
+ },
+ {
+  "id": "secret-manager-cli-outputs",
+  "why": "secret managers print secrets under neutral labels: vault's whitespace-aligned Key/Value table (no = or :), AWS SecretString (last word STRING, inner pairs JSON-escaped as \\\"password\\\":), and terraform output -json's `\"value\"` next to `\"sensitive\": true`; Vault's @@VAULT_S@@ tokens also aren't a TOKEN_FORMAT",
+  "command": "vault kv get secret/shop/db && vault token create -policy=ci -ttl=24h && aws secretsmanager get-secret-value --secret-id prod/orders/db && terraform output -json",
+  "output": "==== Secret Path ====\nsecret/data/shop/db\n\n======= Metadata =======\nKey                Value\n---                -----\ncreated_time       2026-09-12T08:14:22.481Z\nversion            4\n\n====== Data ======\nKey         Value\n---         -----\npassword    Lm4!qZ8vRx2#Tk7w\nusername    shop_app\nKey                  Value\n---                  -----\ntoken                @@VAULT_S@@@@C:CAESIKq7.Zr2mLx9v.T4pN8wB3.cY6dF1gH.5jQ0sRtU.eIa@@\ntoken_accessor       @@C:Xk2vQ9pL.7mNw4RtY.8sB3cZ6d@@\ntoken_duration       24h\ntoken_renewable      true\ntoken_policies       [\"ci\" \"default\"]\n{\n    \"ARN\": \"arn:aws:secretsmanager:us-east-1:123456789012:secret:prod/orders/db-a1B2c3\",\n    \"Name\": \"prod/orders/db\",\n    \"VersionId\": \"8f2b6c1e-4d3a-4b5c-9e8f-7a6b5c4d3e2f\",\n    \"SecretString\": \"{\\\"username\\\":\\\"orders\\\",\\\"password\\\":\\\"Gx7!nQ2vZ9mT4kLr\\\",\\\"host\\\":\\\"orders.cluster-abc.us-east-1.rds.amazonaws.com\\\",\\\"port\\\":5432}\",\n    \"VersionStages\": [\n        \"AWSCURRENT\"\n    ],\n    \"CreatedDate\": \"2026-08-01T10:12:44.118000+00:00\"\n}\n{\n  \"db_endpoint\": {\n    \"sensitive\": false,\n    \"type\": \"string\",\n    \"value\": \"orders.cluster-abc.us-east-1.rds.amazonaws.com:5432\"\n  },\n  \"db_master_password\": {\n    \"sensitive\": true,\n    \"type\": \"string\",\n    \"value\": \"Pz8!kV3qM7xT2wLr\"\n  },\n  \"ci_deploy_key\": {\n    \"sensitive\": true,\n    \"type\": \"string\",\n    \"value\": \"@@C:Hq2vZ9mK.7xR4tL8w.Pb3nC6dF.1gJ5sY0e@@\"\n  }\n}\n",
+  "hide": [
+   "Lm4!qZ8vRx2#Tk7w",
+   "@@VAULT_S@@@@C:CAESIKq7.Zr2mLx9v.T4pN8wB3.cY6dF1gH.5jQ0sRtU.eIa@@",
+   "Gx7!nQ2vZ9mT4kLr",
+   "Pz8!kV3qM7xT2wLr",
+   "@@C:Hq2vZ9mK.7xR4tL8w.Pb3nC6dF.1gJ5sY0e@@"
+  ],
+  "keep": [
+   "secret/data/shop/db",
+   "username    shop_app",
+   "token_duration       24h",
+   "version            4",
+   "\"Name\": \"prod/orders/db\"",
+   "orders.cluster-abc.us-east-1.rds.amazonaws.com",
+   "\"AWSCURRENT\"",
+   "\"db_endpoint\": {",
+   "orders.cluster-abc.us-east-1.rds.amazonaws.com:5432",
+   "\"sensitive\": true"
+  ]
+ },
+ {
+  "id": "kubectl-secret-yaml-env-style-keys",
+  "why": "kubectl get secret -o yaml base64-encodes values under env-style keys; redactBlobs only flags a decoded blob holding a known value or token format, and the URL-password rule never runs on decoded text, so base64 of a credentialed DATABASE_URL passes",
+  "command": "kubectl get secret orders-env -n prod -o yaml",
+  "output": "apiVersion: v1\ndata:\n  DATABASE_URL: @@C:cG9zdGdy.ZXM6Ly9v.cmRlcnM6.TnY0a1E4.elhtMlRy.N0xwV0Bv.cmRlcnMt.ZGIucHJv.ZC5zdmM6.NTQzMi9v.cmRlcnM=@@\n  SESSION_SIGNING: @@C:S3E3bVoy.eFQ5dlI0.cEw4d0hu.M2JZYzZk@@\n  LOG_LEVEL: aW5mbw==\nkind: Secret\nmetadata:\n  creationTimestamp: \"2026-07-14T09:21:07Z\"\n  name: orders-env\n  namespace: prod\ntype: Opaque\n",
+  "hide": [
+   "@@C:cG9zdGdy.ZXM6Ly9v.cmRlcnM6.TnY0a1E4.elhtMlRy.N0xwV0Bv.cmRlcnMt.ZGIucHJv.ZC5zdmM6.NTQzMi9v.cmRlcnM=@@",
+   "@@C:S3E3bVoy.eFQ5dlI0.cEw4d0hu.M2JZYzZk@@"
+  ],
+  "keep": [
+   "name: orders-env",
+   "namespace: prod",
+   "type: Opaque"
+  ]
+ },
+ {
+  "id": "docker-secrets-files-cat",
+  "why": "Docker/Compose secrets live in files like secrets/db_password.txt and /run/secrets/db_password; SECRET_NAMES only matches file names (secrets.json etc.), never a secrets/ directory, so neither masking nor known values apply",
+  "files": {
+   "docker-compose.yml": "services:\n  db:\n    image: postgres:16\n    environment:\n      POSTGRES_PASSWORD_FILE: /run/secrets/db_password\n    secrets:\n      - db_password\nsecrets:\n  db_password:\n    file: ./secrets/db_password.txt\n",
+   "secrets/db_password.txt": "Jw8!rT3xQm6vZ2Lk\n",
+   "secrets/stripe_api_key.txt": "@@C:Hn5bYc8d.F2gJ7sKa.Rk1mQ4xZ.6vT9pL3w@@\n"
+  },
+  "command": "cat secrets/db_password.txt secrets/stripe_api_key.txt",
+  "output": "Jw8!rT3xQm6vZ2Lk\@@C:nHn5bYc8.dF2gJ7sK.aRk1mQ4x.Z6vT9pL3.w@@\n",
+  "hide": [
+   "Jw8!rT3xQm6vZ2Lk",
+   "@@C:Hn5bYc8d.F2gJ7sKa.Rk1mQ4xZ.6vT9pL3w@@"
+  ]
+ },
+ {
+  "id": "git-log-p-all-files-removed-env-line",
+  "why": "in diff output every line starts with + or -, and redactNamedValues' NAME=value rule needs ^ or whitespace/quote before the name, so the rotated (still secret) old password on a -DB_PASSWORD= line passes when the command doesn't name .env",
+  "files": {
+   ".env": "NODE_ENV=production\nDB_PASSWORD=Cz5!wP8mR2vX7kLq\n"
+  },
+  "command": "git log -p -3",
+  "output": "commit @@C:6c1e4d3a.4b5c9e8f.7a6b5c4d.3e2f8f2b.6c1e4d3a@@\nAuthor: Dev <dev@example.com>\nDate:   Mon Sep 14 10:22:01 2026 -0500\n\n    rotate db password\n\ndiff --git a/.env b/.env\nindex 3b18e51..a1c2f9d 100644\n--- a/.env\n+++ b/.env\n@@ -1,2 +1,2 @@\n NODE_ENV=production\n-DB_PASSWORD=Spring2024!Orders\n+DB_PASSWORD=Cz5!wP8mR2vX7kLq\n",
+  "hide": [
+   "Spring2024!Orders",
+   "Cz5!wP8mR2vX7kLq"
+  ],
+  "keep": [
+   "rotate db password",
+   "@@ -1,2 +1,2 @@",
+   " NODE_ENV=production"
+  ]
+ },
+ {
+  "id": "git-log-p-env-commit-sha-masked",
+  "why": "a command naming .env masks its whole output as if it were the file, and maskInline treats any 32+ hex token as a key, so `git log -p -- .env` loses the commit SHAs the agent needs to revert or show",
+  "files": {
+   ".env": "NODE_ENV=production\nDB_PASSWORD=Cz5!wP8mR2vX7kLq\n"
+  },
+  "command": "git log -p -- .env",
+  "output": "commit @@C:6c1e4d3a.4b5c9e8f.7a6b5c4d.3e2f8f2b.6c1e4d3a@@\nAuthor: Dev <dev@example.com>\nDate:   Mon Sep 14 10:22:01 2026 -0500\n\n    rotate db password\n\ndiff --git a/.env b/.env\nindex 3b18e51..a1c2f9d 100644\n--- a/.env\n+++ b/.env\n@@ -1,2 +1,2 @@\n NODE_ENV=production\n-DB_PASSWORD=Spring2024!Orders\n+DB_PASSWORD=Cz5!wP8mR2vX7kLq\n",
+  "hide": [
+   "Spring2024!Orders",
+   "Cz5!wP8mR2vX7kLq"
+  ],
+  "keep": [
+   "commit @@C:6c1e4d3a.4b5c9e8f.7a6b5c4d.3e2f8f2b.6c1e4d3a@@",
+   "index 3b18e51..a1c2f9d 100644"
+  ]
+ },
+ {
+  "id": "git-log-p-removed-private-key",
+  "why": "redactPrivateKeys' line scan accepts only base64 (whose alphabet includes + but not -) after the BEGIN line, so a key deleted in a diff (every body line prefixed with -) is treated as a bare BEGIN constant and left alone; the file is gone, so no known values",
+  "command": "git log -p --diff-filter=D -- deploy/",
+  "output": "commit @@C:9e8f7a6b.5c4d3e2f.8f2b6c1e.4d3a4b5c.6c1e4d3a@@\nAuthor: Dev <dev@example.com>\nDate:   Tue Sep 1 16:40:12 2026 -0500\n\n    remove committed deploy key\n\ndiff --git a/deploy/id_ed25519 b/deploy/id_ed25519\ndeleted file mode 100600\nindex 4be1c2a..0000000\n--- a/deploy/id_ed25519\n+++ /dev/null\n@@ -1,7 +0,0 @@\n-@@PEM_BEGIN@@OPENSSH PRIVATE KEY-----\n-@@C:b3BlbnNz.aC1rZXkt.djEAAAAA.BG5vbmUA.AAAEbm9u.ZQAAAAAA.AAABAAAA.MwAAAAtz.c2gtZW@@\n-@@C:QyNTUxOQ.AAACBkZX.Bsb3kta2.V5LWZvci.1jaS1waX.BlbGluZS.0yMDI2AA.AAoHNlY3.JldC1t@@\n-@@C:YXRlcmlh.bC1mb3It.dGVzdGlu.Zy1vbmx5.LW5vdC1y.ZWFsLWtl.eS1tYXRl.cmlhbC14.eXoxMj@@\n-@@C:MAAAAMZG.VwbG95QG.NpLWJveA.ECAwQFBg.c=@@\n-@@PEM_END@@OPENSSH PRIVATE KEY-----\n",
+  "hide": [
+   "@@C:b3BlbnNz.aC1rZXkt.djEAAAAA.BG5vbmUA.AAAEbm9u.ZQAAAAAA.AAABAAAA.MwAAAAtz.c2gtZW@@",
+   "@@C:QyNTUxOQ.AAACBkZX.Bsb3kta2.V5LWZvci.1jaS1waX.BlbGluZS.0yMDI2AA.AAoHNlY3.JldC1t@@",
+   "@@C:YXRlcmlh.bC1mb3It.dGVzdGlu.Zy1vbmx5.LW5vdC1y.ZWFsLWtl.eS1tYXRl.cmlhbC14.eXoxMj@@"
+  ],
+  "keep": [
+   "remove committed deploy key",
+   "deleted file mode 100600",
+   "+++ /dev/null"
+  ]
+ },
+ {
+  "id": "hex-and-char-dumps-of-env",
+  "why": "plain `hexdump` prints little-endian 16-bit words, which redactBlobs concatenates without swapping byte pairs, so the decoded text is scrambled; `od -c` (the usual check for stray \\r) spells the file one character per column, which nothing reassembles; masking of the named .env finds no KEY=value lines in either",
+  "files": {
+   ".env": "NODE_ENV=production\nDB_PASSWORD=Qm7vR2xK9pLs4TzW\nSTRIPE_KEY=@@STRIPE_SK_LIVE@@@@C:Fz8qK2mL.9xV4tR7w.P3nB6cY1@@\n"
+  },
+  "command": "hexdump .env && od -c .env",
+  "output": "0000000 4f4e 4544 455f 564e 703d 6f72 7564 7463\n0000010 6f69 0a6e 4244 505f 5341 5753 524f 3d44\n0000020 6d51 7637 3252 4b78 7039 734c 5434 577a\n0000030 530a 5254 5049 5f45 454b 3d59 6b73 6c5f\n0000040 7669 5f65 7a46 7138 324b 4c6d 7839 3456\n0000050 5274 7737 3350 426e 6336 3159 000a     \n000005d\n0000000   N   O   D   E   _   E   N   V   =   p   r   o   d   u   c   t\n0000020   i   o   n  \\n   D   B   _   P   A   S   S   W   O   R   D   =\n0000040   Q   m   7   v   R   2   x   K   9   p   L   s   4   T   z   W\n0000060  \\n   S   T   R   I   P   E   _   K   E   Y   =   s   k   _   l\n0000100   i   v   e   _   F   z   8   q   K   2   m   L   9   x   V   4\n0000120   t   R   7   w   P   3   n   B   6   c   Y   1  \\n\n0000135\n",
+  "hide": [
+   "6d51 7637 3252 4b78",
+   "Q   m   7   v   R   2   x   K   9   p   L   s   4   T   z   W"
+  ]
+ },
+ {
+  "id": "base64-dotenv-with-japanese-comments",
+  "why": "CI often keeps the whole .env base64-encoded in one variable; decodeBase64 rejects text under 85% printable ASCII, so when the .env has Japanese (multi-byte UTF-8) comments the blob is treated as binary and the known .env secrets inside are never looked for",
+  "files": {
+   ".env": "# データベース接続設定（本番環境）。変更する場合は必ずチームに連絡してください。\n# 注意：このファイルをリポジトリにコミットしないこと！\nDB_PASSWORD=Hv6!qT3mZ9xR2wLk\n# 決済サービスのシークレット\nPAYMENT_SECRET=@@C:Rn8bKc4d.F7gJ2sYa.Qm5xZ1vT.9pL6wHe3@@\n"
+  },
+  "env": {
+   "ENV_FILE_B64": "@@C:IyDjg4fj.g7zjgr/j.g5njg7zj.grnmjqXn.tproqK3l.rprvvIjm.nKznlarn.krDlooPv.vInjgILl.pInmm7Tj.gZnjgovl.oLTlkIjj.ga/lv4Xj.gZrjg4Hj.g7zjg6Dj.gavpgKPn.taHjgZfj.gabjgY/j.gaDjgZXj.gYTjgIIK.IyDms6jm.hI/vvJrj.gZPjga7j.g5XjgqHj.gqTjg6vj.gpLjg6rj.g53jgrjj.g4jjg6rj.gavjgrPj.g5/jg4Pj.g4jjgZfj.garjgYTj.gZPjgajv.vIEKREJf.UEFTU1dP.UkQ9SHY2.IXFUM21a.OXhSMndM.awojIOax.uua4iOOC.teODvOOD.k+OCueOB.ruOCt+OD.vOOCr+OD.rOODg+OD.iApQQVlN.RU5UX1NF.Q1JFVD1S.bjhiS2M0.ZEY3Z0oy.c1lhUW01.eFoxdlQ5.cEw2d0hl.Mwo=@@"
+  },
+  "command": "printenv ENV_FILE_B64",
+  "output": "@@C:IyDjg4fj.g7zjgr/j.g5njg7zj.grnmjqXn.tproqK3l.rprvvIjm.nKznlarn.krDlooPv.vInjgILl.pInmm7Tj.gZnjgovl.oLTlkIjj.ga/lv4Xj.gZrjg4Hj.g7zjg6Dj.gavpgKPn.taHjgZfj.gabjgY/j.gaDjgZXj.gYTjgIIK.IyDms6jm.hI/vvJrj.gZPjga7j.g5XjgqHj.gqTjg6vj.gpLjg6rj.g53jgrjj.g4jjg6rj.gavjgrPj.g5/jg4Pj.g4jjgZfj.garjgYTj.gZPjgajv.vIEKREJf.UEFTU1dP.UkQ9SHY2.IXFUM21a.OXhSMndM.awojIOax.uua4iOOC.teODvOOD.k+OCueOB.ruOCt+OD.vOOCr+OD.rOODg+OD.iApQQVlN.RU5UX1NF.Q1JFVD1S.bjhiS2M0.ZEY3Z0oy.c1lhUW01.eFoxdlQ5.cEw2d0hl.Mwo=@@\n",
+  "hide": [
+   "@@C:IyDjg4fj.g7zjgr/j.g5njg7zj.grnmjqXn.tproqK3l.rprvvIjm.nKznlarn.krDlooPv.vInjgILl.pInmm7Tj.gZnjgovl.oLTlkIjj.ga/lv4Xj.gZrjg4Hj.g7zjg6Dj.gavpgKPn.taHjgZfj.gabjgY/j.gaDjgZXj.gYTjgIIK.IyDms6jm.hI/vvJrj.gZPjga7j.g5XjgqHj.gqTjg6vj.gpLjg6rj.g53jgrjj.g4jjg6rj.gavjgrPj.g5/jg4Pj.g4jjgZfj.garjgYTj.gZPjgajv.vIEKREJf.UEFTU1dP.UkQ9SHY2.IXFUM21a.OXhSMndM.awojIOax.uua4iOOC.teODvOOD.k+OCueOB.ruOCt+OD.vOOCr+OD.rOODg+OD.iApQQVlN.RU5UX1NF.Q1JFVD1S.bjhiS2M0.ZEY3Z0oy.c1lhUW01.eFoxdlQ5.cEw2d0hl.Mwo=@@"
+  ]
+ },
+ {
+  "id": "env-listing-passphrase-with-spaces",
+  "why": "`env` prints values unquoted; the NAME=value pattern stops the value at the first space, so a diceware passphrase in another container's environment is masked only up to its first word",
+  "command": "docker exec backup-runner env",
+  "output": "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\nHOSTNAME=4f1c8e2a9b7d\nRESTIC_REPOSITORY=s3:s3.amazonaws.com/acme-backups\nRESTIC_PASSWORD=velvet kettle orbit quarry\nBORG_PASSPHRASE=lantern mosaic thistle 77 harbor\nHOME=/root\n",
+  "hide": [
+   "kettle orbit quarry",
+   "mosaic thistle 77 harbor"
+  ],
+  "keep": [
+   "RESTIC_REPOSITORY=s3:s3.amazonaws.com/acme-backups",
+   "HOSTNAME=4f1c8e2a9b7d",
+   "HOME=/root"
+  ]
+ },
+ {
+  "id": "credential-names-with-suffixes",
+  "why": "isCredentialName judges only the last word, so API_KEY_V2, DB_PASSWORD_PROD, JWT_SECRET_OLD, SECRET_KEY_FALLBACKS and plural API_KEYS/ADMIN_TOKENS are not credentials: not registered from the environment and not matched by NAME=value in printenv",
+  "env": {
+   "API_KEY_V2": "@@C:Pq3xR8vZ.2mK9tL4w.Bn7cY5dF.1gJ6sHa0@@",
+   "DB_PASSWORD_PROD": "Mk8!vQ3zXr7#Lt2p",
+   "JWT_SECRET_OLD": "@@C:Yc4dF9gJ.2sHaPq7x.R1vZ6mK3.tL8wBn5e@@",
+   "SECRET_KEY_FALLBACKS": "Ws2kLp9QxR4vT7mZ,Hb6nYc3dF8gJ1sKa",
+   "INTERNAL_API_KEYS": "Fa1gJ8sHq3xR6vZ9,Lm2kTp7Wn4bYc5dE"
+  },
+  "command": "printenv",
+  "output": "SHELL=/bin/bash\nAPI_KEY_V2=@@C:Pq3xR8vZ.2mK9tL4w.Bn7cY5dF.1gJ6sHa0@@\nDB_PASSWORD_PROD=Mk8!vQ3zXr7#Lt2p\nJWT_SECRET_OLD=@@C:Yc4dF9gJ.2sHaPq7x.R1vZ6mK3.tL8wBn5e@@\nSECRET_KEY_FALLBACKS=Ws2kLp9QxR4vT7mZ,Hb6nYc3dF8gJ1sKa\nINTERNAL_API_KEYS=Fa1gJ8sHq3xR6vZ9,Lm2kTp7Wn4bYc5dE\nLANG=C.UTF-8\n",
+  "hide": [
+   "@@C:Pq3xR8vZ.2mK9tL4w.Bn7cY5dF.1gJ6sHa0@@",
+   "Mk8!vQ3zXr7#Lt2p",
+   "@@C:Yc4dF9gJ.2sHaPq7x.R1vZ6mK3.tL8wBn5e@@",
+   "Ws2kLp9QxR4vT7mZ",
+   "Hb6nYc3dF8gJ1sKa",
+   "Fa1gJ8sHq3xR6vZ9",
+   "Lm2kTp7Wn4bYc5dE"
+  ],
+  "keep": [
+   "SHELL=/bin/bash",
+   "LANG=C.UTF-8"
+  ]
+ },
+ {
+  "id": "inert-rules-swallow-real-passwords",
+  "why": "isInert treats `$` followed by word characters as a $VAR reference and any my_/your- prefix as a placeholder, so real passwords like $Kx9vQ2pL7mNw and my_Rt8!zQ4vX2mK are shown on a masked read of .env and never registered",
+  "files": {
+   ".env": "APP_ENV=production\nADMIN_PASSWORD='$Kx9vQ2pL7mNw'\nSMTP_PASSWORD=my_Rt8!zQ4vX2mK\nLOG_LEVEL=info\n"
+  },
+  "read": ".env",
+  "hide": [
+   "$Kx9vQ2pL7mNw",
+   "my_Rt8!zQ4vX2mK"
+  ],
+  "keep": [
+   "APP_ENV=production",
+   "LOG_LEVEL=info"
+  ]
+ },
+ {
+  "id": "quoted-value-with-inline-comment",
+  "why": "cleanValue tries the quote match before stripping the inline comment, so `\"@@STRIPE_WHSEC@@...\" # note` keeps its quotes and only the quoted string is registered; the bare value the app logs is never replaced",
+  "files": {
+   ".env": "STRIPE_WEBHOOK_SECRET=\"@@STRIPE_WHSEC@@@@C:Lq7vZ2kX.p9TmW4rY.c8dF3gJ6@@\" # from dashboard, test mode\nNODE_ENV=development\n"
+  },
+  "command": "npm run dev",
+  "output": "> shop@1.0.0 dev\n> node server.js\n\n[webhooks] verifying Stripe events with signing secret @@STRIPE_WHSEC@@@@C:Lq7vZ2kX.p9TmW4rY.c8dF3gJ6@@\n[server] listening on http://localhost:3000\n",
+  "hide": [
+   "@@STRIPE_WHSEC@@@@C:Lq7vZ2kX.p9TmW4rY.c8dF3gJ6@@"
+  ],
+  "keep": [
+   "[server] listening on http://localhost:3000"
+  ]
+ },
+ {
+  "id": "url-password-unencoded-slash-hash",
+  "why": "both URL-password regexes stop the password at / ? or #, so a password pasted unencoded (the classic broken DATABASE_URL an agent is asked to debug) matches nothing: the env value isn't registered and printenv shows it",
+  "env": {
+   "DATABASE_URL": "postgresql://orders:Rk7/vQ2+xZ9mT4wL@db.internal:5432/orders",
+   "REDIS_URL": "redis://:Tq4#zX8vLm2Kp7Rw@cache.internal:6379/0"
+  },
+  "command": "printenv DATABASE_URL REDIS_URL",
+  "output": "postgresql://orders:Rk7/vQ2+xZ9mT4wL@db.internal:5432/orders\nredis://:Tq4#zX8vLm2Kp7Rw@cache.internal:6379/0\n",
+  "hide": [
+   "Rk7/vQ2+xZ9mT4wL",
+   "Tq4#zX8vLm2Kp7Rw"
+  ],
+  "keep": [
+   "@db.internal:5432/orders",
+   "@cache.internal:6379/0"
+  ]
+ },
+ {
+  "id": "tokens-in-url-username-and-path",
+  "why": "URL rules need user:password@, so a PAT used as the bare username (Azure DevOps https://<pat>@dev.azure.com) passes; a Discord webhook carries its token in the path like Slack's, but only Slack's is a TOKEN_FORMAT and DISCORD_WEBHOOK_URL ends in URL so it isn't registered",
+  "env": {
+   "DISCORD_WEBHOOK_URL": "https://discord.@@C:com/api/.webhooks./1187364.82910293.8475/Qx7.vR2mK9tL.4wPb8nC5.dF1gJ6sY.3eHa0zU2.iOk@@-@@C:Lm9XvT4p.N7wB3cY6.dF1gH5jQ.0sZr8@@"
+  },
+  "command": "git remote -v && printenv DISCORD_WEBHOOK_URL",
+  "output": "origin\thttps:@@C://k3n7qz.2wx4m5bv.c6rt8y9p.a2hs4dj6.fl7gk3qm.x5nz2wt8.ry4vbp@@@dev.azure.com/acme/shop/_git/shop (fetch)\norigin\thttps:@@C://k3n7qz.2wx4m5bv.c6rt8y9p.a2hs4dj6.fl7gk3qm.x5nz2wt8.ry4vbp@@@dev.azure.com/acme/shop/_git/shop (push)\nhttps://discord.@@C:com/api/.webhooks./1187364.82910293.8475/Qx7.vR2mK9tL.4wPb8nC5.dF1gJ6sY.3eHa0zU2.iOk@@-@@C:Lm9XvT4p.N7wB3cY6.dF1gH5jQ.0sZr8@@\n",
+  "hide": [
+   "@@C:k3n7qz2w.x4m5bvc6.rt8y9pa2.hs4dj6fl.7gk3qmx5.nz2wt8ry.4vbp@@",
+   "@@C:Qx7vR2mK.9tL4wPb8.nC5dF1gJ.6sY3eHa0.zU2iOk@@-@@C:Lm9XvT4p.N7wB3cY6.dF1gH5jQ.0sZr8@@"
+  ],
+  "keep": [
+   "dev.azure.com/acme/shop/_git/shop (fetch)",
+   "https://discord.com/api/webhooks/"
+  ]
+ },
+ {
+  "id": "sops-age-keys-cat",
+  "why": "~/.config/sops/age/keys.txt holds an age private key; the path isn't in HOME_SECRETS and @@AGE_SECRET@@... isn't in TOKEN_FORMATS, so cat shows it",
+  "files": {
+   "~/.config/sops/age/keys.txt": "# created: 2026-03-02T11:20:45-06:00\n# public key: @@C:age1ql3z.7hjy54pw.3hyww5ay.yfg7zqgv.c7w3j2el.w8zmrj2k.g5sfn9aq.mcac8p@@\n@@AGE_SECRET@@@@C:QFWSC3FV.8Q7SNAH0.F7X3EHGQ.2GZ8CZ4N.4ZXL2N9Y.Q2T9VWZR.HNGSQ7ZJ.8D@@\n"
+  },
+  "command": "cat ~/.config/sops/age/keys.txt",
+  "output": "# created: 2026-03-02T11:20:45-06:00\n# public key: @@C:age1ql3z.7hjy54pw.3hyww5ay.yfg7zqgv.c7w3j2el.w8zmrj2k.g5sfn9aq.mcac8p@@\n@@AGE_SECRET@@@@C:QFWSC3FV.8Q7SNAH0.F7X3EHGQ.2GZ8CZ4N.4ZXL2N9Y.Q2T9VWZR.HNGSQ7ZJ.8D@@\n",
+  "hide": [
+   "@@AGE_SECRET@@@@C:QFWSC3FV.8Q7SNAH0.F7X3EHGQ.2GZ8CZ4N.4ZXL2N9Y.Q2T9VWZR.HNGSQ7ZJ.8D@@"
+  ],
+  "keep": [
+   "@@C:age1ql3z.7hjy54pw.3hyww5ay.yfg7zqgv.c7w3j2el.w8zmrj2k.g5sfn9aq.mcac8p@@"
+  ]
+ },
+ {
+  "id": "wordy-password-echo",
+  "why": "isDistinctive rejects isWordy values under 20 chars, and isWordy accepts word+digits joined by dashes, so DB_PASSWORD=Maple-Orbit-42 (a real password, safely matchable as a whole word) is never registered and echo prints it",
+  "env": {
+   "DB_PASSWORD": "Maple-Orbit-42",
+   "PGUSER": "orders"
+  },
+  "command": "echo \"connecting as $PGUSER with $DB_PASSWORD\"",
+  "output": "connecting as orders with Maple-Orbit-42\n",
+  "hide": [
+   "Maple-Orbit-42"
+  ],
+  "keep": [
+   "connecting as orders with"
+  ]
+ },
+ {
+  "id": "aws-and-apt-key-token-pin-labels",
+  "why": "the `name: value` rule masks any CREDENTIAL_WORDS last word in any output with no check on the value: AWS tag keys and S3 object keys (`\"Key\": ...`), pagination cursors (`\"NextToken\"`), and apt pinning (`Pin: origin ...`) are lost",
+  "command": "aws ec2 describe-tags --filters Name=resource-id,Values=i-0abc123def4567890 && aws s3api list-objects-v2 --bucket acme-reports --max-items 1 && aws logs describe-log-groups --max-items 1; cat /etc/apt/preferences.d/nodesource",
+  "output": "{\n    \"Tags\": [\n        {\n            \"Key\": \"Environment\",\n            \"ResourceId\": \"i-0abc123def4567890\",\n            \"ResourceType\": \"instance\",\n            \"Value\": \"production\"\n        },\n        {\n            \"Key\": \"Owner\",\n            \"ResourceId\": \"i-0abc123def4567890\",\n            \"ResourceType\": \"instance\",\n            \"Value\": \"platform-team\"\n        }\n    ]\n}\n{\n    \"Contents\": [\n        {\n            \"Key\": \"reports/2026/q3-revenue.csv\",\n            \"LastModified\": \"2026-09-29T22:01:13+00:00\",\n            \"Size\": 48213,\n            \"StorageClass\": \"STANDARD\"\n        }\n    ]\n}\n{\n    \"logGroups\": [\n        {\n            \"logGroupName\": \"/aws/lambda/orders-api\"\n        }\n    ],\n    \"NextToken\": \"@@JWT@@@@C:uZXh0VG9.rZW4iOiB.udWxsLCA.iYm90b19.0cnVuY2F.0ZV9hbW9.1bnQiOiA.xfQ==@@\"\n}\nPackage: nodejs\nPin: origin deb.nodesource.com\nPin-Priority: 600\n",
+  "keep": [
+   "\"Key\": \"Environment\"",
+   "\"Key\": \"Owner\"",
+   "\"Key\": \"reports/2026/q3-revenue.csv\"",
+   "\"NextToken\": \"@@JWT@@@@C:uZXh0VG9.rZW4iOiB.udWxsLCA.iYm90b19.0cnVuY2F.0ZV9hbW9.1bnQiOiA.xfQ==@@\"",
+   "Pin: origin deb.nodesource.com"
+  ]
+ },
+ {
+  "id": "k8s-and-ci-yaml-secret-references",
+  "why": "the `name: value` rule masks any credential-named YAML key in any output, but in manifests `key: password` (secretKeyRef), `existingSecret: orders-db`, `existingSecretPasswordKey: password` and `secrets: inherit` name where a secret lives, not the secret",
+  "command": "cat k8s/deployment.yaml charts/values.yaml .github/workflows/deploy.yml",
+  "output": "        env:\n          - name: DB_PASSWORD\n            valueFrom:\n              secretKeyRef:\n                name: orders-db\n                key: password\npostgresql:\n  auth:\n    username: orders\n    existingSecret: orders-db\n    existingSecretPasswordKey: password\njobs:\n  deploy:\n    uses: acme/workflows/.github/workflows/deploy.yml@v3\n    secrets: inherit\n",
+  "keep": [
+   "key: password",
+   "existingSecret: orders-db",
+   "existingSecretPasswordKey: password",
+   "secrets: inherit"
+  ]
+ },
+ {
+  "id": "hex-ids-in-env-registered-as-secrets",
+  "why": "fileValues and maskInline treat any 32+ hex value in a secret file as a key whatever its name, so Cloudflare account/zone IDs and a release commit SHA are masked on read and replaced in wrangler output and git log",
+  "files": {
+   ".env": "CLOUDFLARE_API_TOKEN=@@C:Yk3vQ8zX.m2Tr7LpW.n4bYc5dF.1gJ6sHa9.Rk2@@\nCLOUDFLARE_ACCOUNT_ID=@@C:8f2b6c1e.4d3a4b5c.9e8f7a6b.5c4d3e2f@@\nCLOUDFLARE_ZONE_ID=@@C:c4d3e2f8.f2b6c1e4.d3a4b5c9.e8f7a6b5@@\nSENTRY_RELEASE=@@C:6c1e4d3a.4b5c9e8f.7a6b5c4d.3e2f8f2b.6c1e4d3a@@\n",
+   "wrangler.toml": "name = \"shop\"\naccount_id = \"@@C:8f2b6c1e.4d3a4b5c.9e8f7a6b.5c4d3e2f@@\"\n"
+  },
+  "command": "npx wrangler whoami && git log --oneline -1 --format='%H %s'",
+  "output": " ⛅️ wrangler 3.78.2\n-------------------\nGetting User settings...\n👋 You are logged in with an API Token, associated with the email dev@example.com.\n┌──────────────────┬──────────────────────────────────┐\n│ Account Name     │ Account ID                       │\n├──────────────────┼──────────────────────────────────┤\n│ Acme Shop        │ @@C:8f2b6c1e.4d3a4b5c.9e8f7a6b.5c4d3e2f@@ │\n└──────────────────┴──────────────────────────────────┘\@@C:n6c1e4d3.a4b5c9e8.f7a6b5c4.d3e2f8f2.b6c1e4d3.a@@ release 2.4.0\n",
+  "hide": [
+   "@@C:Yk3vQ8zX.m2Tr7LpW.n4bYc5dF.1gJ6sHa9.Rk2@@"
+  ],
+  "keep": [
+   "@@C:8f2b6c1e.4d3a4b5c.9e8f7a6b.5c4d3e2f@@",
+   "@@C:6c1e4d3a.4b5c9e8f.7a6b5c4d.3e2f8f2b.6c1e4d3a@@ release 2.4.0"
+  ]
+ },
+ {
+  "id": "key-named-paths-and-public-keys-read",
+  "why": "isInert's path rule allows only [\\w.-/] after ./ or /, so mkcert's localhost+2-key.pem and a ${HOME}/ path fail it, and KEY makes a public VAPID key a credential; all three are masked on a .env read",
+  "files": {
+   ".env": "HTTPS_KEY=./certs/localhost+2-key.pem\nHTTPS_CERT=./certs/localhost+2.pem\nDEPLOY_KEY=${HOME}/.ssh/deploy_ed25519\nVAPID_PUBLIC_KEY=@@C:BEl62iUY.gUivxIkv.69yViEui.BIa@@-Ib9-@@C:SkvMeAtA.3LFgDzkr.xZJjSgSn.fckjBJuB.kr3qBUYI.HBQFLXYp.5Nksh8U@@\nVAPID_PRIVATE_KEY=@@C:Rk2mQ8xZ.4vT7pL1w.Hn9bYc3d.F6gJ0sKa.Vq5@@\n"
+  },
+  "read": ".env",
+  "hide": [
+   "@@C:Rk2mQ8xZ.4vT7pL1w.Hn9bYc3d.F6gJ0sKa.Vq5@@"
+  ],
+  "keep": [
+   "HTTPS_KEY=./certs/localhost+2-key.pem",
+   "DEPLOY_KEY=${HOME}/.ssh/deploy_ed25519",
+   "@@C:BEl62iUY.gUivxIkv.69yViEui.BIa@@-Ib9-@@C:SkvMeAtA.3LFgDzkr.xZJjSgSn.fckjBJuB.kr3qBUYI.HBQFLXYp.5Nksh8U@@",
+   "HTTPS_CERT=./certs/localhost+2.pem"
+  ]
+ },
+ {
+  "id": "credential-named-env-holding-public-values",
+  "why": "env registration trusts the name: the python images' GPG_KEY is a public key fingerprint (40 hex, so distinctive), and GOOGLE_APPLICATION_CREDENTIALS is a path whose gha-creds-<16 hex>.json part fails isWordy's 12-char hex limit so isInert's path rule rejects it; both get replaced in gpg and ls output",
+  "env": {
+   "GPG_KEY": "@@C:7169605F.62C75135.6D054A26.A821E680.E5FA6305@@",
+   "PYTHON_VERSION": "3.12.6",
+   "GOOGLE_APPLICATION_CREDENTIALS": "/home/runner/work/shop/shop/gha-creds-1b2c3d4e5f6a7b8c.json"
+  },
+  "command": "gpg --list-keys && git status --short && ls -l $GOOGLE_APPLICATION_CREDENTIALS",
+  "output": "/root/.gnupg/pubring.kbx\n------------------------\npub   rsa4096 2018-05-16 [SC]\n      @@C:7169605F.62C75135.6D054A26.A821E680.E5FA6305@@\nuid           [ unknown] Thomas Wouters <thomas@python.org>\n?? gha-creds-1b2c3d4e5f6a7b8c.json\n-rw-r----- 1 runner docker 2371 Sep 30 14:02 /home/runner/work/shop/shop/gha-creds-1b2c3d4e5f6a7b8c.json\n",
+  "keep": [
+   "@@C:7169605F.62C75135.6D054A26.A821E680.E5FA6305@@",
+   "/home/runner/work/shop/shop/gha-creds-1b2c3d4e5f6a7b8c.json"
+  ]
+ },
+ {
+  "id": "guard-perf-ipv6-neighbors-50kb",
+  "why": "performance guard: maskAttributedLines tries every colon-delimited prefix as a path (a failing realpathSync each), so 50 KB of colon-dense `ip -6 neigh` output costs ~0.4 s here, near half the budget",
+  "files": {
+   ".env": "API_KEY=@@C:Lq7vZ2kX.p9TmW4rY.c8dF3gJ6@@\n"
+  },
+  "command": "ip -6 neigh show",
+  "output": "fe80::0:a1b2:c3d4:e5f6:0 dev eth0 lladdr 02:42:ac:11:00:00 router REACHABLE\nfe80::1:a1b2:c3d4:e5f6:7 dev eth0 lladdr 02:42:ac:11:00:01 router REACHABLE\nfe80::2:a1b2:c3d4:e5f6:e dev eth0 lladdr 02:42:ac:11:00:02 router REACHABLE\nfe80::3:a1b2:c3d4:e5f6:15 dev eth0 lladdr 02:42:ac:11:00:03 router REACHABLE\nfe80::4:a1b2:c3d4:e5f6:1c dev eth0 lladdr 02:42:ac:11:00:04 router REACHABLE\nfe80::5:a1b2:c3d4:e5f6:23 dev eth0 lladdr 02:42:ac:11:00:05 router REACHABLE\nfe80::6:a1b2:c3d4:e5f6:2a dev eth0 lladdr 02:42:ac:11:00:06 router REACHABLE\nfe80::7:a1b2:c3d4:e5f6:31 dev eth0 lladdr 02:42:ac:11:00:07 router REACHABLE\nfe80::8:a1b2:c3d4:e5f6:38 dev eth0 lladdr 02:42:ac:11:00:08 router REACHABLE\nfe80::9:a1b2:c3d4:e5f6:3f dev eth0 lladdr 02:42:ac:11:00:09 router REACHABLE\nfe80::a:a1b2:c3d4:e5f6:46 dev eth0 lladdr 02:42:ac:11:00:0a router REACHABLE\nfe80::b:a1b2:c3d4:e5f6:4d dev eth0 lladdr 02:42:ac:11:00:0b router REACHABLE\nfe80::c:a1b2:c3d4:e5f6:54 dev eth0 lladdr 02:42:ac:11:00:0c router REACHABLE\nfe80::d:a1b2:c3d4:e5f6:5b dev eth0 lladdr 02:42:ac:11:00:0d router REACHABLE\nfe80::e:a1b2:c3d4:e5f6:62 dev eth0 lladdr 02:42:ac:11:00:0e router REACHABLE\nfe80::f:a1b2:c3d4:e5f6:69 dev eth0 lladdr 02:42:ac:11:00:0f router REACHABLE\nfe80::10:a1b2:c3d4:e5f6:70 dev eth0 lladdr 02:42:ac:11:00:10 router REACHABLE\nfe80::11:a1b2:c3d4:e5f6:77 dev eth0 lladdr 02:42:ac:11:00:11 router REACHABLE\nfe80::12:a1b2:c3d4:e5f6:7e dev eth0 lladdr 02:42:ac:11:00:12 router REACHABLE\nfe80::13:a1b2:c3d4:e5f6:85 dev eth0 lladdr 02:42:ac:11:00:13 router REACHABLE\nfe80::14:a1b2:c3d4:e5f6:8c dev eth0 lladdr 02:42:ac:11:00:14 router REACHABLE\nfe80::15:a1b2:c3d4:e5f6:93 dev eth0 lladdr 02:42:ac:11:00:15 router REACHABLE\nfe80::16:a1b2:c3d4:e5f6:9a dev eth0 lladdr 02:42:ac:11:00:16 router REACHABLE\nfe80::17:a1b2:c3d4:e5f6:a1 dev eth0 lladdr 02:42:ac:11:00:17 router REACHABLE\nfe80::18:a1b2:c3d4:e5f6:a8 dev eth0 lladdr 02:42:ac:11:00:18 router REACHABLE\nfe80::19:a1b2:c3d4:e5f6:af dev eth0 lladdr 02:42:ac:11:00:19 router REACHABLE\nfe80::1a:a1b2:c3d4:e5f6:b6 dev eth0 lladdr 02:42:ac:11:00:1a router REACHABLE\nfe80::1b:a1b2:c3d4:e5f6:bd dev eth0 lladdr 02:42:ac:11:00:1b router REACHABLE\nfe80::1c:a1b2:c3d4:e5f6:c4 dev eth0 lladdr 02:42:ac:11:00:1c router REACHABLE\nfe80::1d:a1b2:c3d4:e5f6:cb dev eth0 lladdr 02:42:ac:11:00:1d router REACHABLE\nfe80::1e:a1b2:c3d4:e5f6:d2 dev eth0 lladdr 02:42:ac:11:00:1e router REACHABLE\nfe80::1f:a1b2:c3d4:e5f6:d9 dev eth0 lladdr 02:42:ac:11:00:1f router REACHABLE\nfe80::20:a1b2:c3d4:e5f6:e0 dev eth0 lladdr 02:42:ac:11:00:20 router REACHABLE\nfe80::21:a1b2:c3d4:e5f6:e7 dev eth0 lladdr 02:42:ac:11:00:21 router REACHABLE\nfe80::22:a1b2:c3d4:e5f6:ee dev eth0 lladdr 02:42:ac:11:00:22 router REACHABLE\nfe80::23:a1b2:c3d4:e5f6:f5 dev eth0 lladdr 02:42:ac:11:00:23 router REACHABLE\nfe80::24:a1b2:c3d4:e5f6:fc dev eth0 lladdr 02:42:ac:11:00:24 router REACHABLE\nfe80::25:a1b2:c3d4:e5f6:103 dev eth0 lladdr 02:42:ac:11:00:25 router REACHABLE\nfe80::26:a1b2:c3d4:e5f6:10a dev eth0 lladdr 02:42:ac:11:00:26 router REACHABLE\nfe80::27:a1b2:c3d4:e5f6:111 dev eth0 lladdr 02:42:ac:11:00:27 router REACHABLE\nfe80::28:a1b2:c3d4:e5f6:118 dev eth0 lladdr 02:42:ac:11:00:28 router REACHABLE\nfe80::29:a1b2:c3d4:e5f6:11f dev eth0 lladdr 02:42:ac:11:00:29 router REACHABLE\nfe80::2a:a1b2:c3d4:e5f6:126 dev eth0 lladdr 02:42:ac:11:00:2a router REACHABLE\nfe80::2b:a1b2:c3d4:e5f6:12d dev eth0 lladdr 02:42:ac:11:00:2b router REACHABLE\nfe80::2c:a1b2:c3d4:e5f6:134 dev eth0 lladdr 02:42:ac:11:00:2c router REACHABLE\nfe80::2d:a1b2:c3d4:e5f6:13b dev eth0 lladdr 02:42:ac:11:00:2d router REACHABLE\nfe80::2e:a1b2:c3d4:e5f6:142 dev eth0 lladdr 02:42:ac:11:00:2e router REACHABLE\nfe80::2f:a1b2:c3d4:e5f6:149 dev eth0 lladdr 02:42:ac:11:00:2f router REACHABLE\nfe80::30:a1b2:c3d4:e5f6:150 dev eth0 lladdr 02:42:ac:11:00:30 router REACHABLE\nfe80::31:a1b2:c3d4:e5f6:157 dev eth0 lladdr 02:42:ac:11:00:31 router REACHABLE\nfe80::32:a1b2:c3d4:e5f6:15e dev eth0 lladdr 02:42:ac:11:00:32 router REACHABLE\nfe80::33:a1b2:c3d4:e5f6:165 dev eth0 lladdr 02:42:ac:11:00:33 router REACHABLE\nfe80::34:a1b2:c3d4:e5f6:16c dev eth0 lladdr 02:42:ac:11:00:34 router REACHABLE\nfe80::35:a1b2:c3d4:e5f6:173 dev eth0 lladdr 02:42:ac:11:00:35 router REACHABLE\nfe80::36:a1b2:c3d4:e5f6:17a dev eth0 lladdr 02:42:ac:11:00:36 router REACHABLE\nfe80::37:a1b2:c3d4:e5f6:181 dev eth0 lladdr 02:42:ac:11:00:37 router REACHABLE\nfe80::38:a1b2:c3d4:e5f6:188 dev eth0 lladdr 02:42:ac:11:00:38 router REACHABLE\nfe80::39:a1b2:c3d4:e5f6:18f dev eth0 lladdr 02:42:ac:11:00:39 router REACHABLE\nfe80::3a:a1b2:c3d4:e5f6:196 dev eth0 lladdr 02:42:ac:11:00:3a router REACHABLE\nfe80::3b:a1b2:c3d4:e5f6:19d dev eth0 lladdr 02:42:ac:11:00:3b router REACHABLE\nfe80::3c:a1b2:c3d4:e5f6:1a4 dev eth0 lladdr 02:42:ac:11:00:3c router REACHABLE\nfe80::3d:a1b2:c3d4:e5f6:1ab dev eth0 lladdr 02:42:ac:11:00:3d router REACHABLE\nfe80::3e:a1b2:c3d4:e5f6:1b2 dev eth0 lladdr 02:42:ac:11:00:3e router REACHABLE\nfe80::3f:a1b2:c3d4:e5f6:1b9 dev eth0 lladdr 02:42:ac:11:00:3f router REACHABLE\nfe80::40:a1b2:c3d4:e5f6:1c0 dev eth0 lladdr 02:42:ac:11:00:40 router REACHABLE\nfe80::41:a1b2:c3d4:e5f6:1c7 dev eth0 lladdr 02:42:ac:11:00:41 router REACHABLE\nfe80::42:a1b2:c3d4:e5f6:1ce dev eth0 lladdr 02:42:ac:11:00:42 router REACHABLE\nfe80::43:a1b2:c3d4:e5f6:1d5 dev eth0 lladdr 02:42:ac:11:00:43 router REACHABLE\nfe80::44:a1b2:c3d4:e5f6:1dc dev eth0 lladdr 02:42:ac:11:00:44 router REACHABLE\nfe80::45:a1b2:c3d4:e5f6:1e3 dev eth0 lladdr 02:42:ac:11:00:45 router REACHABLE\nfe80::46:a1b2:c3d4:e5f6:1ea dev eth0 lladdr 02:42:ac:11:00:46 router REACHABLE\nfe80::47:a1b2:c3d4:e5f6:1f1 dev eth0 lladdr 02:42:ac:11:00:47 router REACHABLE\nfe80::48:a1b2:c3d4:e5f6:1f8 dev eth0 lladdr 02:42:ac:11:00:48 router REACHABLE\nfe80::49:a1b2:c3d4:e5f6:1ff dev eth0 lladdr 02:42:ac:11:00:49 router REACHABLE\nfe80::4a:a1b2:c3d4:e5f6:206 dev eth0 lladdr 02:42:ac:11:00:4a router REACHABLE\nfe80::4b:a1b2:c3d4:e5f6:20d dev eth0 lladdr 02:42:ac:11:00:4b router REACHABLE\nfe80::4c:a1b2:c3d4:e5f6:214 dev eth0 lladdr 02:42:ac:11:00:4c router REACHABLE\nfe80::4d:a1b2:c3d4:e5f6:21b dev eth0 lladdr 02:42:ac:11:00:4d router REACHABLE\nfe80::4e:a1b2:c3d4:e5f6:222 dev eth0 lladdr 02:42:ac:11:00:4e router REACHABLE\nfe80::4f:a1b2:c3d4:e5f6:229 dev eth0 lladdr 02:42:ac:11:00:4f router REACHABLE\nfe80::50:a1b2:c3d4:e5f6:230 dev eth0 lladdr 02:42:ac:11:00:50 router REACHABLE\nfe80::51:a1b2:c3d4:e5f6:237 dev eth0 lladdr 02:42:ac:11:00:51 router REACHABLE\nfe80::52:a1b2:c3d4:e5f6:23e dev eth0 lladdr 02:42:ac:11:00:52 router REACHABLE\nfe80::53:a1b2:c3d4:e5f6:245 dev eth0 lladdr 02:42:ac:11:00:53 router REACHABLE\nfe80::54:a1b2:c3d4:e5f6:24c dev eth0 lladdr 02:42:ac:11:00:54 router REACHABLE\nfe80::55:a1b2:c3d4:e5f6:253 dev eth0 lladdr 02:42:ac:11:00:55 router REACHABLE\nfe80::56:a1b2:c3d4:e5f6:25a dev eth0 lladdr 02:42:ac:11:00:56 router REACHABLE\nfe80::57:a1b2:c3d4:e5f6:261 dev eth0 lladdr 02:42:ac:11:00:57 router REACHABLE\nfe80::58:a1b2:c3d4:e5f6:268 dev eth0 lladdr 02:42:ac:11:00:58 router REACHABLE\nfe80::59:a1b2:c3d4:e5f6:26f dev eth0 lladdr 02:42:ac:11:00:59 router REACHABLE\nfe80::5a:a1b2:c3d4:e5f6:276 dev eth0 lladdr 02:42:ac:11:00:5a router REACHABLE\nfe80::5b:a1b2:c3d4:e5f6:27d dev eth0 lladdr 02:42:ac:11:00:5b router REACHABLE\nfe80::5c:a1b2:c3d4:e5f6:284 dev eth0 lladdr 02:42:ac:11:00:5c router REACHABLE\nfe80::5d:a1b2:c3d4:e5f6:28b dev eth0 lladdr 02:42:ac:11:00:5d router REACHABLE\nfe80::5e:a1b2:c3d4:e5f6:292 dev eth0 lladdr 02:42:ac:11:00:5e router REACHABLE\nfe80::5f:a1b2:c3d4:e5f6:299 dev eth0 lladdr 02:42:ac:11:00:5f router REACHABLE\nfe80::60:a1b2:c3d4:e5f6:2a0 dev eth0 lladdr 02:42:ac:11:00:60 router REACHABLE\nfe80::61:a1b2:c3d4:e5f6:2a7 dev eth0 lladdr 02:42:ac:11:00:61 router REACHABLE\nfe80::62:a1b2:c3d4:e5f6:2ae dev eth0 lladdr 02:42:ac:11:00:62 router REACHABLE\nfe80::63:a1b2:c3d4:e5f6:2b5 dev eth0 lladdr 02:42:ac:11:00:63 router REACHABLE\nfe80::64:a1b2:c3d4:e5f6:2bc dev eth0 lladdr 02:42:ac:11:00:64 router REACHABLE\nfe80::65:a1b2:c3d4:e5f6:2c3 dev eth0 lladdr 02:42:ac:11:00:65 router REACHABLE\nfe80::66:a1b2:c3d4:e5f6:2ca dev eth0 lladdr 02:42:ac:11:00:66 router REACHABLE\nfe80::67:a1b2:c3d4:e5f6:2d1 dev eth0 lladdr 02:42:ac:11:00:67 router REACHABLE\nfe80::68:a1b2:c3d4:e5f6:2d8 dev eth0 lladdr 02:42:ac:11:00:68 router REACHABLE\nfe80::69:a1b2:c3d4:e5f6:2df dev eth0 lladdr 02:42:ac:11:00:69 router REACHABLE\nfe80::6a:a1b2:c3d4:e5f6:2e6 dev eth0 lladdr 02:42:ac:11:00:6a router REACHABLE\nfe80::6b:a1b2:c3d4:e5f6:2ed dev eth0 lladdr 02:42:ac:11:00:6b router REACHABLE\nfe80::6c:a1b2:c3d4:e5f6:2f4 dev eth0 lladdr 02:42:ac:11:00:6c router REACHABLE\nfe80::6d:a1b2:c3d4:e5f6:2fb dev eth0 lladdr 02:42:ac:11:00:6d router REACHABLE\nfe80::6e:a1b2:c3d4:e5f6:302 dev eth0 lladdr 02:42:ac:11:00:6e router REACHABLE\nfe80::6f:a1b2:c3d4:e5f6:309 dev eth0 lladdr 02:42:ac:11:00:6f router REACHABLE\nfe80::70:a1b2:c3d4:e5f6:310 dev eth0 lladdr 02:42:ac:11:00:70 router REACHABLE\nfe80::71:a1b2:c3d4:e5f6:317 dev eth0 lladdr 02:42:ac:11:00:71 router REACHABLE\nfe80::72:a1b2:c3d4:e5f6:31e dev eth0 lladdr 02:42:ac:11:00:72 router REACHABLE\nfe80::73:a1b2:c3d4:e5f6:325 dev eth0 lladdr 02:42:ac:11:00:73 router REACHABLE\nfe80::74:a1b2:c3d4:e5f6:32c dev eth0 lladdr 02:42:ac:11:00:74 router REACHABLE\nfe80::75:a1b2:c3d4:e5f6:333 dev eth0 lladdr 02:42:ac:11:00:75 router REACHABLE\nfe80::76:a1b2:c3d4:e5f6:33a dev eth0 lladdr 02:42:ac:11:00:76 router REACHABLE\nfe80::77:a1b2:c3d4:e5f6:341 dev eth0 lladdr 02:42:ac:11:00:77 router REACHABLE\nfe80::78:a1b2:c3d4:e5f6:348 dev eth0 lladdr 02:42:ac:11:00:78 router REACHABLE\nfe80::79:a1b2:c3d4:e5f6:34f dev eth0 lladdr 02:42:ac:11:00:79 router REACHABLE\nfe80::7a:a1b2:c3d4:e5f6:356 dev eth0 lladdr 02:42:ac:11:00:7a router REACHABLE\nfe80::7b:a1b2:c3d4:e5f6:35d dev eth0 lladdr 02:42:ac:11:00:7b router REACHABLE\nfe80::7c:a1b2:c3d4:e5f6:364 dev eth0 lladdr 02:42:ac:11:00:7c router REACHABLE\nfe80::7d:a1b2:c3d4:e5f6:36b dev eth0 lladdr 02:42:ac:11:00:7d router REACHABLE\nfe80::7e:a1b2:c3d4:e5f6:372 dev eth0 lladdr 02:42:ac:11:00:7e router REACHABLE\nfe80::7f:a1b2:c3d4:e5f6:379 dev eth0 lladdr 02:42:ac:11:00:7f router REACHABLE\nfe80::80:a1b2:c3d4:e5f6:380 dev eth0 lladdr 02:42:ac:11:00:80 router REACHABLE\nfe80::81:a1b2:c3d4:e5f6:387 dev eth0 lladdr 02:42:ac:11:00:81 router REACHABLE\nfe80::82:a1b2:c3d4:e5f6:38e dev eth0 lladdr 02:42:ac:11:00:82 router REACHABLE\nfe80::83:a1b2:c3d4:e5f6:395 dev eth0 lladdr 02:42:ac:11:00:83 router REACHABLE\nfe80::84:a1b2:c3d4:e5f6:39c dev eth0 lladdr 02:42:ac:11:00:84 router REACHABLE\nfe80::85:a1b2:c3d4:e5f6:3a3 dev eth0 lladdr 02:42:ac:11:00:85 router REACHABLE\nfe80::86:a1b2:c3d4:e5f6:3aa dev eth0 lladdr 02:42:ac:11:00:86 router REACHABLE\nfe80::87:a1b2:c3d4:e5f6:3b1 dev eth0 lladdr 02:42:ac:11:00:87 router REACHABLE\nfe80::88:a1b2:c3d4:e5f6:3b8 dev eth0 lladdr 02:42:ac:11:00:88 router REACHABLE\nfe80::89:a1b2:c3d4:e5f6:3bf dev eth0 lladdr 02:42:ac:11:00:89 router REACHABLE\nfe80::8a:a1b2:c3d4:e5f6:3c6 dev eth0 lladdr 02:42:ac:11:00:8a router REACHABLE\nfe80::8b:a1b2:c3d4:e5f6:3cd dev eth0 lladdr 02:42:ac:11:00:8b router REACHABLE\nfe80::8c:a1b2:c3d4:e5f6:3d4 dev eth0 lladdr 02:42:ac:11:00:8c router REACHABLE\nfe80::8d:a1b2:c3d4:e5f6:3db dev eth0 lladdr 02:42:ac:11:00:8d router REACHABLE\nfe80::8e:a1b2:c3d4:e5f6:3e2 dev eth0 lladdr 02:42:ac:11:00:8e router REACHABLE\nfe80::8f:a1b2:c3d4:e5f6:3e9 dev eth0 lladdr 02:42:ac:11:00:8f router REACHABLE\nfe80::90:a1b2:c3d4:e5f6:3f0 dev eth0 lladdr 02:42:ac:11:00:90 router REACHABLE\nfe80::91:a1b2:c3d4:e5f6:3f7 dev eth0 lladdr 02:42:ac:11:00:91 router REACHABLE\nfe80::92:a1b2:c3d4:e5f6:3fe dev eth0 lladdr 02:42:ac:11:00:92 router REACHABLE\nfe80::93:a1b2:c3d4:e5f6:405 dev eth0 lladdr 02:42:ac:11:00:93 router REACHABLE\nfe80::94:a1b2:c3d4:e5f6:40c dev eth0 lladdr 02:42:ac:11:00:94 router REACHABLE\nfe80::95:a1b2:c3d4:e5f6:413 dev eth0 lladdr 02:42:ac:11:00:95 router REACHABLE\nfe80::96:a1b2:c3d4:e5f6:41a dev eth0 lladdr 02:42:ac:11:00:96 router REACHABLE\nfe80::97:a1b2:c3d4:e5f6:421 dev eth0 lladdr 02:42:ac:11:00:97 router REACHABLE\nfe80::98:a1b2:c3d4:e5f6:428 dev eth0 lladdr 02:42:ac:11:00:98 router REACHABLE\nfe80::99:a1b2:c3d4:e5f6:42f dev eth0 lladdr 02:42:ac:11:00:99 router REACHABLE\nfe80::9a:a1b2:c3d4:e5f6:436 dev eth0 lladdr 02:42:ac:11:00:9a router REACHABLE\nfe80::9b:a1b2:c3d4:e5f6:43d dev eth0 lladdr 02:42:ac:11:00:9b router REACHABLE\nfe80::9c:a1b2:c3d4:e5f6:444 dev eth0 lladdr 02:42:ac:11:00:9c router REACHABLE\nfe80::9d:a1b2:c3d4:e5f6:44b dev eth0 lladdr 02:42:ac:11:00:9d router REACHABLE\nfe80::9e:a1b2:c3d4:e5f6:452 dev eth0 lladdr 02:42:ac:11:00:9e router REACHABLE\nfe80::9f:a1b2:c3d4:e5f6:459 dev eth0 lladdr 02:42:ac:11:00:9f router REACHABLE\nfe80::a0:a1b2:c3d4:e5f6:460 dev eth0 lladdr 02:42:ac:11:00:a0 router REACHABLE\nfe80::a1:a1b2:c3d4:e5f6:467 dev eth0 lladdr 02:42:ac:11:00:a1 router REACHABLE\nfe80::a2:a1b2:c3d4:e5f6:46e dev eth0 lladdr 02:42:ac:11:00:a2 router REACHABLE\nfe80::a3:a1b2:c3d4:e5f6:475 dev eth0 lladdr 02:42:ac:11:00:a3 router REACHABLE\nfe80::a4:a1b2:c3d4:e5f6:47c dev eth0 lladdr 02:42:ac:11:00:a4 router REACHABLE\nfe80::a5:a1b2:c3d4:e5f6:483 dev eth0 lladdr 02:42:ac:11:00:a5 router REACHABLE\nfe80::a6:a1b2:c3d4:e5f6:48a dev eth0 lladdr 02:42:ac:11:00:a6 router REACHABLE\nfe80::a7:a1b2:c3d4:e5f6:491 dev eth0 lladdr 02:42:ac:11:00:a7 router REACHABLE\nfe80::a8:a1b2:c3d4:e5f6:498 dev eth0 lladdr 02:42:ac:11:00:a8 router REACHABLE\nfe80::a9:a1b2:c3d4:e5f6:49f dev eth0 lladdr 02:42:ac:11:00:a9 router REACHABLE\nfe80::aa:a1b2:c3d4:e5f6:4a6 dev eth0 lladdr 02:42:ac:11:00:aa router REACHABLE\nfe80::ab:a1b2:c3d4:e5f6:4ad dev eth0 lladdr 02:42:ac:11:00:ab router REACHABLE\nfe80::ac:a1b2:c3d4:e5f6:4b4 dev eth0 lladdr 02:42:ac:11:00:ac router REACHABLE\nfe80::ad:a1b2:c3d4:e5f6:4bb dev eth0 lladdr 02:42:ac:11:00:ad router REACHABLE\nfe80::ae:a1b2:c3d4:e5f6:4c2 dev eth0 lladdr 02:42:ac:11:00:ae router REACHABLE\nfe80::af:a1b2:c3d4:e5f6:4c9 dev eth0 lladdr 02:42:ac:11:00:af router REACHABLE\nfe80::b0:a1b2:c3d4:e5f6:4d0 dev eth0 lladdr 02:42:ac:11:00:b0 router REACHABLE\nfe80::b1:a1b2:c3d4:e5f6:4d7 dev eth0 lladdr 02:42:ac:11:00:b1 router REACHABLE\nfe80::b2:a1b2:c3d4:e5f6:4de dev eth0 lladdr 02:42:ac:11:00:b2 router REACHABLE\nfe80::b3:a1b2:c3d4:e5f6:4e5 dev eth0 lladdr 02:42:ac:11:00:b3 router REACHABLE\nfe80::b4:a1b2:c3d4:e5f6:4ec dev eth0 lladdr 02:42:ac:11:00:b4 router REACHABLE\nfe80::b5:a1b2:c3d4:e5f6:4f3 dev eth0 lladdr 02:42:ac:11:00:b5 router REACHABLE\nfe80::b6:a1b2:c3d4:e5f6:4fa dev eth0 lladdr 02:42:ac:11:00:b6 router REACHABLE\nfe80::b7:a1b2:c3d4:e5f6:501 dev eth0 lladdr 02:42:ac:11:00:b7 router REACHABLE\nfe80::b8:a1b2:c3d4:e5f6:508 dev eth0 lladdr 02:42:ac:11:00:b8 router REACHABLE\nfe80::b9:a1b2:c3d4:e5f6:50f dev eth0 lladdr 02:42:ac:11:00:b9 router REACHABLE\nfe80::ba:a1b2:c3d4:e5f6:516 dev eth0 lladdr 02:42:ac:11:00:ba router REACHABLE\nfe80::bb:a1b2:c3d4:e5f6:51d dev eth0 lladdr 02:42:ac:11:00:bb router REACHABLE\nfe80::bc:a1b2:c3d4:e5f6:524 dev eth0 lladdr 02:42:ac:11:00:bc router REACHABLE\nfe80::bd:a1b2:c3d4:e5f6:52b dev eth0 lladdr 02:42:ac:11:00:bd router REACHABLE\nfe80::be:a1b2:c3d4:e5f6:532 dev eth0 lladdr 02:42:ac:11:00:be router REACHABLE\nfe80::bf:a1b2:c3d4:e5f6:539 dev eth0 lladdr 02:42:ac:11:00:bf router REACHABLE\nfe80::c0:a1b2:c3d4:e5f6:540 dev eth0 lladdr 02:42:ac:11:00:c0 router REACHABLE\nfe80::c1:a1b2:c3d4:e5f6:547 dev eth0 lladdr 02:42:ac:11:00:c1 router REACHABLE\nfe80::c2:a1b2:c3d4:e5f6:54e dev eth0 lladdr 02:42:ac:11:00:c2 router REACHABLE\nfe80::c3:a1b2:c3d4:e5f6:555 dev eth0 lladdr 02:42:ac:11:00:c3 router REACHABLE\nfe80::c4:a1b2:c3d4:e5f6:55c dev eth0 lladdr 02:42:ac:11:00:c4 router REACHABLE\nfe80::c5:a1b2:c3d4:e5f6:563 dev eth0 lladdr 02:42:ac:11:00:c5 router REACHABLE\nfe80::c6:a1b2:c3d4:e5f6:56a dev eth0 lladdr 02:42:ac:11:00:c6 router REACHABLE\nfe80::c7:a1b2:c3d4:e5f6:571 dev eth0 lladdr 02:42:ac:11:00:c7 router REACHABLE\nfe80::c8:a1b2:c3d4:e5f6:578 dev eth0 lladdr 02:42:ac:11:00:c8 router REACHABLE\nfe80::c9:a1b2:c3d4:e5f6:57f dev eth0 lladdr 02:42:ac:11:00:c9 router REACHABLE\nfe80::ca:a1b2:c3d4:e5f6:586 dev eth0 lladdr 02:42:ac:11:00:ca router REACHABLE\nfe80::cb:a1b2:c3d4:e5f6:58d dev eth0 lladdr 02:42:ac:11:00:cb router REACHABLE\nfe80::cc:a1b2:c3d4:e5f6:594 dev eth0 lladdr 02:42:ac:11:00:cc router REACHABLE\nfe80::cd:a1b2:c3d4:e5f6:59b dev eth0 lladdr 02:42:ac:11:00:cd router REACHABLE\nfe80::ce:a1b2:c3d4:e5f6:5a2 dev eth0 lladdr 02:42:ac:11:00:ce router REACHABLE\nfe80::cf:a1b2:c3d4:e5f6:5a9 dev eth0 lladdr 02:42:ac:11:00:cf router REACHABLE\nfe80::d0:a1b2:c3d4:e5f6:5b0 dev eth0 lladdr 02:42:ac:11:00:d0 router REACHABLE\nfe80::d1:a1b2:c3d4:e5f6:5b7 dev eth0 lladdr 02:42:ac:11:00:d1 router REACHABLE\nfe80::d2:a1b2:c3d4:e5f6:5be dev eth0 lladdr 02:42:ac:11:00:d2 router REACHABLE\nfe80::d3:a1b2:c3d4:e5f6:5c5 dev eth0 lladdr 02:42:ac:11:00:d3 router REACHABLE\nfe80::d4:a1b2:c3d4:e5f6:5cc dev eth0 lladdr 02:42:ac:11:00:d4 router REACHABLE\nfe80::d5:a1b2:c3d4:e5f6:5d3 dev eth0 lladdr 02:42:ac:11:00:d5 router REACHABLE\nfe80::d6:a1b2:c3d4:e5f6:5da dev eth0 lladdr 02:42:ac:11:00:d6 router REACHABLE\nfe80::d7:a1b2:c3d4:e5f6:5e1 dev eth0 lladdr 02:42:ac:11:00:d7 router REACHABLE\nfe80::d8:a1b2:c3d4:e5f6:5e8 dev eth0 lladdr 02:42:ac:11:00:d8 router REACHABLE\nfe80::d9:a1b2:c3d4:e5f6:5ef dev eth0 lladdr 02:42:ac:11:00:d9 router REACHABLE\nfe80::da:a1b2:c3d4:e5f6:5f6 dev eth0 lladdr 02:42:ac:11:00:da router REACHABLE\nfe80::db:a1b2:c3d4:e5f6:5fd dev eth0 lladdr 02:42:ac:11:00:db router REACHABLE\nfe80::dc:a1b2:c3d4:e5f6:604 dev eth0 lladdr 02:42:ac:11:00:dc router REACHABLE\nfe80::dd:a1b2:c3d4:e5f6:60b dev eth0 lladdr 02:42:ac:11:00:dd router REACHABLE\nfe80::de:a1b2:c3d4:e5f6:612 dev eth0 lladdr 02:42:ac:11:00:de router REACHABLE\nfe80::df:a1b2:c3d4:e5f6:619 dev eth0 lladdr 02:42:ac:11:00:df router REACHABLE\nfe80::e0:a1b2:c3d4:e5f6:620 dev eth0 lladdr 02:42:ac:11:00:e0 router REACHABLE\nfe80::e1:a1b2:c3d4:e5f6:627 dev eth0 lladdr 02:42:ac:11:00:e1 router REACHABLE\nfe80::e2:a1b2:c3d4:e5f6:62e dev eth0 lladdr 02:42:ac:11:00:e2 router REACHABLE\nfe80::e3:a1b2:c3d4:e5f6:635 dev eth0 lladdr 02:42:ac:11:00:e3 router REACHABLE\nfe80::e4:a1b2:c3d4:e5f6:63c dev eth0 lladdr 02:42:ac:11:00:e4 router REACHABLE\nfe80::e5:a1b2:c3d4:e5f6:643 dev eth0 lladdr 02:42:ac:11:00:e5 router REACHABLE\nfe80::e6:a1b2:c3d4:e5f6:64a dev eth0 lladdr 02:42:ac:11:00:e6 router REACHABLE\nfe80::e7:a1b2:c3d4:e5f6:651 dev eth0 lladdr 02:42:ac:11:00:e7 router REACHABLE\nfe80::e8:a1b2:c3d4:e5f6:658 dev eth0 lladdr 02:42:ac:11:00:e8 router REACHABLE\nfe80::e9:a1b2:c3d4:e5f6:65f dev eth0 lladdr 02:42:ac:11:00:e9 router REACHABLE\nfe80::ea:a1b2:c3d4:e5f6:666 dev eth0 lladdr 02:42:ac:11:00:ea router REACHABLE\nfe80::eb:a1b2:c3d4:e5f6:66d dev eth0 lladdr 02:42:ac:11:00:eb router REACHABLE\nfe80::ec:a1b2:c3d4:e5f6:674 dev eth0 lladdr 02:42:ac:11:00:ec router REACHABLE\nfe80::ed:a1b2:c3d4:e5f6:67b dev eth0 lladdr 02:42:ac:11:00:ed router REACHABLE\nfe80::ee:a1b2:c3d4:e5f6:682 dev eth0 lladdr 02:42:ac:11:00:ee router REACHABLE\nfe80::ef:a1b2:c3d4:e5f6:689 dev eth0 lladdr 02:42:ac:11:00:ef router REACHABLE\nfe80::f0:a1b2:c3d4:e5f6:690 dev eth0 lladdr 02:42:ac:11:00:f0 router REACHABLE\nfe80::f1:a1b2:c3d4:e5f6:697 dev eth0 lladdr 02:42:ac:11:00:f1 router REACHABLE\nfe80::f2:a1b2:c3d4:e5f6:69e dev eth0 lladdr 02:42:ac:11:00:f2 router REACHABLE\nfe80::f3:a1b2:c3d4:e5f6:6a5 dev eth0 lladdr 02:42:ac:11:00:f3 router REACHABLE\nfe80::f4:a1b2:c3d4:e5f6:6ac dev eth0 lladdr 02:42:ac:11:00:f4 router REACHABLE\nfe80::f5:a1b2:c3d4:e5f6:6b3 dev eth0 lladdr 02:42:ac:11:00:f5 router REACHABLE\nfe80::f6:a1b2:c3d4:e5f6:6ba dev eth0 lladdr 02:42:ac:11:00:f6 router REACHABLE\nfe80::f7:a1b2:c3d4:e5f6:6c1 dev eth0 lladdr 02:42:ac:11:00:f7 router REACHABLE\nfe80::f8:a1b2:c3d4:e5f6:6c8 dev eth0 lladdr 02:42:ac:11:00:f8 router REACHABLE\nfe80::f9:a1b2:c3d4:e5f6:6cf dev eth0 lladdr 02:42:ac:11:00:f9 router REACHABLE\nfe80::fa:a1b2:c3d4:e5f6:6d6 dev eth0 lladdr 02:42:ac:11:00:fa router REACHABLE\nfe80::fb:a1b2:c3d4:e5f6:6dd dev eth0 lladdr 02:42:ac:11:00:fb router REACHABLE\nfe80::fc:a1b2:c3d4:e5f6:6e4 dev eth0 lladdr 02:42:ac:11:00:fc router REACHABLE\nfe80::fd:a1b2:c3d4:e5f6:6eb dev eth0 lladdr 02:42:ac:11:00:fd router REACHABLE\nfe80::fe:a1b2:c3d4:e5f6:6f2 dev eth0 lladdr 02:42:ac:11:00:fe router REACHABLE\nfe80::ff:a1b2:c3d4:e5f6:6f9 dev eth0 lladdr 02:42:ac:11:00:ff router REACHABLE\nfe80::100:a1b2:c3d4:e5f6:700 dev eth0 lladdr 02:42:ac:11:01:00 router REACHABLE\nfe80::101:a1b2:c3d4:e5f6:707 dev eth0 lladdr 02:42:ac:11:01:01 router REACHABLE\nfe80::102:a1b2:c3d4:e5f6:70e dev eth0 lladdr 02:42:ac:11:01:02 router REACHABLE\nfe80::103:a1b2:c3d4:e5f6:715 dev eth0 lladdr 02:42:ac:11:01:03 router REACHABLE\nfe80::104:a1b2:c3d4:e5f6:71c dev eth0 lladdr 02:42:ac:11:01:04 router REACHABLE\nfe80::105:a1b2:c3d4:e5f6:723 dev eth0 lladdr 02:42:ac:11:01:05 router REACHABLE\nfe80::106:a1b2:c3d4:e5f6:72a dev eth0 lladdr 02:42:ac:11:01:06 router REACHABLE\nfe80::107:a1b2:c3d4:e5f6:731 dev eth0 lladdr 02:42:ac:11:01:07 router REACHABLE\nfe80::108:a1b2:c3d4:e5f6:738 dev eth0 lladdr 02:42:ac:11:01:08 router REACHABLE\nfe80::109:a1b2:c3d4:e5f6:73f dev eth0 lladdr 02:42:ac:11:01:09 router REACHABLE\nfe80::10a:a1b2:c3d4:e5f6:746 dev eth0 lladdr 02:42:ac:11:01:0a router REACHABLE\nfe80::10b:a1b2:c3d4:e5f6:74d dev eth0 lladdr 02:42:ac:11:01:0b router REACHABLE\nfe80::10c:a1b2:c3d4:e5f6:754 dev eth0 lladdr 02:42:ac:11:01:0c router REACHABLE\nfe80::10d:a1b2:c3d4:e5f6:75b dev eth0 lladdr 02:42:ac:11:01:0d router REACHABLE\nfe80::10e:a1b2:c3d4:e5f6:762 dev eth0 lladdr 02:42:ac:11:01:0e router REACHABLE\nfe80::10f:a1b2:c3d4:e5f6:769 dev eth0 lladdr 02:42:ac:11:01:0f router REACHABLE\nfe80::110:a1b2:c3d4:e5f6:770 dev eth0 lladdr 02:42:ac:11:01:10 router REACHABLE\nfe80::111:a1b2:c3d4:e5f6:777 dev eth0 lladdr 02:42:ac:11:01:11 router REACHABLE\nfe80::112:a1b2:c3d4:e5f6:77e dev eth0 lladdr 02:42:ac:11:01:12 router REACHABLE\nfe80::113:a1b2:c3d4:e5f6:785 dev eth0 lladdr 02:42:ac:11:01:13 router REACHABLE\nfe80::114:a1b2:c3d4:e5f6:78c dev eth0 lladdr 02:42:ac:11:01:14 router REACHABLE\nfe80::115:a1b2:c3d4:e5f6:793 dev eth0 lladdr 02:42:ac:11:01:15 router REACHABLE\nfe80::116:a1b2:c3d4:e5f6:79a dev eth0 lladdr 02:42:ac:11:01:16 router REACHABLE\nfe80::117:a1b2:c3d4:e5f6:7a1 dev eth0 lladdr 02:42:ac:11:01:17 router REACHABLE\nfe80::118:a1b2:c3d4:e5f6:7a8 dev eth0 lladdr 02:42:ac:11:01:18 router REACHABLE\nfe80::119:a1b2:c3d4:e5f6:7af dev eth0 lladdr 02:42:ac:11:01:19 router REACHABLE\nfe80::11a:a1b2:c3d4:e5f6:7b6 dev eth0 lladdr 02:42:ac:11:01:1a router REACHABLE\nfe80::11b:a1b2:c3d4:e5f6:7bd dev eth0 lladdr 02:42:ac:11:01:1b router REACHABLE\nfe80::11c:a1b2:c3d4:e5f6:7c4 dev eth0 lladdr 02:42:ac:11:01:1c router REACHABLE\nfe80::11d:a1b2:c3d4:e5f6:7cb dev eth0 lladdr 02:42:ac:11:01:1d router REACHABLE\nfe80::11e:a1b2:c3d4:e5f6:7d2 dev eth0 lladdr 02:42:ac:11:01:1e router REACHABLE\nfe80::11f:a1b2:c3d4:e5f6:7d9 dev eth0 lladdr 02:42:ac:11:01:1f router REACHABLE\nfe80::120:a1b2:c3d4:e5f6:7e0 dev eth0 lladdr 02:42:ac:11:01:20 router REACHABLE\nfe80::121:a1b2:c3d4:e5f6:7e7 dev eth0 lladdr 02:42:ac:11:01:21 router REACHABLE\nfe80::122:a1b2:c3d4:e5f6:7ee dev eth0 lladdr 02:42:ac:11:01:22 router REACHABLE\nfe80::123:a1b2:c3d4:e5f6:7f5 dev eth0 lladdr 02:42:ac:11:01:23 router REACHABLE\nfe80::124:a1b2:c3d4:e5f6:7fc dev eth0 lladdr 02:42:ac:11:01:24 router REACHABLE\nfe80::125:a1b2:c3d4:e5f6:803 dev eth0 lladdr 02:42:ac:11:01:25 router REACHABLE\nfe80::126:a1b2:c3d4:e5f6:80a dev eth0 lladdr 02:42:ac:11:01:26 router REACHABLE\nfe80::127:a1b2:c3d4:e5f6:811 dev eth0 lladdr 02:42:ac:11:01:27 router REACHABLE\nfe80::128:a1b2:c3d4:e5f6:818 dev eth0 lladdr 02:42:ac:11:01:28 router REACHABLE\nfe80::129:a1b2:c3d4:e5f6:81f dev eth0 lladdr 02:42:ac:11:01:29 router REACHABLE\nfe80::12a:a1b2:c3d4:e5f6:826 dev eth0 lladdr 02:42:ac:11:01:2a router REACHABLE\nfe80::12b:a1b2:c3d4:e5f6:82d dev eth0 lladdr 02:42:ac:11:01:2b router REACHABLE\nfe80::12c:a1b2:c3d4:e5f6:834 dev eth0 lladdr 02:42:ac:11:01:2c router REACHABLE\nfe80::12d:a1b2:c3d4:e5f6:83b dev eth0 lladdr 02:42:ac:11:01:2d router REACHABLE\nfe80::12e:a1b2:c3d4:e5f6:842 dev eth0 lladdr 02:42:ac:11:01:2e router REACHABLE\nfe80::12f:a1b2:c3d4:e5f6:849 dev eth0 lladdr 02:42:ac:11:01:2f router REACHABLE\nfe80::130:a1b2:c3d4:e5f6:850 dev eth0 lladdr 02:42:ac:11:01:30 router REACHABLE\nfe80::131:a1b2:c3d4:e5f6:857 dev eth0 lladdr 02:42:ac:11:01:31 router REACHABLE\nfe80::132:a1b2:c3d4:e5f6:85e dev eth0 lladdr 02:42:ac:11:01:32 router REACHABLE\nfe80::133:a1b2:c3d4:e5f6:865 dev eth0 lladdr 02:42:ac:11:01:33 router REACHABLE\nfe80::134:a1b2:c3d4:e5f6:86c dev eth0 lladdr 02:42:ac:11:01:34 router REACHABLE\nfe80::135:a1b2:c3d4:e5f6:873 dev eth0 lladdr 02:42:ac:11:01:35 router REACHABLE\nfe80::136:a1b2:c3d4:e5f6:87a dev eth0 lladdr 02:42:ac:11:01:36 router REACHABLE\nfe80::137:a1b2:c3d4:e5f6:881 dev eth0 lladdr 02:42:ac:11:01:37 router REACHABLE\nfe80::138:a1b2:c3d4:e5f6:888 dev eth0 lladdr 02:42:ac:11:01:38 router REACHABLE\nfe80::139:a1b2:c3d4:e5f6:88f dev eth0 lladdr 02:42:ac:11:01:39 router REACHABLE\nfe80::13a:a1b2:c3d4:e5f6:896 dev eth0 lladdr 02:42:ac:11:01:3a router REACHABLE\nfe80::13b:a1b2:c3d4:e5f6:89d dev eth0 lladdr 02:42:ac:11:01:3b router REACHABLE\nfe80::13c:a1b2:c3d4:e5f6:8a4 dev eth0 lladdr 02:42:ac:11:01:3c router REACHABLE\nfe80::13d:a1b2:c3d4:e5f6:8ab dev eth0 lladdr 02:42:ac:11:01:3d router REACHABLE\nfe80::13e:a1b2:c3d4:e5f6:8b2 dev eth0 lladdr 02:42:ac:11:01:3e router REACHABLE\nfe80::13f:a1b2:c3d4:e5f6:8b9 dev eth0 lladdr 02:42:ac:11:01:3f router REACHABLE\nfe80::140:a1b2:c3d4:e5f6:8c0 dev eth0 lladdr 02:42:ac:11:01:40 router REACHABLE\nfe80::141:a1b2:c3d4:e5f6:8c7 dev eth0 lladdr 02:42:ac:11:01:41 router REACHABLE\nfe80::142:a1b2:c3d4:e5f6:8ce dev eth0 lladdr 02:42:ac:11:01:42 router REACHABLE\nfe80::143:a1b2:c3d4:e5f6:8d5 dev eth0 lladdr 02:42:ac:11:01:43 router REACHABLE\nfe80::144:a1b2:c3d4:e5f6:8dc dev eth0 lladdr 02:42:ac:11:01:44 router REACHABLE\nfe80::145:a1b2:c3d4:e5f6:8e3 dev eth0 lladdr 02:42:ac:11:01:45 router REACHABLE\nfe80::146:a1b2:c3d4:e5f6:8ea dev eth0 lladdr 02:42:ac:11:01:46 router REACHABLE\nfe80::147:a1b2:c3d4:e5f6:8f1 dev eth0 lladdr 02:42:ac:11:01:47 router REACHABLE\nfe80::148:a1b2:c3d4:e5f6:8f8 dev eth0 lladdr 02:42:ac:11:01:48 router REACHABLE\nfe80::149:a1b2:c3d4:e5f6:8ff dev eth0 lladdr 02:42:ac:11:01:49 router REACHABLE\nfe80::14a:a1b2:c3d4:e5f6:906 dev eth0 lladdr 02:42:ac:11:01:4a router REACHABLE\nfe80::14b:a1b2:c3d4:e5f6:90d dev eth0 lladdr 02:42:ac:11:01:4b router REACHABLE\nfe80::14c:a1b2:c3d4:e5f6:914 dev eth0 lladdr 02:42:ac:11:01:4c router REACHABLE\nfe80::14d:a1b2:c3d4:e5f6:91b dev eth0 lladdr 02:42:ac:11:01:4d router REACHABLE\nfe80::14e:a1b2:c3d4:e5f6:922 dev eth0 lladdr 02:42:ac:11:01:4e router REACHABLE\nfe80::14f:a1b2:c3d4:e5f6:929 dev eth0 lladdr 02:42:ac:11:01:4f router REACHABLE\nfe80::150:a1b2:c3d4:e5f6:930 dev eth0 lladdr 02:42:ac:11:01:50 router REACHABLE\nfe80::151:a1b2:c3d4:e5f6:937 dev eth0 lladdr 02:42:ac:11:01:51 router REACHABLE\nfe80::152:a1b2:c3d4:e5f6:93e dev eth0 lladdr 02:42:ac:11:01:52 router REACHABLE\nfe80::153:a1b2:c3d4:e5f6:945 dev eth0 lladdr 02:42:ac:11:01:53 router REACHABLE\nfe80::154:a1b2:c3d4:e5f6:94c dev eth0 lladdr 02:42:ac:11:01:54 router REACHABLE\nfe80::155:a1b2:c3d4:e5f6:953 dev eth0 lladdr 02:42:ac:11:01:55 router REACHABLE\nfe80::156:a1b2:c3d4:e5f6:95a dev eth0 lladdr 02:42:ac:11:01:56 router REACHABLE\nfe80::157:a1b2:c3d4:e5f6:961 dev eth0 lladdr 02:42:ac:11:01:57 router REACHABLE\nfe80::158:a1b2:c3d4:e5f6:968 dev eth0 lladdr 02:42:ac:11:01:58 router REACHABLE\nfe80::159:a1b2:c3d4:e5f6:96f dev eth0 lladdr 02:42:ac:11:01:59 router REACHABLE\nfe80::15a:a1b2:c3d4:e5f6:976 dev eth0 lladdr 02:42:ac:11:01:5a router REACHABLE\nfe80::15b:a1b2:c3d4:e5f6:97d dev eth0 lladdr 02:42:ac:11:01:5b router REACHABLE\nfe80::15c:a1b2:c3d4:e5f6:984 dev eth0 lladdr 02:42:ac:11:01:5c router REACHABLE\nfe80::15d:a1b2:c3d4:e5f6:98b dev eth0 lladdr 02:42:ac:11:01:5d router REACHABLE\nfe80::15e:a1b2:c3d4:e5f6:992 dev eth0 lladdr 02:42:ac:11:01:5e router REACHABLE\nfe80::15f:a1b2:c3d4:e5f6:999 dev eth0 lladdr 02:42:ac:11:01:5f router REACHABLE\nfe80::160:a1b2:c3d4:e5f6:9a0 dev eth0 lladdr 02:42:ac:11:01:60 router REACHABLE\nfe80::161:a1b2:c3d4:e5f6:9a7 dev eth0 lladdr 02:42:ac:11:01:61 router REACHABLE\nfe80::162:a1b2:c3d4:e5f6:9ae dev eth0 lladdr 02:42:ac:11:01:62 router REACHABLE\nfe80::163:a1b2:c3d4:e5f6:9b5 dev eth0 lladdr 02:42:ac:11:01:63 router REACHABLE\nfe80::164:a1b2:c3d4:e5f6:9bc dev eth0 lladdr 02:42:ac:11:01:64 router REACHABLE\nfe80::165:a1b2:c3d4:e5f6:9c3 dev eth0 lladdr 02:42:ac:11:01:65 router REACHABLE\nfe80::166:a1b2:c3d4:e5f6:9ca dev eth0 lladdr 02:42:ac:11:01:66 router REACHABLE\nfe80::167:a1b2:c3d4:e5f6:9d1 dev eth0 lladdr 02:42:ac:11:01:67 router REACHABLE\nfe80::168:a1b2:c3d4:e5f6:9d8 dev eth0 lladdr 02:42:ac:11:01:68 router REACHABLE\nfe80::169:a1b2:c3d4:e5f6:9df dev eth0 lladdr 02:42:ac:11:01:69 router REACHABLE\nfe80::16a:a1b2:c3d4:e5f6:9e6 dev eth0 lladdr 02:42:ac:11:01:6a router REACHABLE\nfe80::16b:a1b2:c3d4:e5f6:9ed dev eth0 lladdr 02:42:ac:11:01:6b router REACHABLE\nfe80::16c:a1b2:c3d4:e5f6:9f4 dev eth0 lladdr 02:42:ac:11:01:6c router REACHABLE\nfe80::16d:a1b2:c3d4:e5f6:9fb dev eth0 lladdr 02:42:ac:11:01:6d router REACHABLE\nfe80::16e:a1b2:c3d4:e5f6:a02 dev eth0 lladdr 02:42:ac:11:01:6e router REACHABLE\nfe80::16f:a1b2:c3d4:e5f6:a09 dev eth0 lladdr 02:42:ac:11:01:6f router REACHABLE\nfe80::170:a1b2:c3d4:e5f6:a10 dev eth0 lladdr 02:42:ac:11:01:70 router REACHABLE\nfe80::171:a1b2:c3d4:e5f6:a17 dev eth0 lladdr 02:42:ac:11:01:71 router REACHABLE\nfe80::172:a1b2:c3d4:e5f6:a1e dev eth0 lladdr 02:42:ac:11:01:72 router REACHABLE\nfe80::173:a1b2:c3d4:e5f6:a25 dev eth0 lladdr 02:42:ac:11:01:73 router REACHABLE\nfe80::174:a1b2:c3d4:e5f6:a2c dev eth0 lladdr 02:42:ac:11:01:74 router REACHABLE\nfe80::175:a1b2:c3d4:e5f6:a33 dev eth0 lladdr 02:42:ac:11:01:75 router REACHABLE\nfe80::176:a1b2:c3d4:e5f6:a3a dev eth0 lladdr 02:42:ac:11:01:76 router REACHABLE\nfe80::177:a1b2:c3d4:e5f6:a41 dev eth0 lladdr 02:42:ac:11:01:77 router REACHABLE\nfe80::178:a1b2:c3d4:e5f6:a48 dev eth0 lladdr 02:42:ac:11:01:78 router REACHABLE\nfe80::179:a1b2:c3d4:e5f6:a4f dev eth0 lladdr 02:42:ac:11:01:79 router REACHABLE\nfe80::17a:a1b2:c3d4:e5f6:a56 dev eth0 lladdr 02:42:ac:11:01:7a router REACHABLE\nfe80::17b:a1b2:c3d4:e5f6:a5d dev eth0 lladdr 02:42:ac:11:01:7b router REACHABLE\nfe80::17c:a1b2:c3d4:e5f6:a64 dev eth0 lladdr 02:42:ac:11:01:7c router REACHABLE\nfe80::17d:a1b2:c3d4:e5f6:a6b dev eth0 lladdr 02:42:ac:11:01:7d router REACHABLE\nfe80::17e:a1b2:c3d4:e5f6:a72 dev eth0 lladdr 02:42:ac:11:01:7e router REACHABLE\nfe80::17f:a1b2:c3d4:e5f6:a79 dev eth0 lladdr 02:42:ac:11:01:7f router REACHABLE\nfe80::180:a1b2:c3d4:e5f6:a80 dev eth0 lladdr 02:42:ac:11:01:80 router REACHABLE\nfe80::181:a1b2:c3d4:e5f6:a87 dev eth0 lladdr 02:42:ac:11:01:81 router REACHABLE\nfe80::182:a1b2:c3d4:e5f6:a8e dev eth0 lladdr 02:42:ac:11:01:82 router REACHABLE\nfe80::183:a1b2:c3d4:e5f6:a95 dev eth0 lladdr 02:42:ac:11:01:83 router REACHABLE\nfe80::184:a1b2:c3d4:e5f6:a9c dev eth0 lladdr 02:42:ac:11:01:84 router REACHABLE\nfe80::185:a1b2:c3d4:e5f6:aa3 dev eth0 lladdr 02:42:ac:11:01:85 router REACHABLE\nfe80::186:a1b2:c3d4:e5f6:aaa dev eth0 lladdr 02:42:ac:11:01:86 router REACHABLE\nfe80::187:a1b2:c3d4:e5f6:ab1 dev eth0 lladdr 02:42:ac:11:01:87 router REACHABLE\nfe80::188:a1b2:c3d4:e5f6:ab8 dev eth0 lladdr 02:42:ac:11:01:88 router REACHABLE\nfe80::189:a1b2:c3d4:e5f6:abf dev eth0 lladdr 02:42:ac:11:01:89 router REACHABLE\nfe80::18a:a1b2:c3d4:e5f6:ac6 dev eth0 lladdr 02:42:ac:11:01:8a router REACHABLE\nfe80::18b:a1b2:c3d4:e5f6:acd dev eth0 lladdr 02:42:ac:11:01:8b router REACHABLE\nfe80::18c:a1b2:c3d4:e5f6:ad4 dev eth0 lladdr 02:42:ac:11:01:8c router REACHABLE\nfe80::18d:a1b2:c3d4:e5f6:adb dev eth0 lladdr 02:42:ac:11:01:8d router REACHABLE\nfe80::18e:a1b2:c3d4:e5f6:ae2 dev eth0 lladdr 02:42:ac:11:01:8e router REACHABLE\nfe80::18f:a1b2:c3d4:e5f6:ae9 dev eth0 lladdr 02:42:ac:11:01:8f router REACHABLE\nfe80::190:a1b2:c3d4:e5f6:af0 dev eth0 lladdr 02:42:ac:11:01:90 router REACHABLE\nfe80::191:a1b2:c3d4:e5f6:af7 dev eth0 lladdr 02:42:ac:11:01:91 router REACHABLE\nfe80::192:a1b2:c3d4:e5f6:afe dev eth0 lladdr 02:42:ac:11:01:92 router REACHABLE\nfe80::193:a1b2:c3d4:e5f6:b05 dev eth0 lladdr 02:42:ac:11:01:93 router REACHABLE\nfe80::194:a1b2:c3d4:e5f6:b0c dev eth0 lladdr 02:42:ac:11:01:94 router REACHABLE\nfe80::195:a1b2:c3d4:e5f6:b13 dev eth0 lladdr 02:42:ac:11:01:95 router REACHABLE\nfe80::196:a1b2:c3d4:e5f6:b1a dev eth0 lladdr 02:42:ac:11:01:96 router REACHABLE\nfe80::197:a1b2:c3d4:e5f6:b21 dev eth0 lladdr 02:42:ac:11:01:97 router REACHABLE\nfe80::198:a1b2:c3d4:e5f6:b28 dev eth0 lladdr 02:42:ac:11:01:98 router REACHABLE\nfe80::199:a1b2:c3d4:e5f6:b2f dev eth0 lladdr 02:42:ac:11:01:99 router REACHABLE\nfe80::19a:a1b2:c3d4:e5f6:b36 dev eth0 lladdr 02:42:ac:11:01:9a router REACHABLE\nfe80::19b:a1b2:c3d4:e5f6:b3d dev eth0 lladdr 02:42:ac:11:01:9b router REACHABLE\nfe80::19c:a1b2:c3d4:e5f6:b44 dev eth0 lladdr 02:42:ac:11:01:9c router REACHABLE\nfe80::19d:a1b2:c3d4:e5f6:b4b dev eth0 lladdr 02:42:ac:11:01:9d router REACHABLE\nfe80::19e:a1b2:c3d4:e5f6:b52 dev eth0 lladdr 02:42:ac:11:01:9e router REACHABLE\nfe80::19f:a1b2:c3d4:e5f6:b59 dev eth0 lladdr 02:42:ac:11:01:9f router REACHABLE\nfe80::1a0:a1b2:c3d4:e5f6:b60 dev eth0 lladdr 02:42:ac:11:01:a0 router REACHABLE\nfe80::1a1:a1b2:c3d4:e5f6:b67 dev eth0 lladdr 02:42:ac:11:01:a1 router REACHABLE\nfe80::1a2:a1b2:c3d4:e5f6:b6e dev eth0 lladdr 02:42:ac:11:01:a2 router REACHABLE\nfe80::1a3:a1b2:c3d4:e5f6:b75 dev eth0 lladdr 02:42:ac:11:01:a3 router REACHABLE\nfe80::1a4:a1b2:c3d4:e5f6:b7c dev eth0 lladdr 02:42:ac:11:01:a4 router REACHABLE\nfe80::1a5:a1b2:c3d4:e5f6:b83 dev eth0 lladdr 02:42:ac:11:01:a5 router REACHABLE\nfe80::1a6:a1b2:c3d4:e5f6:b8a dev eth0 lladdr 02:42:ac:11:01:a6 router REACHABLE\nfe80::1a7:a1b2:c3d4:e5f6:b91 dev eth0 lladdr 02:42:ac:11:01:a7 router REACHABLE\nfe80::1a8:a1b2:c3d4:e5f6:b98 dev eth0 lladdr 02:42:ac:11:01:a8 router REACHABLE\nfe80::1a9:a1b2:c3d4:e5f6:b9f dev eth0 lladdr 02:42:ac:11:01:a9 router REACHABLE\nfe80::1aa:a1b2:c3d4:e5f6:ba6 dev eth0 lladdr 02:42:ac:11:01:aa router REACHABLE\nfe80::1ab:a1b2:c3d4:e5f6:bad dev eth0 lladdr 02:42:ac:11:01:ab router REACHABLE\nfe80::1ac:a1b2:c3d4:e5f6:bb4 dev eth0 lladdr 02:42:ac:11:01:ac router REACHABLE\nfe80::1ad:a1b2:c3d4:e5f6:bbb dev eth0 lladdr 02:42:ac:11:01:ad router REACHABLE\nfe80::1ae:a1b2:c3d4:e5f6:bc2 dev eth0 lladdr 02:42:ac:11:01:ae router REACHABLE\nfe80::1af:a1b2:c3d4:e5f6:bc9 dev eth0 lladdr 02:42:ac:11:01:af router REACHABLE\nfe80::1b0:a1b2:c3d4:e5f6:bd0 dev eth0 lladdr 02:42:ac:11:01:b0 router REACHABLE\nfe80::1b1:a1b2:c3d4:e5f6:bd7 dev eth0 lladdr 02:42:ac:11:01:b1 router REACHABLE\nfe80::1b2:a1b2:c3d4:e5f6:bde dev eth0 lladdr 02:42:ac:11:01:b2 router REACHABLE\nfe80::1b3:a1b2:c3d4:e5f6:be5 dev eth0 lladdr 02:42:ac:11:01:b3 router REACHABLE\nfe80::1b4:a1b2:c3d4:e5f6:bec dev eth0 lladdr 02:42:ac:11:01:b4 router REACHABLE\nfe80::1b5:a1b2:c3d4:e5f6:bf3 dev eth0 lladdr 02:42:ac:11:01:b5 router REACHABLE\nfe80::1b6:a1b2:c3d4:e5f6:bfa dev eth0 lladdr 02:42:ac:11:01:b6 router REACHABLE\nfe80::1b7:a1b2:c3d4:e5f6:c01 dev eth0 lladdr 02:42:ac:11:01:b7 router REACHABLE\nfe80::1b8:a1b2:c3d4:e5f6:c08 dev eth0 lladdr 02:42:ac:11:01:b8 router REACHABLE\nfe80::1b9:a1b2:c3d4:e5f6:c0f dev eth0 lladdr 02:42:ac:11:01:b9 router REACHABLE\nfe80::1ba:a1b2:c3d4:e5f6:c16 dev eth0 lladdr 02:42:ac:11:01:ba router REACHABLE\nfe80::1bb:a1b2:c3d4:e5f6:c1d dev eth0 lladdr 02:42:ac:11:01:bb router REACHABLE\nfe80::1bc:a1b2:c3d4:e5f6:c24 dev eth0 lladdr 02:42:ac:11:01:bc router REACHABLE\nfe80::1bd:a1b2:c3d4:e5f6:c2b dev eth0 lladdr 02:42:ac:11:01:bd router REACHABLE\nfe80::1be:a1b2:c3d4:e5f6:c32 dev eth0 lladdr 02:42:ac:11:01:be router REACHABLE\nfe80::1bf:a1b2:c3d4:e5f6:c39 dev eth0 lladdr 02:42:ac:11:01:bf router REACHABLE\nfe80::1c0:a1b2:c3d4:e5f6:c40 dev eth0 lladdr 02:42:ac:11:01:c0 router REACHABLE\nfe80::1c1:a1b2:c3d4:e5f6:c47 dev eth0 lladdr 02:42:ac:11:01:c1 router REACHABLE\nfe80::1c2:a1b2:c3d4:e5f6:c4e dev eth0 lladdr 02:42:ac:11:01:c2 router REACHABLE\nfe80::1c3:a1b2:c3d4:e5f6:c55 dev eth0 lladdr 02:42:ac:11:01:c3 router REACHABLE\nfe80::1c4:a1b2:c3d4:e5f6:c5c dev eth0 lladdr 02:42:ac:11:01:c4 router REACHABLE\nfe80::1c5:a1b2:c3d4:e5f6:c63 dev eth0 lladdr 02:42:ac:11:01:c5 router REACHABLE\nfe80::1c6:a1b2:c3d4:e5f6:c6a dev eth0 lladdr 02:42:ac:11:01:c6 router REACHABLE\nfe80::1c7:a1b2:c3d4:e5f6:c71 dev eth0 lladdr 02:42:ac:11:01:c7 router REACHABLE\nfe80::1c8:a1b2:c3d4:e5f6:c78 dev eth0 lladdr 02:42:ac:11:01:c8 router REACHABLE\nfe80::1c9:a1b2:c3d4:e5f6:c7f dev eth0 lladdr 02:42:ac:11:01:c9 router REACHABLE\nfe80::1ca:a1b2:c3d4:e5f6:c86 dev eth0 lladdr 02:42:ac:11:01:ca router REACHABLE\nfe80::1cb:a1b2:c3d4:e5f6:c8d dev eth0 lladdr 02:42:ac:11:01:cb router REACHABLE\nfe80::1cc:a1b2:c3d4:e5f6:c94 dev eth0 lladdr 02:42:ac:11:01:cc router REACHABLE\nfe80::1cd:a1b2:c3d4:e5f6:c9b dev eth0 lladdr 02:42:ac:11:01:cd router REACHABLE\nfe80::1ce:a1b2:c3d4:e5f6:ca2 dev eth0 lladdr 02:42:ac:11:01:ce router REACHABLE\nfe80::1cf:a1b2:c3d4:e5f6:ca9 dev eth0 lladdr 02:42:ac:11:01:cf router REACHABLE\nfe80::1d0:a1b2:c3d4:e5f6:cb0 dev eth0 lladdr 02:42:ac:11:01:d0 router REACHABLE\nfe80::1d1:a1b2:c3d4:e5f6:cb7 dev eth0 lladdr 02:42:ac:11:01:d1 router REACHABLE\nfe80::1d2:a1b2:c3d4:e5f6:cbe dev eth0 lladdr 02:42:ac:11:01:d2 router REACHABLE\nfe80::1d3:a1b2:c3d4:e5f6:cc5 dev eth0 lladdr 02:42:ac:11:01:d3 router REACHABLE\nfe80::1d4:a1b2:c3d4:e5f6:ccc dev eth0 lladdr 02:42:ac:11:01:d4 router REACHABLE\nfe80::1d5:a1b2:c3d4:e5f6:cd3 dev eth0 lladdr 02:42:ac:11:01:d5 router REACHABLE\nfe80::1d6:a1b2:c3d4:e5f6:cda dev eth0 lladdr 02:42:ac:11:01:d6 router REACHABLE\nfe80::1d7:a1b2:c3d4:e5f6:ce1 dev eth0 lladdr 02:42:ac:11:01:d7 router REACHABLE\nfe80::1d8:a1b2:c3d4:e5f6:ce8 dev eth0 lladdr 02:42:ac:11:01:d8 router REACHABLE\nfe80::1d9:a1b2:c3d4:e5f6:cef dev eth0 lladdr 02:42:ac:11:01:d9 router REACHABLE\nfe80::1da:a1b2:c3d4:e5f6:cf6 dev eth0 lladdr 02:42:ac:11:01:da router REACHABLE\nfe80::1db:a1b2:c3d4:e5f6:cfd dev eth0 lladdr 02:42:ac:11:01:db router REACHABLE\nfe80::1dc:a1b2:c3d4:e5f6:d04 dev eth0 lladdr 02:42:ac:11:01:dc router REACHABLE\nfe80::1dd:a1b2:c3d4:e5f6:d0b dev eth0 lladdr 02:42:ac:11:01:dd router REACHABLE\nfe80::1de:a1b2:c3d4:e5f6:d12 dev eth0 lladdr 02:42:ac:11:01:de router REACHABLE\nfe80::1df:a1b2:c3d4:e5f6:d19 dev eth0 lladdr 02:42:ac:11:01:df router REACHABLE\nfe80::1e0:a1b2:c3d4:e5f6:d20 dev eth0 lladdr 02:42:ac:11:01:e0 router REACHABLE\nfe80::1e1:a1b2:c3d4:e5f6:d27 dev eth0 lladdr 02:42:ac:11:01:e1 router REACHABLE\nfe80::1e2:a1b2:c3d4:e5f6:d2e dev eth0 lladdr 02:42:ac:11:01:e2 router REACHABLE\nfe80::1e3:a1b2:c3d4:e5f6:d35 dev eth0 lladdr 02:42:ac:11:01:e3 router REACHABLE\nfe80::1e4:a1b2:c3d4:e5f6:d3c dev eth0 lladdr 02:42:ac:11:01:e4 router REACHABLE\nfe80::1e5:a1b2:c3d4:e5f6:d43 dev eth0 lladdr 02:42:ac:11:01:e5 router REACHABLE\nfe80::1e6:a1b2:c3d4:e5f6:d4a dev eth0 lladdr 02:42:ac:11:01:e6 router REACHABLE\nfe80::1e7:a1b2:c3d4:e5f6:d51 dev eth0 lladdr 02:42:ac:11:01:e7 router REACHABLE\nfe80::1e8:a1b2:c3d4:e5f6:d58 dev eth0 lladdr 02:42:ac:11:01:e8 router REACHABLE\nfe80::1e9:a1b2:c3d4:e5f6:d5f dev eth0 lladdr 02:42:ac:11:01:e9 router REACHABLE\nfe80::1ea:a1b2:c3d4:e5f6:d66 dev eth0 lladdr 02:42:ac:11:01:ea router REACHABLE\nfe80::1eb:a1b2:c3d4:e5f6:d6d dev eth0 lladdr 02:42:ac:11:01:eb router REACHABLE\nfe80::1ec:a1b2:c3d4:e5f6:d74 dev eth0 lladdr 02:42:ac:11:01:ec router REACHABLE\nfe80::1ed:a1b2:c3d4:e5f6:d7b dev eth0 lladdr 02:42:ac:11:01:ed router REACHABLE\nfe80::1ee:a1b2:c3d4:e5f6:d82 dev eth0 lladdr 02:42:ac:11:01:ee router REACHABLE\nfe80::1ef:a1b2:c3d4:e5f6:d89 dev eth0 lladdr 02:42:ac:11:01:ef router REACHABLE\nfe80::1f0:a1b2:c3d4:e5f6:d90 dev eth0 lladdr 02:42:ac:11:01:f0 router REACHABLE\nfe80::1f1:a1b2:c3d4:e5f6:d97 dev eth0 lladdr 02:42:ac:11:01:f1 router REACHABLE\nfe80::1f2:a1b2:c3d4:e5f6:d9e dev eth0 lladdr 02:42:ac:11:01:f2 router REACHABLE\nfe80::1f3:a1b2:c3d4:e5f6:da5 dev eth0 lladdr 02:42:ac:11:01:f3 router REACHABLE\nfe80::1f4:a1b2:c3d4:e5f6:dac dev eth0 lladdr 02:42:ac:11:01:f4 router REACHABLE\nfe80::1f5:a1b2:c3d4:e5f6:db3 dev eth0 lladdr 02:42:ac:11:01:f5 router REACHABLE\nfe80::1f6:a1b2:c3d4:e5f6:dba dev eth0 lladdr 02:42:ac:11:01:f6 router REACHABLE\nfe80::1f7:a1b2:c3d4:e5f6:dc1 dev eth0 lladdr 02:42:ac:11:01:f7 router REACHABLE\nfe80::1f8:a1b2:c3d4:e5f6:dc8 dev eth0 lladdr 02:42:ac:11:01:f8 router REACHABLE\nfe80::1f9:a1b2:c3d4:e5f6:dcf dev eth0 lladdr 02:42:ac:11:01:f9 router REACHABLE\nfe80::1fa:a1b2:c3d4:e5f6:dd6 dev eth0 lladdr 02:42:ac:11:01:fa router REACHABLE\nfe80::1fb:a1b2:c3d4:e5f6:ddd dev eth0 lladdr 02:42:ac:11:01:fb router REACHABLE\nfe80::1fc:a1b2:c3d4:e5f6:de4 dev eth0 lladdr 02:42:ac:11:01:fc router REACHABLE\nfe80::1fd:a1b2:c3d4:e5f6:deb dev eth0 lladdr 02:42:ac:11:01:fd router REACHABLE\nfe80::1fe:a1b2:c3d4:e5f6:df2 dev eth0 lladdr 02:42:ac:11:01:fe router REACHABLE\nfe80::1ff:a1b2:c3d4:e5f6:df9 dev eth0 lladdr 02:42:ac:11:01:ff router REACHABLE\nfe80::200:a1b2:c3d4:e5f6:e00 dev eth0 lladdr 02:42:ac:11:02:00 router REACHABLE\nfe80::201:a1b2:c3d4:e5f6:e07 dev eth0 lladdr 02:42:ac:11:02:01 router REACHABLE\nfe80::202:a1b2:c3d4:e5f6:e0e dev eth0 lladdr 02:42:ac:11:02:02 router REACHABLE\nfe80::203:a1b2:c3d4:e5f6:e15 dev eth0 lladdr 02:42:ac:11:02:03 router REACHABLE\nfe80::204:a1b2:c3d4:e5f6:e1c dev eth0 lladdr 02:42:ac:11:02:04 router REACHABLE\nfe80::205:a1b2:c3d4:e5f6:e23 dev eth0 lladdr 02:42:ac:11:02:05 router REACHABLE\nfe80::206:a1b2:c3d4:e5f6:e2a dev eth0 lladdr 02:42:ac:11:02:06 router REACHABLE\nfe80::207:a1b2:c3d4:e5f6:e31 dev eth0 lladdr 02:42:ac:11:02:07 router REACHABLE\nfe80::208:a1b2:c3d4:e5f6:e38 dev eth0 lladdr 02:42:ac:11:02:08 router REACHABLE\nfe80::209:a1b2:c3d4:e5f6:e3f dev eth0 lladdr 02:42:ac:11:02:09 router REACHABLE\nfe80::20a:a1b2:c3d4:e5f6:e46 dev eth0 lladdr 02:42:ac:11:02:0a router REACHABLE\nfe80::20b:a1b2:c3d4:e5f6:e4d dev eth0 lladdr 02:42:ac:11:02:0b router REACHABLE\nfe80::20c:a1b2:c3d4:e5f6:e54 dev eth0 lladdr 02:42:ac:11:02:0c router REACHABLE\nfe80::20d:a1b2:c3d4:e5f6:e5b dev eth0 lladdr 02:42:ac:11:02:0d router REACHABLE\nfe80::20e:a1b2:c3d4:e5f6:e62 dev eth0 lladdr 02:42:ac:11:02:0e router REACHABLE\nfe80::20f:a1b2:c3d4:e5f6:e69 dev eth0 lladdr 02:42:ac:11:02:0f router REACHABLE\nfe80::210:a1b2:c3d4:e5f6:e70 dev eth0 lladdr 02:42:ac:11:02:10 router REACHABLE\nfe80::211:a1b2:c3d4:e5f6:e77 dev eth0 lladdr 02:42:ac:11:02:11 router REACHABLE\nfe80::212:a1b2:c3d4:e5f6:e7e dev eth0 lladdr 02:42:ac:11:02:12 router REACHABLE\nfe80::213:a1b2:c3d4:e5f6:e85 dev eth0 lladdr 02:42:ac:11:02:13 router REACHABLE\nfe80::214:a1b2:c3d4:e5f6:e8c dev eth0 lladdr 02:42:ac:11:02:14 router REACHABLE\nfe80::215:a1b2:c3d4:e5f6:e93 dev eth0 lladdr 02:42:ac:11:02:15 router REACHABLE\nfe80::216:a1b2:c3d4:e5f6:e9a dev eth0 lladdr 02:42:ac:11:02:16 router REACHABLE\nfe80::217:a1b2:c3d4:e5f6:ea1 dev eth0 lladdr 02:42:ac:11:02:17 router REACHABLE\nfe80::218:a1b2:c3d4:e5f6:ea8 dev eth0 lladdr 02:42:ac:11:02:18 router REACHABLE\nfe80::219:a1b2:c3d4:e5f6:eaf dev eth0 lladdr 02:42:ac:11:02:19 router REACHABLE\nfe80::21a:a1b2:c3d4:e5f6:eb6 dev eth0 lladdr 02:42:ac:11:02:1a router REACHABLE\nfe80::21b:a1b2:c3d4:e5f6:ebd dev eth0 lladdr 02:42:ac:11:02:1b router REACHABLE\nfe80::21c:a1b2:c3d4:e5f6:ec4 dev eth0 lladdr 02:42:ac:11:02:1c router REACHABLE\nfe80::21d:a1b2:c3d4:e5f6:ecb dev eth0 lladdr 02:42:ac:11:02:1d router REACHABLE\nfe80::21e:a1b2:c3d4:e5f6:ed2 dev eth0 lladdr 02:42:ac:11:02:1e router REACHABLE\nfe80::21f:a1b2:c3d4:e5f6:ed9 dev eth0 lladdr 02:42:ac:11:02:1f router REACHABLE\nfe80::220:a1b2:c3d4:e5f6:ee0 dev eth0 lladdr 02:42:ac:11:02:20 router REACHABLE\nfe80::221:a1b2:c3d4:e5f6:ee7 dev eth0 lladdr 02:42:ac:11:02:21 router REACHABLE\nfe80::222:a1b2:c3d4:e5f6:eee dev eth0 lladdr 02:42:ac:11:02:22 router REACHABLE\nfe80::223:a1b2:c3d4:e5f6:ef5 dev eth0 lladdr 02:42:ac:11:02:23 router REACHABLE\nfe80::224:a1b2:c3d4:e5f6:efc dev eth0 lladdr 02:42:ac:11:02:24 router REACHABLE\nfe80::225:a1b2:c3d4:e5f6:f03 dev eth0 lladdr 02:42:ac:11:02:25 router REACHABLE\nfe80::226:a1b2:c3d4:e5f6:f0a dev eth0 lladdr 02:42:ac:11:02:26 router REACHABLE\nfe80::227:a1b2:c3d4:e5f6:f11 dev eth0 lladdr 02:42:ac:11:02:27 router REACHABLE\nfe80::228:a1b2:c3d4:e5f6:f18 dev eth0 lladdr 02:42:ac:11:02:28 router REACHABLE\nfe80::229:a1b2:c3d4:e5f6:f1f dev eth0 lladdr 02:42:ac:11:02:29 router REACHABLE\nfe80::22a:a1b2:c3d4:e5f6:f26 dev eth0 lladdr 02:42:ac:11:02:2a router REACHABLE\nfe80::22b:a1b2:c3d4:e5f6:f2d dev eth0 lladdr 02:42:ac:11:02:2b router REACHABLE\nfe80::22c:a1b2:c3d4:e5f6:f34 dev eth0 lladdr 02:42:ac:11:02:2c router REACHABLE\nfe80::22d:a1b2:c3d4:e5f6:f3b dev eth0 lladdr 02:42:ac:11:02:2d router REACHABLE\nfe80::22e:a1b2:c3d4:e5f6:f42 dev eth0 lladdr 02:42:ac:11:02:2e router REACHABLE\nfe80::22f:a1b2:c3d4:e5f6:f49 dev eth0 lladdr 02:42:ac:11:02:2f router REACHABLE\nfe80::230:a1b2:c3d4:e5f6:f50 dev eth0 lladdr 02:42:ac:11:02:30 router REACHABLE\nfe80::231:a1b2:c3d4:e5f6:f57 dev eth0 lladdr 02:42:ac:11:02:31 router REACHABLE\nfe80::232:a1b2:c3d4:e5f6:f5e dev eth0 lladdr 02:42:ac:11:02:32 router REACHABLE\nfe80::233:a1b2:c3d4:e5f6:f65 dev eth0 lladdr 02:42:ac:11:02:33 router REACHABLE\nfe80::234:a1b2:c3d4:e5f6:f6c dev eth0 lladdr 02:42:ac:11:02:34 router REACHABLE\nfe80::235:a1b2:c3d4:e5f6:f73 dev eth0 lladdr 02:42:ac:11:02:35 router REACHABLE\nfe80::236:a1b2:c3d4:e5f6:f7a dev eth0 lladdr 02:42:ac:11:02:36 router REACHABLE\nfe80::237:a1b2:c3d4:e5f6:f81 dev eth0 lladdr 02:42:ac:11:02:37 router REACHABLE\nfe80::238:a1b2:c3d4:e5f6:f88 dev eth0 lladdr 02:42:ac:11:02:38 router REACHABLE\nfe80::239:a1b2:c3d4:e5f6:f8f dev eth0 lladdr 02:42:ac:11:02:39 router REACHABLE\nfe80::23a:a1b2:c3d4:e5f6:f96 dev eth0 lladdr 02:42:ac:11:02:3a router REACHABLE\nfe80::23b:a1b2:c3d4:e5f6:f9d dev eth0 lladdr 02:42:ac:11:02:3b router REACHABLE\nfe80::23c:a1b2:c3d4:e5f6:fa4 dev eth0 lladdr 02:42:ac:11:02:3c router REACHABLE\nfe80::23d:a1b2:c3d4:e5f6:fab dev eth0 lladdr 02:42:ac:11:02:3d router REACHABLE\nfe80::23e:a1b2:c3d4:e5f6:fb2 dev eth0 lladdr 02:42:ac:11:02:3e router REACHABLE\nfe80::23f:a1b2:c3d4:e5f6:fb9 dev eth0 lladdr 02:42:ac:11:02:3f router REACHABLE\nfe80::240:a1b2:c3d4:e5f6:fc0 dev eth0 lladdr 02:42:ac:11:02:40 router REACHABLE\nfe80::241:a1b2:c3d4:e5f6:fc7 dev eth0 lladdr 02:42:ac:11:02:41 router REACHABLE\nfe80::242:a1b2:c3d4:e5f6:fce dev eth0 lladdr 02:42:ac:11:02:42 router REACHABLE\nfe80::243:a1b2:c3d4:e5f6:fd5 dev eth0 lladdr 02:42:ac:11:02:43 router REACHABLE\nfe80::244:a1b2:c3d4:e5f6:fdc dev eth0 lladdr 02:42:ac:11:02:44 router REACHABLE\nfe80::245:a1b2:c3d4:e5f6:fe3 dev eth0 lladdr 02:42:ac:11:02:45 router REACHABLE\nfe80::246:a1b2:c3d4:e5f6:fea dev eth0 lladdr 02:42:ac:11:02:46 router REACHABLE\nfe80::247:a1b2:c3d4:e5f6:ff1 dev eth0 lladdr 02:42:ac:11:02:47 router REACHABLE\nfe80::248:a1b2:c3d4:e5f6:ff8 dev eth0 lladdr 02:42:ac:11:02:48 router REACHABLE\nfe80::249:a1b2:c3d4:e5f6:fff dev eth0 lladdr 02:42:ac:11:02:49 router REACHABLE\nfe80::24a:a1b2:c3d4:e5f6:1006 dev eth0 lladdr 02:42:ac:11:02:4a router REACHABLE\nfe80::24b:a1b2:c3d4:e5f6:100d dev eth0 lladdr 02:42:ac:11:02:4b router REACHABLE\nfe80::24c:a1b2:c3d4:e5f6:1014 dev eth0 lladdr 02:42:ac:11:02:4c router REACHABLE\nfe80::24d:a1b2:c3d4:e5f6:101b dev eth0 lladdr 02:42:ac:11:02:4d router REACHABLE\nfe80::24e:a1b2:c3d4:e5f6:1022 dev eth0 lladdr 02:42:ac:11:02:4e router REACHABLE\nfe80::24f:a1b2:c3d4:e5f6:1029 dev eth0 lladdr 02:42:ac:11:02:4f router REACHABLE\nfe80::250:a1b2:c3d4:e5f6:1030 dev eth0 lladdr 02:42:ac:11:02:50 router REACHABLE\nfe80::251:a1b2:c3d4:e5f6:1037 dev eth0 lladdr 02:42:ac:11:02:51 router REACHABLE\nfe80::252:a1b2:c3d4:e5f6:103e dev eth0 lladdr 02:42:ac:11:02:52 router REACHABLE\nfe80::253:a1b2:c3d4:e5f6:1045 dev eth0 lladdr 02:42:ac:11:02:53 router REACHABLE\nfe80::254:a1b2:c3d4:e5f6:104c dev eth0 lladdr 02:42:ac:11:02:54 router REACHABLE\nfe80::255:a1b2:c3d4:e5f6:1053 dev eth0 lladdr 02:42:ac:11:02:55 router REACHABLE\nfe80::256:a1b2:c3d4:e5f6:105a dev eth0 lladdr 02:42:ac:11:02:56 router REACHABLE\nfe80::257:a1b2:c3d4:e5f6:1061 dev eth0 lladdr 02:42:ac:11:02:57 router REACHABLE\nfe80::258:a1b2:c3d4:e5f6:1068 dev eth0 lladdr 02:42:ac:11:02:58 router REACHABLE\nfe80::259:a1b2:c3d4:e5f6:106f dev eth0 lladdr 02:42:ac:11:02:59 router REACHABLE\nfe80::25a:a1b2:c3d4:e5f6:1076 dev eth0 lladdr 02:42:ac:11:02:5a router REACHABLE\nfe80::25b:a1b2:c3d4:e5f6:107d dev eth0 lladdr 02:42:ac:11:02:5b router REACHABLE\nfe80::25c:a1b2:c3d4:e5f6:1084 dev eth0 lladdr 02:42:ac:11:02:5c router REACHABLE\nfe80::25d:a1b2:c3d4:e5f6:108b dev eth0 lladdr 02:42:ac:11:02:5d router REACHABLE\nfe80::25e:a1b2:c3d4:e5f6:1092 dev eth0 lladdr 02:42:ac:11:02:5e router REACHABLE\nfe80::25f:a1b2:c3d4:e5f6:1099 dev eth0 lladdr 02:42:ac:11:02:5f router REACHABLE\nfe80::260:a1b2:c3d4:e5f6:10a0 dev eth0 lladdr 02:42:ac:11:02:60 router REACHABLE\nfe80::261:a1b2:c3d4:e5f6:10a7 dev eth0 lladdr 02:42:ac:11:02:61 router REACHABLE\nfe80::262:a1b2:c3d4:e5f6:10ae dev eth0 lladdr 02:42:ac:11:02:62 router REACHABLE\nfe80::263:a1b2:c3d4:e5f6:10b5 dev eth0 lladdr 02:42:ac:11:02:63 router REACHABLE\nfe80::264:a1b2:c3d4:e5f6:10bc dev eth0 lladdr 02:42:ac:11:02:64 router REACHABLE\nfe80::265:a1b2:c3d4:e5f6:10c3 dev eth0 lladdr 02:42:ac:11:02:65 router REACHABLE\nfe80::266:a1b2:c3d4:e5f6:10ca dev eth0 lladdr 02:42:ac:11:02:66 router REACHABLE\nfe80::267:a1b2:c3d4:e5f6:10d1 dev eth0 lladdr 02:42:ac:11:02:67 router REACHABLE\nfe80::268:a1b2:c3d4:e5f6:10d8 dev eth0 lladdr 02:42:ac:11:02:68 router REACHABLE\nfe80::269:a1b2:c3d4:e5f6:10df dev eth0 lladdr 02:42:ac:11:02:69 router REACHABLE\nfe80::26a:a1b2:c3d4:e5f6:10e6 dev eth0 lladdr 02:42:ac:11:02:6a router REACHABLE\nfe80::26b:a1b2:c3d4:e5f6:10ed dev eth0 lladdr 02:42:ac:11:02:6b router REACHABLE\nfe80::26c:a1b2:c3d4:e5f6:10f4 dev eth0 lladdr 02:42:ac:11:02:6c router REACHABLE\nfe80::26d:a1b2:c3d4:e5f6:10fb dev eth0 lladdr 02:42:ac:11:02:6d router REACHABLE\nfe80::26e:a1b2:c3d4:e5f6:1102 dev eth0 lladdr 02:42:ac:11:02:6e router REACHABLE\nfe80::26f:a1b2:c3d4:e5f6:1109 dev eth0 lladdr 02:42:ac:11:02:6f router REACHABLE\nfe80::270:a1b2:c3d4:e5f6:1110 dev eth0 lladdr 02:42:ac:11:02:70 router REACHABLE\nfe80::271:a1b2:c3d4:e5f6:1117 dev eth0 lladdr 02:42:ac:11:02:71 router REACHABLE\nfe80::272:a1b2:c3d4:e5f6:111e dev eth0 lladdr 02:42:ac:11:02:72 router REACHABLE\nfe80::273:a1b2:c3d4:e5f6:1125 dev eth0 lladdr 02:42:ac:11:02:73 router REACHABLE\nfe80::274:a1b2:c3d4:e5f6:112c dev eth0 lladdr 02:42:ac:11:02:74 router REACHABLE\n",
+  "keep": [
+   "fe80::0:a1b2:c3d4:e5f6:0 dev eth0 lladdr 02:42:ac:11:00:00 router REACHABLE"
+  ]
+ },
+ {
+  "id": "yaml-block-scalar-password-read",
+  "why": "maskValue leaves `|` block indicators alone, and the indented continuation line has no name, so maskInline only hides it if it looks random; a human password with punctuation in a YAML block scalar is shown on a masked read (and fileValues never registers it)",
+  "files": {
+   "config/secrets.yml": "production:\n  db_password: |\n    Tr0ub4dor&3-horse!\n  smtp:\n    host: smtp.example.com\n    port: 587\n"
+  },
+  "read": "config/secrets.yml",
+  "hide": [
+   "Tr0ub4dor&3-horse!"
+  ],
+  "keep": [
+   "host: smtp.example.com",
+   "port: 587"
+  ]
+ },
+ {
+  "id": "guard-sts-session-credentials",
+  "why": "regression guard: aws sts get-session-token prints SecretAccessKey and SessionToken as pretty JSON; the name rule must hide both while keeping the expiry and key id",
+  "command": "aws sts get-session-token --duration-seconds 3600",
+  "output": "{\n    \"Credentials\": {\n        \"AccessKeyId\": \"@@AWS_ASIA@@Z3EXAMPLEKEYID12\",\n        \"SecretAccessKey\": \"@@C:wJalrXUt.nFEMI/K7.MDENG/bP.xRfiCYzE.XAMPLEKY@@\",\n        \"SessionToken\": \"@@C:FwoGZXIv.YXdzEBYa.DHk3Qx9v.R2mK7tL4.wPb8nC5d.F1gJ6sY3.eHa0zU2i.OkLm9XvT.4pN7wB3c.Y6dF1gH5.jQ0sZr8@@\",\n        \"Expiration\": \"2026-09-30T15:02:11+00:00\"\n    }\n}\n",
+  "hide": [
+   "@@C:wJalrXUt.nFEMI/K7.MDENG/bP.xRfiCYzE.XAMPLEKY@@",
+   "@@C:FwoGZXIv.YXdzEBYa.DHk3Qx9v.R2mK7tL4.wPb8nC5d.F1gJ6sY3.eHa0zU2i.OkLm9XvT.4pN7wB3c.Y6dF1gH5.jQ0sZr8@@"
+  ],
+  "keep": [
+   "\"Expiration\": \"2026-09-30T15:02:11+00:00\""
+  ]
+ },
+ {
+  "id": "guard-compose-config-env",
+  "why": "regression guard: docker compose config prints environment as `NAME: value`; credential names hidden, settings kept",
+  "files": {
+   ".env": "POSTGRES_PASSWORD=Fv9!kT2qZx7mL4wR\nPOSTGRES_DB=orders\n"
+  },
+  "command": "docker compose config",
+  "output": "name: shop\nservices:\n  db:\n    environment:\n      POSTGRES_DB: orders\n      POSTGRES_PASSWORD: Fv9!kT2qZx7mL4wR\n    image: postgres:16\n",
+  "hide": [
+   "Fv9!kT2qZx7mL4wR"
+  ],
+  "keep": [
+   "POSTGRES_DB: orders",
+   "image: postgres:16"
+  ]
+ }
+]

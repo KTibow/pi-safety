@@ -1,0 +1,5 @@
+[
+ {"id":"dotenv-read","why":"masked read keeps settings, hides secrets","files":{".env":"NODE_ENV=development\nPORT=3000\nAPI_KEY=k8Hq2LmZ9xPvR4tN\nPASSWORD=hunter22\n"},"read":".env","hide":["k8Hq2LmZ9xPvR4tN","hunter22"],"keep":["NODE_ENV=development","PORT=3000","API_KEY="]},
+ {"id":"dotenv-cat","why":"cat output redacted, host kept","files":{".env":"DB_HOST=db.internal:5432\nAPI_KEY=k8Hq2LmZ9xPvR4tN\n"},"output":"DB_HOST=db.internal:5432\nAPI_KEY=k8Hq2LmZ9xPvR4tN\n","hide":["k8Hq2LmZ9xPvR4tN"],"keep":["db.internal:5432"]},
+ {"id":"env-pwd","why":"PWD is not a secret","env":{"PWD":"/home/me/project","XDG_SESSION_TYPE":"wayland"},"output":"PWD=/home/me/project\nXDG_SESSION_TYPE=wayland","keep":["/home/me/project","wayland"]}
+]

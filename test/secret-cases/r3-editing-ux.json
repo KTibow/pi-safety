@@ -1,0 +1,508 @@
+[
+ {
+  "id": "cat-n-env-weak-values",
+  "why": "cat -n to find line numbers for an edit: the line-number prefix must not stop masking of plain-word and numeric credentials, which only masking can hide",
+  "files": {
+   ".env": "# App\nNODE_ENV=development\nPORT=3000\nAWS_S3_BUCKET=acme-dev-uploads\nOAUTH2_CLIENT_ID=web-dashboard\n\n# Database\nDB_HOST=db.internal\nDB_USER=acme\nDB_PASSWORD=devpassword\nADMIN_PIN=482913\n\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n"
+  },
+  "command": "cat -n .env",
+  "output": "     1\t# App\n     2\tNODE_ENV=development\n     3\tPORT=3000\n     4\tAWS_S3_BUCKET=acme-dev-uploads\n     5\tOAUTH2_CLIENT_ID=web-dashboard\n     6\t\n     7\t# Database\n     8\tDB_HOST=db.internal\n     9\tDB_USER=acme\n    10\tDB_PASSWORD=devpassword\n    11\tADMIN_PIN=482913\n    12\t\n    13\tAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\n    14\tJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n",
+  "hide": [
+   "devpassword",
+   "482913",
+   "@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@",
+   "@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@"
+  ],
+  "keep": [
+   "     3\tPORT=3000",
+   "     4\tAWS_S3_BUCKET=acme-dev-uploads",
+   "    10\tDB_PASSWORD=",
+   "    11\tADMIN_PIN="
+  ]
+ },
+ {
+  "id": "nl-ba-env-weak-values",
+  "why": "nl -ba numbers lines the same way: masking must survive the prefix",
+  "files": {
+   ".env": "# App\nNODE_ENV=development\nPORT=3000\nAWS_S3_BUCKET=acme-dev-uploads\nOAUTH2_CLIENT_ID=web-dashboard\n\n# Database\nDB_HOST=db.internal\nDB_USER=acme\nDB_PASSWORD=devpassword\nADMIN_PIN=482913\n\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n"
+  },
+  "command": "nl -ba .env",
+  "output": "     1\t# App\n     2\tNODE_ENV=development\n     3\tPORT=3000\n     4\tAWS_S3_BUCKET=acme-dev-uploads\n     5\tOAUTH2_CLIENT_ID=web-dashboard\n     6\t\n     7\t# Database\n     8\tDB_HOST=db.internal\n     9\tDB_USER=acme\n    10\tDB_PASSWORD=devpassword\n    11\tADMIN_PIN=482913\n    12\t\n    13\tAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\n    14\tJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n",
+  "hide": [
+   "devpassword",
+   "482913"
+  ],
+  "keep": [
+   "     3\tPORT=3000",
+   "     8\tDB_HOST=db.internal"
+  ]
+ },
+ {
+  "id": "grep-n-single-file-weak-values",
+  "why": "grep -n on one file prints `10:NAME=value` with no path: plain-word and numeric credentials must still be masked",
+  "files": {
+   ".env": "# App\nNODE_ENV=development\nPORT=3000\nAWS_S3_BUCKET=acme-dev-uploads\nOAUTH2_CLIENT_ID=web-dashboard\n\n# Database\nDB_HOST=db.internal\nDB_USER=acme\nDB_PASSWORD=devpassword\nADMIN_PIN=482913\n\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n"
+  },
+  "command": "grep -nE 'PASSWORD|PIN|PORT' .env",
+  "output": "3:PORT=3000\n10:DB_PASSWORD=devpassword\n11:ADMIN_PIN=482913\n",
+  "hide": [
+   "devpassword",
+   "482913"
+  ],
+  "keep": [
+   "3:PORT=3000",
+   "10:DB_PASSWORD=",
+   "11:ADMIN_PIN="
+  ]
+ },
+ {
+  "id": "diff-env-example-vs-env",
+  "why": "comparing .env with .env.example: diff prints .env's lines, so its plain-word and numeric credentials must not get through; the placeholders and settings must",
+  "files": {
+   ".env": "# App\nNODE_ENV=development\nPORT=3000\nAWS_S3_BUCKET=acme-dev-uploads\nOAUTH2_CLIENT_ID=web-dashboard\n\n# Database\nDB_HOST=db.internal\nDB_USER=acme\nDB_PASSWORD=devpassword\nADMIN_PIN=482913\n\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n",
+   ".env.example": "# App\nNODE_ENV=development\nPORT=3000\n\n# Database\nDB_HOST=localhost\nDB_USER=acme\nDB_PASSWORD=change-me\n\nAPI_KEY=\nJWT_SECRET=\n"
+  },
+  "command": "diff .env.example .env",
+  "output": "3a4,5\n> AWS_S3_BUCKET=acme-dev-uploads\n> OAUTH2_CLIENT_ID=web-dashboard\n6,8c8,11\n< DB_HOST=localhost\n< DB_USER=acme\n< DB_PASSWORD=change-me\n---\n> DB_HOST=db.internal\n> DB_USER=acme\n> DB_PASSWORD=devpassword\n> ADMIN_PIN=482913\n10,11c13,14\n< API_KEY=\n< JWT_SECRET=\n---\n> API_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\n> JWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n",
+  "hide": [
+   "devpassword",
+   "482913",
+   "@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@",
+   "@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@"
+  ],
+  "keep": [
+   "3a4,5",
+   "> AWS_S3_BUCKET=acme-dev-uploads",
+   "< DB_PASSWORD=change-me",
+   "> DB_HOST=db.internal",
+   "< API_KEY=",
+   "> DB_PASSWORD=",
+   "> ADMIN_PIN="
+  ]
+ },
+ {
+  "id": "git-diff-no-index-env",
+  "why": "git diff --no-index between the example and the real file: unified diff lines from .env",
+  "files": {
+   ".env": "# App\nNODE_ENV=development\nPORT=3000\nAWS_S3_BUCKET=acme-dev-uploads\nOAUTH2_CLIENT_ID=web-dashboard\n\n# Database\nDB_HOST=db.internal\nDB_USER=acme\nDB_PASSWORD=devpassword\nADMIN_PIN=482913\n\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n",
+   ".env.example": "# App\nNODE_ENV=development\nPORT=3000\n\n# Database\nDB_HOST=localhost\nDB_USER=acme\nDB_PASSWORD=change-me\n\nAPI_KEY=\nJWT_SECRET=\n"
+  },
+  "command": "git diff --no-index .env.example .env",
+  "output": "diff --git a/.env.example b/.env\nindex 4c1a2b7..9e0f3d1 100644\n--- a/.env.example\n+++ b/.env\n@@ -3,9 +3,14 @@ NODE_ENV=development\n PORT=3000\n+AWS_S3_BUCKET=acme-dev-uploads\n+OAUTH2_CLIENT_ID=web-dashboard\n \n # Database\n-DB_HOST=localhost\n+DB_HOST=db.internal\n DB_USER=acme\n-DB_PASSWORD=change-me\n+DB_PASSWORD=devpassword\n+ADMIN_PIN=482913\n \n-API_KEY=\n-JWT_SECRET=\n+API_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\n+JWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n",
+  "hide": [
+   "devpassword",
+   "482913",
+   "@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@",
+   "@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@"
+  ],
+  "keep": [
+   "@@ -3,9 +3,14 @@",
+   "+AWS_S3_BUCKET=acme-dev-uploads",
+   "-DB_PASSWORD=change-me",
+   "+DB_PASSWORD=",
+   "+ADMIN_PIN=",
+   "-API_KEY="
+  ]
+ },
+ {
+  "id": "cut-variable-names",
+  "why": "listing .env's variable names to write .env.example: names with digits are not values and must survive",
+  "files": {
+   ".env": "# App\nNODE_ENV=development\nPORT=3000\nAWS_S3_BUCKET=acme-dev-uploads\nOAUTH2_CLIENT_ID=web-dashboard\n\n# Database\nDB_HOST=db.internal\nDB_USER=acme\nDB_PASSWORD=devpassword\nADMIN_PIN=482913\n\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n"
+  },
+  "command": "cut -d= -f1 .env",
+  "output": "# App\nNODE_ENV\nPORT\nAWS_S3_BUCKET\nOAUTH2_CLIENT_ID\n\n# Database\nDB_HOST\nDB_USER\nDB_PASSWORD\nADMIN_PIN\n\nAPI_KEY\nJWT_SECRET\n\n",
+  "keep": [
+   "AWS_S3_BUCKET",
+   "OAUTH2_CLIENT_ID",
+   "NODE_ENV",
+   "JWT_SECRET"
+  ]
+ },
+ {
+  "id": "diff-variable-names-example-vs-env",
+  "why": "which variables .env.example is missing: a diff of sorted names; names and hunk headers are not secrets",
+  "files": {
+   ".env": "# App\nNODE_ENV=development\nPORT=3000\nAWS_S3_BUCKET=acme-dev-uploads\nOAUTH2_CLIENT_ID=web-dashboard\n\n# Database\nDB_HOST=db.internal\nDB_USER=acme\nDB_PASSWORD=devpassword\nADMIN_PIN=482913\n\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n",
+   ".env.example": "# App\nNODE_ENV=development\nPORT=3000\n\n# Database\nDB_HOST=localhost\nDB_USER=acme\nDB_PASSWORD=change-me\n\nAPI_KEY=\nJWT_SECRET=\n"
+  },
+  "command": "diff <(grep -o '^[A-Z0-9_]*' .env.example | sort) <(grep -o '^[A-Z0-9_]*' .env | sort)",
+  "output": "0a1\n> ADMIN_PIN\n1a3\n> AWS_S3_BUCKET\n7a10\n> OAUTH2_CLIENT_ID\n",
+  "keep": [
+   "> ADMIN_PIN",
+   "> AWS_S3_BUCKET",
+   "> OAUTH2_CLIENT_ID",
+   "7a10"
+  ]
+ },
+ {
+  "id": "env-to-example-sed",
+  "why": "generating .env.example by blanking values: the output is names only and must be shown as is",
+  "files": {
+   ".env": "# App\nNODE_ENV=development\nPORT=3000\nAWS_S3_BUCKET=acme-dev-uploads\nOAUTH2_CLIENT_ID=web-dashboard\n\n# Database\nDB_HOST=db.internal\nDB_USER=acme\nDB_PASSWORD=devpassword\nADMIN_PIN=482913\n\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n"
+  },
+  "command": "sed -E 's/^([A-Za-z0-9_]+)=.*/\\1=/' .env",
+  "output": "# App\nNODE_ENV=\nPORT=\nAWS_S3_BUCKET=\nOAUTH2_CLIENT_ID=\n\n# Database\nDB_HOST=\nDB_USER=\nDB_PASSWORD=\nADMIN_PIN=\n\nAPI_KEY=\nJWT_SECRET=\n\n",
+  "keep": [
+   "AWS_S3_BUCKET=\nOAUTH2_CLIENT_ID=\n",
+   "DB_PASSWORD=\nADMIN_PIN=\n",
+   "API_KEY=\nJWT_SECRET=\n"
+  ]
+ },
+ {
+  "id": "env-quoting-visible",
+  "why": "debugging a value the app reads with quotes in it: whether a secret is quoted (and how) must stay visible, as redactNamedValues already does",
+  "files": {
+   ".env": "PORT=3000\nAPI_KEY=\"@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\"\nJWT_SECRET='@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@'\nDB_PASSWORD=\"Vt7qL2mZx9Rk\n"
+  },
+  "read": ".env",
+  "hide": [
+   "@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@",
+   "@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@",
+   "Vt7qL2mZx9Rk"
+  ],
+  "keep": [
+   "API_KEY=\"",
+   "JWT_SECRET='",
+   "PORT=3000"
+  ]
+ },
+ {
+  "id": "env-comment-after-secret",
+  "why": "a comment after a secret says when it expires or where it came from; the agent needs it to rotate the key",
+  "files": {
+   ".env": "PORT=3000\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@ # expires 2026-11-01, issued by billing team\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@  # rotated 2026-08\n"
+  },
+  "read": ".env",
+  "hide": [
+   "@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@",
+   "@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@"
+  ],
+  "keep": [
+   "# expires 2026-11-01, issued by billing team",
+   "# rotated 2026-08"
+  ]
+ },
+ {
+  "id": "cat-A-crlf-and-trailing-space",
+  "why": "cat -A to find why auth fails: the CRLF (^M$) and trailing space after a secret are the bug, and must stay visible while the value is masked",
+  "files": {
+   ".env": "PORT=3000\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\r\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@ \n"
+  },
+  "command": "cat -A .env",
+  "output": "PORT=3000$\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@^M$\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@ $\n",
+  "hide": [
+   "@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@",
+   "@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@"
+  ],
+  "keep": [
+   "PORT=3000$",
+   "^M$",
+   " $\n"
+  ]
+ },
+ {
+  "id": "env-set-empty-unset",
+  "why": "whether a value is set, empty or quoted-empty must be visible",
+  "files": {
+   ".env": "STRIPE_WEBHOOK_SECRET=\nSENTRY_DSN=\nAPI_KEY=\"\"\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n# SMTP_PASSWORD=\n"
+  },
+  "read": ".env",
+  "hide": [
+   "@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@"
+  ],
+  "keep": [
+   "STRIPE_WEBHOOK_SECRET=\n",
+   "SENTRY_DSN=\n",
+   "API_KEY=\"\"",
+   "# SMTP_PASSWORD=\n",
+   "JWT_SECRET="
+  ]
+ },
+ {
+  "id": "awk-value-lengths",
+  "why": "checking a key's length (truncated paste?) without seeing it: names and lengths are harmless",
+  "files": {
+   ".env": "# App\nNODE_ENV=development\nPORT=3000\nAWS_S3_BUCKET=acme-dev-uploads\nOAUTH2_CLIENT_ID=web-dashboard\n\n# Database\nDB_HOST=db.internal\nDB_USER=acme\nDB_PASSWORD=devpassword\nADMIN_PIN=482913\n\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n"
+  },
+  "command": "awk -F= '!/^#/ && NF {print $1, length($2)}' .env",
+  "output": "NODE_ENV 11\nPORT 4\nAWS_S3_BUCKET 16\nOAUTH2_CLIENT_ID 13\nDB_HOST 11\nDB_USER 4\nDB_PASSWORD 11\nADMIN_PIN 6\nAPI_KEY 24\nJWT_SECRET 24\n",
+  "keep": [
+   "API_KEY 24",
+   "DB_PASSWORD 11",
+   "AWS_S3_BUCKET 16",
+   "OAUTH2_CLIENT_ID 13"
+  ]
+ },
+ {
+  "id": "sha256-compare-values",
+  "why": "checking whether two files hold the same key by hashing: digests are not secrets",
+  "files": {
+   ".env": "# App\nNODE_ENV=development\nPORT=3000\nAWS_S3_BUCKET=acme-dev-uploads\nOAUTH2_CLIENT_ID=web-dashboard\n\n# Database\nDB_HOST=db.internal\nDB_USER=acme\nDB_PASSWORD=devpassword\nADMIN_PIN=482913\n\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n",
+   ".env.local": "API_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\n"
+  },
+  "command": "for f in .env .env.local; do grep '^API_KEY=' \"$f\" | cut -d= -f2- | sha256sum; done",
+  "output": "@@C:5f3c8a1e.9b2d4f6a.7c0e1b3d.5f7a9c2e.4b6d8f0a.1c3e5b7d.9f2a4c6e.8b0d1f3a@@  -\@@C:n5f3c8a1.e9b2d4f6.a7c0e1b3.d5f7a9c2.e4b6d8f0.a1c3e5b7.d9f2a4c6.e8b0d1f3.a@@  -\n",
+  "keep": [
+   "@@C:5f3c8a1e.9b2d4f6a.7c0e1b3d.5f7a9c2e.4b6d8f0a.1c3e5b7d.9f2a4c6e.8b0d1f3a@@  -"
+  ]
+ },
+ {
+  "id": "env-json-value",
+  "why": "a JSON value in .env: the API key inside is masked, the project settings around it stay so the agent can edit them",
+  "files": {
+   ".env": "FIREBASE_CONFIG={\"apiKey\":\"@@GOOG_API@@@@C:SyD4Rk2m.Zx9LpQ7v.T3nW8yB1.cH6jF0sG.5eK@@\",\"authDomain\":\"acme-prod.firebaseapp.com\",\"projectId\":\"acme-prod\",\"storageBucket\":\"acme-prod.appspot.com\"}\nPORT=3000\n"
+  },
+  "read": ".env",
+  "hide": [
+   "@@GOOG_API@@@@C:SyD4Rk2m.Zx9LpQ7v.T3nW8yB1.cH6jF0sG.5eK@@"
+  ],
+  "keep": [
+   "\"authDomain\":\"acme-prod.firebaseapp.com\"",
+   "\"projectId\":\"acme-prod\"",
+   "\"storageBucket\":\"acme-prod.appspot.com\"",
+   "PORT=3000"
+  ]
+ },
+ {
+  "id": "env-database-url-debug",
+  "why": "debugging a connection: everything in DATABASE_URL but the password is needed (user, host, port, db, params)",
+  "files": {
+   ".env": "DATABASE_URL=postgres://acme_app:Vt7qL2mZx9Rk@db.internal:6432/acme_prod?sslmode=require&pool_timeout=10\nREDIS_URL=redis://:@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@@cache.internal:6380/2\n"
+  },
+  "read": ".env",
+  "hide": [
+   "Vt7qL2mZx9Rk",
+   "@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@"
+  ],
+  "keep": [
+   "postgres://acme_app:",
+   "@db.internal:6432/acme_prod?sslmode=require&pool_timeout=10",
+   "redis://:",
+   "@cache.internal:6380/2"
+  ]
+ },
+ {
+  "id": "compose-default-password",
+  "why": "a compose file's ${VAR:-default} fallback holds a real password (compose files are not secret files, so this is the pattern layer); the rest of the service definition must stay editable",
+  "command": "cat docker-compose.yml",
+  "output": "services:\n  db:\n    image: postgres:16-alpine\n    environment:\n      POSTGRES_USER: ${DB_USER:-acme}\n      POSTGRES_PASSWORD: ${DB_PASSWORD:-Zq8vL3mX7tRk}\n      POSTGRES_DB: acme\n    ports:\n      - \"5432:5432\"\n",
+  "hide": [
+   "Zq8vL3mX7tRk"
+  ],
+  "keep": [
+   "image: postgres:16-alpine",
+   "POSTGRES_USER: ${DB_USER:-acme}",
+   "POSTGRES_PASSWORD: ${DB_PASSWORD:-",
+   "POSTGRES_DB: acme",
+   "- \"5432:5432\""
+  ]
+ },
+ {
+  "id": "compose-variable-references",
+  "why": "compose environment entries that reference .env variables are code, not secrets: the agent edits these lines",
+  "files": {
+   ".env": "DB_PASSWORD=Vt7qL2mZx9Rk\n",
+   "docker-compose.yml": "services:\n  api:\n    build: .\n    env_file: .env\n    environment:\n      - DATABASE_URL=postgres://acme:${DB_PASSWORD}@db:5432/acme\n      - JWT_SECRET=${JWT_SECRET:?set JWT_SECRET in .env}\n      - PORT=8080\n"
+  },
+  "command": "cat docker-compose.yml",
+  "output": "services:\n  api:\n    build: .\n    env_file: .env\n    environment:\n      - DATABASE_URL=postgres://acme:${DB_PASSWORD}@db:5432/acme\n      - JWT_SECRET=${JWT_SECRET:?set JWT_SECRET in .env}\n      - PORT=8080\n",
+  "hide": [
+   "Vt7qL2mZx9Rk"
+  ],
+  "keep": [
+   "- DATABASE_URL=postgres://acme:${DB_PASSWORD}@db:5432/acme",
+   "- JWT_SECRET=${JWT_SECRET:?set JWT_SECRET in .env}",
+   "env_file: .env"
+  ]
+ },
+ {
+  "id": "k8s-deployment-secret-refs",
+  "why": "a Deployment that references a Secret by name and key: references are what the agent edits, and hold no secret",
+  "files": {
+   "k8s/deployment.yaml": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: api\nspec:\n  template:\n    spec:\n      containers:\n        - name: api\n          image: ghcr.io/acme/api:1.14.2\n          env:\n            - name: DB_PASSWORD\n              valueFrom:\n                secretKeyRef:\n                  name: api-secrets\n                  key: DB_PASSWORD\n            - name: API_TOKEN\n              valueFrom:\n                secretKeyRef:\n                  name: api-secrets\n                  key: api-token\n            - name: LOG_LEVEL\n              value: info\n"
+  },
+  "read": "k8s/deployment.yaml",
+  "keep": [
+   "key: DB_PASSWORD",
+   "key: api-token",
+   "name: api-secrets",
+   "image: ghcr.io/acme/api:1.14.2",
+   "value: info"
+  ]
+ },
+ {
+  "id": "k8s-secret-manifest-structure",
+  "why": "editing a Secret manifest to add a key: values masked, structure, names and annotations kept",
+  "files": {
+   "k8s/api-secrets.yaml": "apiVersion: v1\nkind: Secret\nmetadata:\n  name: api-secrets\n  namespace: prod\n  labels:\n    app.kubernetes.io/name: api\n  annotations:\n    reloader.stakater.com/match: \"true\"\ntype: Opaque\nstringData:\n  DB_PASSWORD: Vt7qL2mZx9Rk\n  api-token: @@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\n  DB_HOST: db.internal\n"
+  },
+  "read": "k8s/api-secrets.yaml",
+  "hide": [
+   "Vt7qL2mZx9Rk",
+   "@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@"
+  ],
+  "keep": [
+   "name: api-secrets",
+   "namespace: prod",
+   "app.kubernetes.io/name: api",
+   "reloader.stakater.com/match: \"true\"",
+   "type: Opaque",
+   "  DB_PASSWORD: ",
+   "  api-token: "
+  ]
+ },
+ {
+  "id": "tfvars-public-key-and-tags",
+  "why": "terraform.tfvars mixes a password with an SSH public key, CIDRs and tags the agent edits; only the password is secret",
+  "files": {
+   "terraform.tfvars": "region        = \"eu-west-1\"\ninstance_type = \"t3.micro\"\nallowed_cidrs = [\"10.0.0.0/8\", \"192.168.10.0/24\"]\ntags = {\n  Owner      = \"platform\"\n  CostCenter = \"cc-1042\"\n}\ndb_password   = \"Vt7qL2mZx9Rk\"\nssh_public_key = <<EOT\nssh-ed25519 @@C:AAAAC3Nz.aC1lZDI1.NTE5AAAA.IFk3Rz8m.Q2vL7xT9.pN4wB6cH.1jY5sK0d.E3gU8aZ2.rV7q@@ deploy@ci\nEOT\n"
+  },
+  "read": "terraform.tfvars",
+  "hide": [
+   "Vt7qL2mZx9Rk"
+  ],
+  "keep": [
+   "instance_type = \"t3.micro\"",
+   "allowed_cidrs = [\"10.0.0.0/8\", \"192.168.10.0/24\"]",
+   "CostCenter = \"cc-1042\"",
+   "ssh-ed25519 @@C:AAAAC3Nz.aC1lZDI1.NTE5AAAA.IFk3Rz8m.Q2vL7xT9.pN4wB6cH.1jY5sK0d.E3gU8aZ2.rV7q@@ deploy@ci",
+   "db_password   = "
+  ]
+ },
+ {
+  "id": "env-example-placeholder-tokens",
+  "why": "placeholders in .env.example shaped like real token formats (@@STRIPE_SK_TEST@@xxx…, @@GH_P@@xxx…) are not secrets; the agent copies them when writing docs",
+  "files": {
+   ".env.example": "STRIPE_SECRET_KEY=@@STRIPE_SK_TEST@@xxxxxxxxxxxxxxxxxxxxxxxx\nGITHUB_TOKEN=@@GH_P@@@@C:xxxxxxxx.xxxxxxxx.xxxxxxxx.xxxxxxxx.xxxx@@\nOPENAI_API_KEY=@@SK_DASH@@@@C:xxxxxxxx.xxxxxxxx.xxxxxxxx.xxxxxxxx.xxxxxxxx@@\nPORT=3000\n"
+  },
+  "read": ".env.example",
+  "keep": [
+   "@@STRIPE_SK_TEST@@xxxxxxxxxxxxxxxxxxxxxxxx",
+   "@@GH_P@@@@C:xxxxxxxx.xxxxxxxx.xxxxxxxx.xxxxxxxx.xxxx@@",
+   "@@SK_DASH@@@@C:xxxxxxxx.xxxxxxxx.xxxxxxxx.xxxxxxxx.xxxxxxxx@@"
+  ]
+ },
+ {
+  "id": "rotate-generate-python-secrets",
+  "why": "rotating a key: a freshly generated secret printed to stdout is a credential even though no file holds it yet (openssl rand is already handled)",
+  "command": "python3 -c 'import secrets; print(secrets.token_urlsafe(32))'",
+  "output": "@@C:Xq3vR8mL.2tZ9pK4w.N7yB1cH6.jF0sG5eD.uA2oI8kT.4rQ@@\n",
+  "hide": [
+   "@@C:Xq3vR8mL.2tZ9pK4w.N7yB1cH6.jF0sG5eD.uA2oI8kT.4rQ@@"
+  ]
+ },
+ {
+  "id": "rotate-generate-urandom",
+  "why": "the same with head -c /dev/urandom | base64",
+  "command": "head -c 32 /dev/urandom | base64",
+  "output": "@@C:q7Lw2Zx9.Rk4tN8vB.3mY6cH1j.F0sG5eD+.UoA2iP8k.T4r=@@\n",
+  "hide": [
+   "@@C:q7Lw2Zx9.Rk4tN8vB.3mY6cH1j.F0sG5eD+.UoA2iP8k.T4r=@@"
+  ]
+ },
+ {
+  "id": "rotate-in-place-confirmation",
+  "why": "rotating JWT_SECRET in place with sed and checking the line count: the confirmation output is harmless",
+  "files": {
+   ".env": "# App\nNODE_ENV=development\nPORT=3000\nAWS_S3_BUCKET=acme-dev-uploads\nOAUTH2_CLIENT_ID=web-dashboard\n\n# Database\nDB_HOST=db.internal\nDB_USER=acme\nDB_PASSWORD=devpassword\nADMIN_PIN=482913\n\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n"
+  },
+  "command": "sed -i.bak \"s/^JWT_SECRET=.*/JWT_SECRET=$(openssl rand -hex 32)/\" .env && grep -c '^JWT_SECRET=' .env && grep -n '^JWT_SECRET=' .env | cut -d= -f1",
+  "output": "1\n14:JWT_SECRET\n",
+  "keep": [
+   "14:JWT_SECRET"
+  ]
+ },
+ {
+  "id": "rotate-diff-backup",
+  "why": "after a rotation, diffing the backup with the new file: both values hidden, the changed line visible",
+  "files": {
+   ".env": "# App\nNODE_ENV=development\nPORT=3000\nAWS_S3_BUCKET=acme-dev-uploads\nOAUTH2_CLIENT_ID=web-dashboard\n\n# Database\nDB_HOST=db.internal\nDB_USER=acme\nDB_PASSWORD=devpassword\nADMIN_PIN=482913\n\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\nJWT_SECRET=@@C:Wm4Np8Rt.2Yk6Hs1L.x7Qz9b3f@@\n",
+   ".env.bak": "# App\nNODE_ENV=development\nPORT=3000\nAWS_S3_BUCKET=acme-dev-uploads\nOAUTH2_CLIENT_ID=web-dashboard\n\n# Database\nDB_HOST=db.internal\nDB_USER=acme\nDB_PASSWORD=devpassword\nADMIN_PIN=482913\n\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n"
+  },
+  "command": "diff .env.bak .env",
+  "output": "14c14\n< JWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n---\n> JWT_SECRET=@@C:Wm4Np8Rt.2Yk6Hs1L.x7Qz9b3f@@\n",
+  "hide": [
+   "@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@",
+   "@@C:Wm4Np8Rt.2Yk6Hs1L.x7Qz9b3f@@"
+  ],
+  "keep": [
+   "14c14",
+   "< JWT_SECRET=",
+   "> JWT_SECRET="
+  ]
+ },
+ {
+  "id": "pytest-settings-repr",
+  "why": "a failing test prints the settings object: known values hidden, the settings the agent is debugging kept",
+  "files": {
+   ".env": "DATABASE_URL=postgresql://acme:Vt7qL2mZx9Rk@localhost:5432/acme_test\nSECRET_KEY=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n"
+  },
+  "command": "pytest tests/test_config.py -x -q",
+  "output": "F\n=================================== FAILURES ===================================\n_______________________________ test_db_port ________________________________\n\n    def test_db_port():\n        s = Settings()\n>       assert s.db_port == 5433\nE       AssertionError: assert 5432 == 5433\nE        +  where 5432 = Settings(database_url='postgresql://acme:Vt7qL2mZx9Rk@localhost:5432/acme_test', secret_key='@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@', debug=True, db_port=5432, allowed_hosts=['localhost', '127.0.0.1']).db_port\n\ntests/test_config.py:7: AssertionError\n1 failed in 0.12s\n",
+  "hide": [
+   "Vt7qL2mZx9Rk",
+   "@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@"
+  ],
+  "keep": [
+   "assert 5432 == 5433",
+   "@localhost:5432/acme_test",
+   "debug=True, db_port=5432, allowed_hosts=['localhost', '127.0.0.1']",
+   "tests/test_config.py:7: AssertionError"
+  ]
+ },
+ {
+  "id": "psql-auth-failure",
+  "why": "debugging a refused connection: the error names host, port and user and must survive",
+  "env": {
+   "DATABASE_URL": "postgres://acme_app:Vt7qL2mZx9Rk@db.internal:6432/acme_prod"
+  },
+  "command": "psql \"$DATABASE_URL\" -c 'select 1'",
+  "output": "psql: error: connection to server at \"db.internal\" (10.0.4.17), port 6432 failed: FATAL:  password authentication failed for user \"acme_app\"\n",
+  "hide": [
+   "Vt7qL2mZx9Rk"
+  ],
+  "keep": [
+   "psql: error: connection to server at \"db.internal\" (10.0.4.17), port 6432 failed: FATAL:  password authentication failed for user \"acme_app\""
+  ]
+ },
+ {
+  "id": "node-config-inspect",
+  "why": "printing the loaded config object to see what the app actually got: known values hidden, the rest kept",
+  "files": {
+   ".env": "DB_PASSWORD=Vt7qL2mZx9Rk\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n"
+  },
+  "command": "node -e \"console.log(require('./src/config'))\"",
+  "output": "{\n  port: 3000,\n  db: {\n    host: 'db.internal',\n    port: 5432,\n    user: 'acme',\n    password: 'Vt7qL2mZx9Rk',\n    poolSize: 10\n  },\n  jwt: { secret: '@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@', expiresIn: '15m', issuer: 'acme-api' }\n}\n",
+  "hide": [
+   "Vt7qL2mZx9Rk",
+   "@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@"
+  ],
+  "keep": [
+   "host: 'db.internal'",
+   "poolSize: 10",
+   "expiresIn: '15m', issuer: 'acme-api'",
+   "password: '",
+   "secret: '"
+  ]
+ },
+ {
+  "id": "printenv-weak-password",
+  "why": "after `set -a; source .env`, printenv prints .env's plain-word and numeric credentials; masking can't apply, so only known values protect them",
+  "files": {
+   ".env": "# App\nNODE_ENV=development\nPORT=3000\nAWS_S3_BUCKET=acme-dev-uploads\nOAUTH2_CLIENT_ID=web-dashboard\n\n# Database\nDB_HOST=db.internal\nDB_USER=acme\nDB_PASSWORD=devpassword\nADMIN_PIN=482913\n\nAPI_KEY=@@C:k8Hq2LmZ.9xPvR4tN.7wYc3Bd6@@\nJWT_SECRET=@@C:b3f9Qz1L.x7Wm2Np8.Rt4Yk6Hs@@\n"
+  },
+  "command": "set -a; source .env; set +a; printenv | grep -E '^(DB_|ADMIN_)' | sort",
+  "output": "ADMIN_PIN=482913\nDB_HOST=db.internal\nDB_PASSWORD=devpassword\nDB_USER=acme\n",
+  "hide": [
+   "devpassword",
+   "482913"
+  ],
+  "keep": [
+   "DB_HOST=db.internal",
+   "DB_USER=acme",
+   "DB_PASSWORD=",
+   "ADMIN_PIN="
+  ]
+ }
+]

@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": true
   },
-  "files": ["index.ts", "questions.ts", "test/eval.ts", "test/hijacked-agent.ts"]
+  "include": ["index.ts", "questions.ts", "secrets.ts", "test/**/*.ts"]
 }

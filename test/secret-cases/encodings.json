@@ -1,0 +1,421 @@
+[
+ {
+  "id": "b64-dotenv-wrapped-76",
+  "why": "base64 .env wraps at 76 columns; the blob is replaced but its short final line (the tail of SESSION_SECRET) must go too",
+  "files": {
+   ".env": "NODE_ENV=production\nPORT=8080\nDB_HOST=db.internal\nAPI_KEY=@@C:Rk7vQ2mX.p9LwT4zN.8sHc3JdF@@\nSESSION_SECRET=@@C:Gq4Lz8Tn.2Wb6Xv9R.k3Pm7Hs5@@\n"
+  },
+  "output": "@@C:Tk9ERV9F.TlY9cHJv.ZHVjdGlv.bgpQT1JU.PTgwODAK.REJfSE9T.VD1kYi5p.bnRlcm5h.bApBUElf.S0VZ@@\@@C:nPVJrN3Z.RMm1YcDl.Md1Q0ek4.4c0hjM0p.kRgpTRVN.TSU9OX1N.FQ1JFVD1.HcTRMejh.UbjJXYjZ.YdjlS@@\nazNQbTdIczUK\n",
+  "hide": [
+   "@@C:Tk9ERV9F.TlY9cHJv.ZHVjdGlv.bgpQT1JU.PTgwODAK.REJfSE9T.VD1kYi5p.bnRlcm5h.bApBUElf.S0VZ@@",
+   "@@C:PVJrN3ZR.Mm1YcDlM.d1Q0ek44.c0hjM0pk.RgpTRVNT.SU9OX1NF.Q1JFVD1H.cTRMejhU.bjJXYjZY.djlS@@",
+   "azNQbTdIczUK"
+  ]
+ },
+ {
+  "id": "b64-dotenv-w0",
+  "why": "base64 -w0 .env is one unbroken blob with no trailing newline",
+  "files": {
+   ".env": "NODE_ENV=production\nPORT=8080\nDB_HOST=db.internal\nAPI_KEY=@@C:Rk7vQ2mX.p9LwT4zN.8sHc3JdF@@\nSESSION_SECRET=@@C:Gq4Lz8Tn.2Wb6Xv9R.k3Pm7Hs5@@\n"
+  },
+  "output": "@@C:Tk9ERV9F.TlY9cHJv.ZHVjdGlv.bgpQT1JU.PTgwODAK.REJfSE9T.VD1kYi5p.bnRlcm5h.bApBUElf.S0VZPVJr.N3ZRMm1Y.cDlMd1Q0.ek44c0hj.M0pkRgpT.RVNTSU9O.X1NFQ1JF.VD1HcTRM.ejhUbjJX.YjZYdjlS.azNQbTdI.czUK@@",
+  "hide": [
+   "@@C:REJfSE9T.VD1kYi5p.bnRlcm5h.bApBUElf.S0VZPVJr.N3ZRMm1Y.cDlMd1Q0.ek44c0hj.M0pkRgpT.RVNTSU9O@@"
+  ]
+ },
+ {
+  "id": "b64-short-password",
+  "why": "a 9-char password base64-encoded alone gives a 12-char blob, below every base64 rule",
+  "files": {
+   ".env": "NODE_ENV=development\nDB_USER=app\nDB_PASSWORD=Tr0ub4dor\n"
+  },
+  "output": "$ echo -n \"$DB_PASSWORD\" | base64\nVHIwdWI0ZG9y\n",
+  "hide": [
+   "VHIwdWI0ZG9y"
+  ]
+ },
+ {
+  "id": "kubectl-secret-yaml-known-long",
+  "why": "kubectl get secret -o yaml: each value base64-encoded on its own; the 16-char DB password is known from .env",
+  "files": {
+   ".env": "DB_PASSWORD=Vb8sKq2Lr5Zt9Wn3\n"
+  },
+  "output": "apiVersion: v1\ndata:\n  DB_PASSWORD: @@C:VmI4c0tx.MkxyNVp0.OVduMw==@@\nkind: Secret\nmetadata:\n  creationTimestamp: \"2026-09-28T14:02:11Z\"\n  name: app-secrets\n  namespace: default\n  resourceVersion: \"48213\"\n  uid: 3f1c9a2e-7b44-4d0e-9c1a-5e2f8d6b0a17\ntype: Opaque\n",
+  "hide": [
+   "@@C:VmI4c0tx.MkxyNVp0.OVduMw==@@"
+  ],
+  "keep": [
+   "name: app-secrets",
+   "namespace: default",
+   "type: Opaque"
+  ]
+ },
+ {
+  "id": "kubectl-secret-yaml-known-short",
+  "why": "same Secret, but the 8-char Redis password (known from .env) encodes to 12 base64 chars mid-line",
+  "files": {
+   ".env": "DB_PASSWORD=Vb8sKq2Lr5Zt9Wn3\nREDIS_PASSWORD=hunter22\n"
+  },
+  "output": "apiVersion: v1\ndata:\n  DB_PASSWORD: @@C:VmI4c0tx.MkxyNVp0.OVduMw==@@\n  REDIS_PASSWORD: aHVudGVyMjI=\nkind: Secret\nmetadata:\n  creationTimestamp: \"2026-09-28T14:02:11Z\"\n  name: app-secrets\n  namespace: default\n  resourceVersion: \"48213\"\n  uid: 3f1c9a2e-7b44-4d0e-9c1a-5e2f8d6b0a17\ntype: Opaque\n",
+  "hide": [
+   "@@C:VmI4c0tx.MkxyNVp0.OVduMw==@@",
+   "aHVudGVyMjI="
+  ],
+  "keep": [
+   "name: app-secrets",
+   "namespace: default"
+  ]
+ },
+ {
+  "id": "kubectl-secret-json-unknown-ghp",
+  "why": "a GitHub token stored in a cluster Secret is base64 in kubectl -o json; token formats are only matched in plain text",
+  "output": "{\n    \"apiVersion\": \"v1\",\n    \"data\": {\n        \"GITHUB_TOKEN\": \"@@C:Z2hwX1I4.a1QybVE5.dkx4NFpw.N1duM0hz.NkpkMUZi.NUdjMFlh.OFVlMg==@@\"\n    },\n    \"kind\": \"Secret\",\n    \"metadata\": {\n        \"name\": \"ci-github\",\n        \"namespace\": \"ci\"\n    },\n    \"type\": \"Opaque\"\n}\n",
+  "hide": [
+   "@@C:Z2hwX1I4.a1QybVE5.dkx4NFpw.N1duM0hz.NkpkMUZi.NUdjMFlh.OFVlMg==@@",
+   "@@GH_P@@@@C:R8kT2mQ9.vLx4Zp7W.n3Hs6Jd1.Fb5Gc0Ya.8Ue2@@"
+  ],
+  "keep": [
+   "\"name\": \"ci-github\"",
+   "\"namespace\": \"ci\""
+  ]
+ },
+ {
+  "id": "docker-config-auth-decoded",
+  "why": "decoding the auth field of ~/.docker/config.json prints user:PAT; only the base64 form is registered",
+  "files": {
+   "~/.docker/config.json": "{\n\t\"auths\": {\n\t\t\"https://index.docker.io/v1/\": {\n\t\t\t\"auth\": \"@@C:b2N0b2Nh.dDpkY2ty.X3BhdF83.SHEyS3g5.TG1WNHRS.ejhXYk4z.cFlzNkpk.RjE=@@\"\n\t\t}\n\t}\n}\n"
+  },
+  "output": "$ jq -r '.auths[\"https://index.docker.io/v1/\"].auth' ~/.docker/config.json | base64 -d\noctocat:@@DOCKER_PAT@@@@C:7Hq2Kx9L.mV4tRz8W.bN3pYs6J.dF1@@\n",
+  "hide": [
+   "@@DOCKER_PAT@@@@C:7Hq2Kx9L.mV4tRz8W.bN3pYs6J.dF1@@"
+  ],
+  "keep": [
+   "octocat"
+  ]
+ },
+ {
+  "id": "curl-v-basic-known",
+  "why": "curl -v -u deploy:$REGISTRY_PASSWORD prints Basic base64(user:pass) with the password at a 7-byte offset",
+  "files": {
+   ".env": "REGISTRY_USER=deploy\nREGISTRY_PASSWORD=Qz7mWp3Lx9Rt2Vk8Nb\n"
+  },
+  "output": "* Host registry.example.com:443 was resolved.\n* IPv4: 203.0.113.10\n*   Trying 203.0.113.10:443...\n* Connected to registry.example.com (203.0.113.10) port 443\n* using HTTP/2\n* Server auth using Basic with user 'deploy'\n> GET /v2/_catalog HTTP/2\r\n> Host: registry.example.com\r\n> Authorization: Basic @@C:ZGVwbG95.OlF6N21X.cDNMeDlS.dDJWazhO.Yg==@@\r\n> User-Agent: curl/8.5.0\r\n> Accept: */*\r\n>\r\n< HTTP/2 200 \r\n< content-type: application/json; charset=utf-8\r\n<\r\n{\"repositories\":[\"api\",\"worker\"]}\n",
+  "hide": [
+   "@@C:ZGVwbG95.OlF6N21X.cDNMeDlS.dDJWazhO.Yg==@@"
+  ],
+  "keep": [
+   "HTTP/2 200",
+   "registry.example.com",
+   "\"repositories\":[\"api\",\"worker\"]"
+  ]
+ },
+ {
+  "id": "curl-v-bearer-oauth",
+  "why": "curl -v -H \"Authorization: Bearer $(gcloud auth print-access-token)\" echoes a live OAuth access token in the request header",
+  "output": "> GET /v1/projects/acme-prod/topics HTTP/2\r\n> Host: pubsub.googleapis.com\r\n> User-Agent: curl/8.5.0\r\n> Accept: */*\r\n> Authorization: Bearer @@GOOG_TOKEN@@a0AfB_@@C:byC7kQ2m.Xv9Lp4Rz.8Tn3Wb6H.s1Jd5Fg0.Ye2Uc7Ia.4Ok9Pl3M.n8Qr2St6.Vw1Xz5Yb.0Za3Ce7D.f1Gh@@\r\n>\r\n< HTTP/2 200 \r\n< content-type: application/json; charset=UTF-8\r\n",
+  "hide": [
+   "a0AfB_@@C:byC7kQ2m.Xv9Lp4Rz.8Tn3Wb6H.s1Jd5Fg0.Ye2Uc7Ia.4Ok9Pl3M.n8Qr2St6.Vw1Xz5Yb.0Za3Ce7D.f1Gh@@"
+  ],
+  "keep": [
+   "pubsub.googleapis.com",
+   "HTTP/2 200"
+  ]
+ },
+ {
+  "id": "xxd-p-env-value",
+  "why": "printf %s \"$API_SECRET\" | xxd -p prints the value as one contiguous hex line",
+  "files": {
+   ".env": "API_SECRET=@@C:Hs6Wb2Lq.9Tz4Rk8X.v3Pm7Nd1@@\n"
+  },
+  "output": "@@C:48733657.62324c71.39547a34.526b3858.7633506d.374e6431@@\n",
+  "hide": [
+   "@@C:48733657.62324c71.39547a34.526b3858.7633506d.374e6431@@"
+  ]
+ },
+ {
+  "id": "hexdump-C-dotenv",
+  "why": "hexdump -C .env shows the secret 16 bytes at a time in the ASCII column (and in hex)",
+  "files": {
+   ".env": "NODE_ENV=production\nPORT=3000\nSTRIPE_WEBHOOK_SECRET=@@STRIPE_WHSEC@@@@C:Kq3Lz8Tn.2Wb6Xv9R.k4Pm7Hs5.Jd1Fg0Ye@@\n"
+  },
+  "output": "00000000  4e 4f 44 45 5f 45 4e 56  3d 70 72 6f 64 75 63 74  |NODE_ENV=product|\n00000010  69 6f 6e 0a 50 4f 52 54  3d 33 30 30 30 0a 53 54  |ion.PORT=3000.ST|\n00000020  52 49 50 45 5f 57 45 42  48 4f 4f 4b 5f 53 45 43  |RIPE_WEBHOOK_SEC|\n00000030  52 45 54 3d 77 68 73 65  63 5f 4b 71 33 4c 7a 38  |RET=@@STRIPE_WHSEC@@Kq3Lz8|\n00000040  54 6e 32 57 62 36 58 76  39 52 6b 34 50 6d 37 48  |Tn2Wb6Xv9Rk4Pm7H|\n00000050  73 35 4a 64 31 46 67 30  59 65 0a                 |s5Jd1Fg0Ye.|\n0000005b\n",
+  "hide": [
+   "Tn2Wb6Xv9Rk4Pm7H",
+   "54 6e 32 57 62 36 58 76  39 52 6b 34 50 6d 37 48"
+  ]
+ },
+ {
+  "id": "xxd-dotenv",
+  "why": "xxd .env: hex grouped in byte pairs, ASCII column carries 16-byte slices of the webhook secret",
+  "files": {
+   ".env": "NODE_ENV=production\nPORT=3000\nSTRIPE_WEBHOOK_SECRET=@@STRIPE_WHSEC@@@@C:Kq3Lz8Tn.2Wb6Xv9R.k4Pm7Hs5.Jd1Fg0Ye@@\n"
+  },
+  "output": "00000000: 4e4f 4445 5f45 4e56 3d70 726f 6475 6374  NODE_ENV=product\n00000010: 696f 6e0a 504f 5254 3d33 3030 300a 5354  ion.PORT=3000.ST\n00000020: 5249 5045 5f57 4542 484f 4f4b 5f53 4543  RIPE_WEBHOOK_SEC\n00000030: 5245 543d 7768 7365 635f 4b71 334c 7a38  RET=@@STRIPE_WHSEC@@Kq3Lz8\n00000040: 546e 3257 6236 5876 3952 6b34 506d 3748  Tn2Wb6Xv9Rk4Pm7H\n00000050: 7335 4a64 3146 6730 5965 0a              s5Jd1Fg0Ye.\n",
+  "hide": [
+   "Tn2Wb6Xv9Rk4Pm7H",
+   "546e 3257 6236 5876 3952 6b34 506d 3748"
+  ]
+ },
+ {
+  "id": "form-urlencoded-password",
+  "why": "a form-encoded login body (space as +, ! as %21) differs from encodeURIComponent, the only URL form tried",
+  "files": {
+   ".env": "SVC_USERNAME=svc-reporting\nSVC_PASSWORD=\"Tr0ub4dor&3 horse!\"\n"
+  },
+  "output": "DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): auth.example.com:443\nDEBUG:http.client:send: b'POST /oauth/token HTTP/1.1\\r\\nHost: auth.example.com\\r\\nContent-Type: application/x-www-form-urlencoded\\r\\nContent-Length: 74\\r\\n\\r\\ngrant_type=password&username=svc-reporting&password=Tr0ub4dor%263+horse%21'\n",
+  "hide": [
+   "Tr0ub4dor%263+horse%21"
+  ],
+  "keep": [
+   "auth.example.com",
+   "grant_type=password",
+   "username=svc-reporting"
+  ]
+ },
+ {
+  "id": "jdbc-url-encoded-known",
+  "why": "DATABASE_URL in .env carries a percent-encoded password; the same encoding shows up in a JDBC URL query string",
+  "files": {
+   ".env": "DATABASE_URL=postgres://app:s3cr%2Ft%40Pa55w0rd-x9@db.internal:5432/app\n"
+  },
+  "output": "spring.datasource.url=jdbc:postgresql://db.internal:5432/app?user=app&password=s3cr%2Ft%40Pa55w0rd-x9&sslmode=require\n",
+  "hide": [
+   "s3cr%2Ft%40Pa55w0rd-x9",
+   "s3cr/t@Pa55w0rd-x9"
+  ],
+  "keep": [
+   "jdbc:postgresql://db.internal:5432/app",
+   "sslmode=require"
+  ]
+ },
+ {
+  "id": "azure-sas-url",
+  "why": "az storage blob generate-sas --full-uri prints a URL whose sig= parameter is a bearer credential (URL-encoded base64)",
+  "output": "\"https://acmeuploads.blob.core.windows.net/exports/report.csv?se=2026-10-01T00%3A00Z&sp=r&sv=2022-11-02&sr=b&sig=jzocnnK00F9uKpwTt%@@C:2FhNBumi.XHHwO41O.ahyS97Be.PYo@@%3D\"\n",
+  "hide": [
+   "jzocnnK00F9uKpwTt%@@C:2FhNBumi.XHHwO41O.ahyS97Be.PYo@@%3D"
+  ],
+  "keep": [
+   "acmeuploads.blob.core.windows.net/exports/report.csv",
+   "sv=2022-11-02"
+  ]
+ },
+ {
+  "id": "slack-webhook-url-in-config",
+  "why": "a Slack incoming-webhook URL is a credential in its path, printed by cat of a non-secret config file",
+  "files": {
+   "config/alerts.yml": "channel: \"#deploys\"\nwebhook_url: @@SLACK_WEBHOOK@@@@C:T04ABCD1.234/B07E.FGH5678/.x9Kq2Lm7.Rt4Vz8Wn.3Hs6Jd1F@@\nmention: \"@oncall\"\n"
+  },
+  "output": "channel: \"#deploys\"\nwebhook_url: @@SLACK_WEBHOOK@@@@C:T04ABCD1.234/B07E.FGH5678/.x9Kq2Lm7.Rt4Vz8Wn.3Hs6Jd1F@@\nmention: \"@oncall\"\n",
+  "hide": [
+   "@@C:x9Kq2Lm7.Rt4Vz8Wn.3Hs6Jd1F@@"
+  ],
+  "keep": [
+   "channel: \"#deploys\"",
+   "mention: \"@oncall\""
+  ]
+ },
+ {
+  "id": "php-json-escaped-slashes",
+  "why": "PHP json_encode escapes / as \\/, so an AWS secret key from .env no longer matches as is or JSON.stringify'd",
+  "files": {
+   ".env": "APP_ENV=local\nAWS_ACCESS_KEY_ID=@@AWS_AKIA@@Q3EXAMPLE7RTZ4MN\nAWS_SECRET_ACCESS_KEY=@@C:wJalrXUt.nFEMI/K7.MDENG/bP.xRfiCYzq.8Lk2Tn4V@@\nAWS_DEFAULT_REGION=us-east-1\nAWS_BUCKET=acme-uploads\n"
+  },
+  "output": "{\"driver\":\"s3\",\"key\":\"@@AWS_AKIA@@Q3EXAMPLE7RTZ4MN\",\"secret\":\"wJalrXUtnFEMI\\/K7MDENG\\/bPxRfiCYzq8Lk2Tn4V\",\"region\":\"us-east-1\",\"bucket\":\"acme-uploads\"}\n",
+  "hide": [
+   "wJalrXUtnFEMI\\/K7MDENG\\/bPxRfiCYzq8Lk2Tn4V",
+   "@@AWS_AKIA@@Q3EXAMPLE7RTZ4MN"
+  ],
+  "keep": [
+   "\"region\":\"us-east-1\"",
+   "\"driver\":\"s3\""
+  ]
+ },
+ {
+  "id": "printf-q-password",
+  "why": "printf '%q' backslash-escapes spaces and !, so the password from .env appears in a shell-quoted form",
+  "files": {
+   ".env": "DB_PASSWORD=\"c0rrect horse!battery\"\n"
+  },
+  "output": "c0rrect\\ horse\\!battery\n",
+  "hide": [
+   "c0rrect\\ horse\\!battery"
+  ]
+ },
+ {
+  "id": "bash-xtrace-quoting",
+  "why": "bash -x prints a password containing ' as 'admin:it'\\''s-...' which splits the value",
+  "files": {
+   ".env": "JENKINS_PASSWORD=\"it's-S3cret-Pw\"\n"
+  },
+  "output": "+ curl -fsS -u 'admin:it'\\''s-S3cret-Pw' https://ci.example.com/api/json\n",
+  "hide": [
+   "it'\\''s-S3cret-Pw"
+  ],
+  "keep": [
+   "https://ci.example.com/api/json"
+  ]
+ },
+ {
+  "id": "declare-p-escaped",
+  "why": "declare -p / export -p escape $ and \" inside double quotes, so a password from the environment no longer matches",
+  "env": {
+   "DB_PASSWORD": "Xq9$mZ\"4vLp2!rT7"
+  },
+  "output": "declare -x DB_PASSWORD=\"Xq9\\$mZ\\\"4vLp2!rT7\"\n",
+  "hide": [
+   "Xq9\\$mZ\\\"4vLp2!rT7"
+  ]
+ },
+ {
+  "id": "proc-environ-nul",
+  "why": "cat /proc/self/environ is NUL-separated; PGPASSWORD and GPG_PASSPHRASE are standard secret variables whose names have no secret segment",
+  "env": {
+   "NODE_ENV": "production",
+   "PORT": "8080",
+   "API_TOKEN": "Mv3Kq8Lz2Tn7Wb4Xr9",
+   "PGPASSWORD": "Zq8rT2vLx9",
+   "GPG_PASSPHRASE": "lamp-orbit-cactus-41"
+  },
+  "output": "NODE_ENV=production\u0000PORT=8080\u0000API_TOKEN=Mv3Kq8Lz2Tn7Wb4Xr9\u0000PGPASSWORD=Zq8rT2vLx9\u0000GPG_PASSPHRASE=lamp-orbit-cactus-41\u0000HOME=/home/app\u0000",
+  "hide": [
+   "Mv3Kq8Lz2Tn7Wb4Xr9",
+   "Zq8rT2vLx9",
+   "lamp-orbit-cactus-41"
+  ],
+  "keep": [
+   "NODE_ENV=production",
+   "PORT=8080"
+  ]
+ },
+ {
+  "id": "docker-inspect-env-unknown",
+  "why": "docker inspect of another project's container lists POSTGRES_PASSWORD=... in Config.Env; the value isn't in any local file",
+  "output": "[\n    {\n        \"Id\": \"9c1e4b7f2a3d\",\n        \"Name\": \"/billing-db-1\",\n        \"Config\": {\n            \"Hostname\": \"9c1e4b7f2a3d\",\n            \"Env\": [\n                \"POSTGRES_PASSWORD=Fj7Kw2Qx9Lm4Rt8Zv3\",\n                \"POSTGRES_USER=billing\",\n                \"POSTGRES_DB=billing\",\n                \"PGDATA=/var/lib/postgresql/data\",\n                \"LANG=en_US.utf8\",\n                \"PG_MAJOR=16\"\n            ],\n            \"Image\": \"postgres:16-alpine\"\n        }\n    }\n]\n",
+  "hide": [
+   "Fj7Kw2Qx9Lm4Rt8Zv3"
+  ],
+  "keep": [
+   "POSTGRES_DB=billing",
+   "PGDATA=/var/lib/postgresql/data",
+   "postgres:16-alpine"
+  ]
+ },
+ {
+  "id": "ps-eww-env-known",
+  "why": "ps eww appends the process environment to argv; SESSION_SECRET is in this process's env",
+  "env": {
+   "SESSION_SECRET": "@@C:Np4Wz8Kq.2Lx7Rt3V.b9Hm@@",
+   "NODE_ENV": "production"
+  },
+  "output": "    PID TTY      STAT   TIME COMMAND\n  48211 pts/3    Sl+    0:02 node dist/server.js NODE_ENV=production PORT=3000 SESSION_SECRET=@@C:Np4Wz8Kq.2Lx7Rt3V.b9Hm@@ DB_HOST=db.internal HOME=/home/app\n",
+  "hide": [
+   "@@C:Np4Wz8Kq.2Lx7Rt3V.b9Hm@@"
+  ],
+  "keep": [
+   "NODE_ENV=production",
+   "PORT=3000",
+   "DB_HOST=db.internal",
+   "node dist/server.js"
+  ]
+ },
+ {
+  "id": "head-c-truncates-key",
+  "why": "head -c 64 .env cuts the 64-hex encryption key after 45 characters; the prefix is most of the key",
+  "files": {
+   ".env": "APP_ENCRYPTION_KEY=@@C:9f3b7c1e.5a2d8f4b.6c0e9a7d.3f1b5c8e.2a4d6f0b.9c7e3a1d.5f8b2c4e.6a0d9f7b@@\nLOG_LEVEL=info\n"
+  },
+  "output": "APP_ENCRYPTION_KEY=@@C:9f3b7c1e.5a2d8f4b.6c0e9a7d.3f1b5c8e.2a4d6f0b.9c7e3@@",
+  "hide": [
+   "@@C:9f3b7c1e.5a2d8f4b.6c0e9a7d.3f1b5c8e.2a4d6f0b.9c7e3@@"
+  ]
+ },
+ {
+  "id": "uppercased-hex-key",
+  "why": "the same hex key printed upper-case (e.g. by tr or a tool's hex formatter) no longer matches",
+  "files": {
+   ".env": "APP_ENCRYPTION_KEY=@@C:9f3b7c1e.5a2d8f4b.6c0e9a7d.3f1b5c8e.2a4d6f0b.9c7e3a1d.5f8b2c4e.6a0d9f7b@@\nLOG_LEVEL=info\n"
+  },
+  "output": "@@C:9F3B7C1E.5A2D8F4B.6C0E9A7D.3F1B5C8E.2A4D6F0B.9C7E3A1D.5F8B2C4E.6A0D9F7B@@\n",
+  "hide": [
+   "@@C:9F3B7C1E.5A2D8F4B.6C0E9A7D.3F1B5C8E.2A4D6F0B.9C7E3A1D.5F8B2C4E.6A0D9F7B@@"
+  ]
+ },
+ {
+  "id": "ado-connection-string",
+  "why": "an ADO.NET connection string in appsettings.json carries Password=...; only scheme://user:pass@ URLs are handled",
+  "files": {
+   "appsettings.json": "{\n  \"Logging\": {\n    \"LogLevel\": {\n      \"Default\": \"Information\"\n    }\n  },\n  \"ConnectionStrings\": {\n    \"Orders\": \"Server=tcp:acme-sql.database.windows.net,1433;Initial Catalog=orders;Persist Security Info=False;User ID=orders_app;Password=Wq4!Lz8#Tn2Rk;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;\"\n  },\n  \"AllowedHosts\": \"*\"\n}\n"
+  },
+  "read": "appsettings.json",
+  "hide": [
+   "Wq4!Lz8#Tn2Rk"
+  ],
+  "keep": [
+   "acme-sql.database.windows.net,1433",
+   "Initial Catalog=orders",
+   "\"Default\": \"Information\""
+  ]
+ },
+ {
+  "id": "masked-read-plain-settings",
+  "why": "masked read of .env should keep plain settings: inline-commented port, IANA time zone, credential-free URLs, a Supabase host",
+  "files": {
+   ".env": "NODE_ENV=production\nPORT=3000 # web port\nTZ=America/New_York\nDATABASE_URL=postgres://localhost:5432/app_dev\nREDIS_URL=redis://localhost:6379/0\nDB_HOST=db.qwertyuiopasdfghjklz.supabase.co\nSTRIPE_SECRET_KEY=@@STRIPE_SK_TEST@@@@C:51Mz8Kq2.Lx7Rt3Vb.9HmNp4Wz@@\n"
+  },
+  "read": ".env",
+  "hide": [
+   "@@STRIPE_SK_TEST@@@@C:51Mz8Kq2.Lx7Rt3Vb.9HmNp4Wz@@"
+  ],
+  "keep": [
+   "NODE_ENV=production",
+   "PORT=3000",
+   "TZ=America/New_York",
+   "DATABASE_URL=postgres://localhost:5432/app_dev",
+   "REDIS_URL=redis://localhost:6379/0",
+   "DB_HOST=db.qwertyuiopasdfghjklz.supabase.co",
+   "STRIPE_SECRET_KEY="
+  ]
+ },
+ {
+  "id": "bucket-name-not-a-secret",
+  "why": "a bucket name in .env is a plain setting, but it is long, hyphenated and has digits; aws s3 ls output must keep it",
+  "files": {
+   ".env": "AWS_REGION=us-east-1\nS3_BUCKET=acme-media-uploads-prod-2024\nAWS_SECRET_ACCESS_KEY=@@C:Lp9Xz3Qr.7Tm2Wv8K.n4Hs6Jd1.Fb5Gc0Ya.8Ue2Rt6@@\n"
+  },
+  "output": "$ aws s3 ls s3://acme-media-uploads-prod-2024/avatars/\n2026-09-29 10:14:02      48213 u_1842.png\n2026-09-29 10:15:40      51877 u_1843.png\n",
+  "hide": [
+   "@@C:Lp9Xz3Qr.7Tm2Wv8K.n4Hs6Jd1.Fb5Gc0Ya.8Ue2Rt6@@"
+  ],
+  "keep": [
+   "s3://acme-media-uploads-prod-2024/avatars/",
+   "u_1842.png"
+  ]
+ },
+ {
+  "id": "dev-password-postgres-overredacts",
+  "why": "docker-compose dev setups use POSTGRES_PASSWORD=postgres; replacing that word everywhere mangles image names and URLs",
+  "files": {
+   ".env": "POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=postgres\nPOSTGRES_DB=app\n"
+  },
+  "output": "CONTAINER ID   IMAGE                COMMAND                  CREATED       STATUS       PORTS                    NAMES\n3f9a1c2b7d4e   postgres:16-alpine   \"docker-entrypoint.s…\"   2 hours ago   Up 2 hours   0.0.0.0:5432->5432/tcp   app-postgres-1\n",
+  "keep": [
+   "postgres:16-alpine",
+   "app-postgres-1",
+   "docker-entrypoint.s"
+  ]
+ },
+ {
+  "id": "integrity-hashes-and-commits-kept",
+  "why": "base64 integrity hashes, git SHAs and a sha256 digest are not secrets and must pass through even when .env secrets are registered",
+  "files": {
+   ".env": "NODE_ENV=production\nPORT=8080\nDB_HOST=db.internal\nAPI_KEY=@@C:Rk7vQ2mX.p9LwT4zN.8sHc3JdF@@\nSESSION_SECRET=@@C:Gq4Lz8Tn.2Wb6Xv9R.k3Pm7Hs5@@\n"
+  },
+  "output": "{\n  \"node_modules/lodash\": {\n    \"version\": \"4.17.21\",\n    \"resolved\": \"https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz\",\n    \"integrity\": \"sha512-@@C:v2kDEe57.lecTulaD.IuNTPy3R.y4gLGJ6Z.1O3vE1kr.gXZNrsQ+.LFTGHVxV.jcXPs17L.hbZVGedA.Jv8XZ1tv.j5FvSg==@@\"\n  }\n}\n$ git log --oneline -2\n3e1f9a7 Fix webhook retry\nb04c2d1 Bump lodash\n$ sha256sum dist/app.js\@@C:ne3b0c44.298fc1c1.49afbf4c.8996fb92.427ae41e.4649b934.ca495991.b7852b85.5@@  dist/app.js\n",
+  "keep": [
+   "sha512-@@C:v2kDEe57.lecTulaD.IuNTPy3R.y4gLGJ6Z.1O3vE1kr.gXZNrsQ+.LFTGHVxV.jcXPs17L.hbZVGedA.Jv8XZ1tv.j5FvSg==@@",
+   "3e1f9a7 Fix webhook retry",
+   "@@C:e3b0c442.98fc1c14.9afbf4c8.996fb924.27ae41e4.649b934c.a495991b.7852b855@@"
+  ]
+ }
+]

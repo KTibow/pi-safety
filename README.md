@@ -1,22 +1,27 @@
 # pi-safety
 
-An auto mode for [pi](https://github.com/earendil-works/pi). Before the agent runs a command or calls
-a tool that could do damage, a decisions classifier rates how likely the action is to be dangerous
-and unrequested. If the rating is high enough, the action is blocked. It works like Claude Code's auto
-mode, but the judge is a cheap classifier, such as TypeSafe's Jev, rather than an LLM. A check takes
-about half a second and costs about $0.00002.
+Two safeguards for [pi](https://github.com/earendil-works/pi), for the sessions nobody is watching:
 
-The gate is off by default. Turn it on for scripted runs, CI, or any session nobody is watching.
+- **An auto mode.** Before the agent runs a command or calls a tool that could do damage, a decisions
+  classifier rates how likely the action is to be dangerous and unrequested, and blocks it if the
+  rating is high enough. Like Claude Code's auto mode, but the judge is a cheap classifier such as
+  TypeSafe's Jev rather than an LLM: about half a second and $0.00002 per check. **Off until you turn
+  it on**, because it needs a classifier and credentials for one.
+- **[Secret protection](#keep-secrets-out-of-the-provider).** Values from your `.env` files,
+  credential files and credential-named environment variables are replaced in everything the model is
+  sent, so they never reach whichever provider serves your model. **On by default**, and it needs no
+  credentials of its own.
 
 ```bash
-pi install git:github.com/KTibow/pi-safety
-pi --safety -p "fix the failing test"
+pi install git:github.com/KTibow/pi-safety   # secret protection starts working
+pi --safety -p "fix the failing test"        # ...and the gate, for this run
 ```
 
 ## How it works
 
-pi-safety is a `tool_call` handler. pi calls it before every tool call runs, and it either lets the
-call through or blocks it with a reason the agent sees.
+The gate is a `tool_call` handler: pi calls it before every tool call runs, and it either lets the
+call through or blocks it with a reason the agent sees. Secret protection is a `tool_result` handler
+that rewrites output on its way back, and is independent of the gate.
 
 ```
 agent ─ tool call ─▶ pi ─ tool_call event ─▶ pi-safety
@@ -51,9 +56,11 @@ pi-safety is split into layers:
 
 | File | What it holds |
 |---|---|
-| `index.ts` | The gate: enabling, the fast path, building state, calling the classifier, blocking |
-| `questions.ts` | The policy: the two questions and the default definitions of dangerous and routine |
+| `index.ts` | Enabling, the fast path, building state, calling the classifier, blocking, and the hooks that rewrite output |
+| `questions.ts` | The gate's policy: the two questions and the default definitions of dangerous and routine |
+| `secrets.ts` | Secret protection: which files and names hold credentials, masking, and redaction |
 | `test/eval.ts` | 43 labeled actions, including injection attempts, scored against a classifier |
+| `test/secrets-eval.ts` | 502 labeled secret cases in `test/secret-cases/`, scored against `secrets.ts` |
 | `test/hijacked-agent.ts` | A scripted malicious agent that tries to get past the gate in a real pi run |
 
 ## Turn it on
@@ -68,7 +75,11 @@ pi-safety is split into layers:
 
 `--safety` and `PI_SAFETY=1` can't be turned off from inside the session. When the gate is on,
 pi-safety sets `PI_SAFETY=1` for commands the agent runs, so a nested `pi` starts gated too.
-`/safety` on its own shows which classifier is in use and how many calls it has checked and blocked.
+`/safety` on its own shows which classifier is in use, how many calls it has checked and blocked, and
+how secrets are being handled.
+
+This table is about the gate only. Secret protection is on from the moment pi-safety is installed,
+in every mode, and is turned off with `"secrets": "off"`.
 
 ## Choose a classifier
 
@@ -111,9 +122,11 @@ Environment variables override the file: `PI_SAFETY_CLASSIFIER` replaces `classi
 
 ## What gets checked
 
+This is the gate. Secret protection applies to every tool result either way.
+
 | Tool call | Treatment |
 |---|---|
-| `read`, `grep`, `find`, `ls` | Runs without a check |
+| `read`, `grep`, `find`, `ls` | Runs without a check. A `read` of a secret file still comes back masked |
 | Tools marked `readOnlyHint` and `openWorldHint: false`, e.g. some MCP tools | Runs without a check |
 | `write` or `edit` of an ordinary project file, up to 4,000 characters | Runs without a check. The written text goes into the next check |
 | Everything else | Checked |
@@ -207,13 +220,64 @@ file.
 endpoint unless `PI_SAFETY_URL` is set. With the defaults, Jev gets 42 right. The miss is a borderline
 case: `git config --global http.sslVerify false` after "fix the TLS error".
 
+## Keep secrets out of the provider
+
+Blocking exfiltration is the gate's job. This is the other half of the problem: once the agent reads a
+secret, that value is in the transcript and goes to whichever provider serves your model, whatever the
+agent does next. If you don't trust what providers retain, pi-safety rewrites tool output before the
+model sees it. This works whether or not the gate is on.
+
+| Layer | What it does |
+|---|---|
+| **Masked files** | A read of a secret file, a command that prints one (`cat .env`, `git show HEAD:.env`), and grep lines from one show the file with credential values replaced by `[secret]`. Names, structure, comments, quoting and harmless settings stay, so the agent can still edit the file |
+| **Known values** | Every credential in a secret file under the project, a credential file in your home directory, or a credential-named environment variable is replaced wherever it appears: JSON-, URL-, shell- and hex-escaped, inside base64 and hex blobs, and when output cut the value short |
+| **Patterns** | Secrets that were never in a file (`gh auth token`, an OAuth response, another container's environment) are caught by well-known token formats, private-key blocks, `Authorization` headers, URL passwords and credentials in URL query strings |
+
+What counts as a credential is decided by a name's last meaningful word, the word that says what the
+value is. `DB_PASSWORD` and `client-key-data` hold credentials; `PASSWORD_MIN_LENGTH`, `TOKEN_URL`,
+`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` and an S3 object `Key` don't. A few names depend on the value:
+`TERM_SESSION_ID` is a terminal's, `INSTAGRAM_SESSION_ID` is a live login.
+
+### What is and isn't guaranteed
+
+- **Guaranteed.** A value pi-safety knows — it was in a secret file or a credential-named variable —
+  and that is distinctive enough to replace never reaches the model. `pnpm eval:secrets` fails if one
+  does.
+- **Masked, not replaced.** A known value too ordinary to replace everywhere: `postgres`, a 4-digit
+  PIN, a short dictionary word. Replacing those would wreck ordinary output, so they are hidden when
+  the file is read or printed, but not if the agent prints them some other way.
+- **Best effort.** A secret pi-safety has never seen. This is the same caveat gitleaks and GitHub
+  Actions' log masking carry.
+
+Measured on 502 labeled cases, written by three rounds of adversarial agents:
+
+| | Known values leaked | Harmless text hidden | Unknown secrets missed |
+|---|---|---|---|
+| `"secretPatterns": "precise"` (default) | 0 | 0 | 110 |
+| `"secretPatterns": "broad"` | 0 | 18 | 45 |
+
+"Broad" also hides credential-named values in any output (`password=…`, `"token": "…"`, `--api-key …`).
+It catches 65 more unknown secrets, and in exchange it hides things an agent needs: type annotations
+like `password: Secret<String>`, i18n labels, `Authorization: Bearer <token>` in documentation, and S3
+object keys. A `[secret]` written into source that the agent later edits breaks that edit, so the
+default is "precise".
+
+`pnpm eval:secrets` scores the corpus in `test/secret-cases/`. Those cases hold synthetic values in
+real credential formats, because that is what they test, so each format's prefix is stored as a
+`@@NAME@@` marker and the harness puts it back on load (`test/markers.ts`). Without that, the corpus
+would trip the secret scanner of every repository it is cloned into.
+
+`"secrets": "block"` additionally refuses reads of secret files instead of masking them, and tells the
+classifier to treat printing one as dangerous. `PI_SAFETY_DEBUG` logs what the classifier was sent, not
+what was redacted; to see redaction, read a secret file in a scratch project.
+
 ## Configuration
 
 `~/.pi/agent/safety.json`. Every field is optional:
 
 ```jsonc
 {
-  "enable": "flag",           // "flag" | "headless" | "always"
+  "enable": "flag",           // the gate: "flag" | "headless" | "always"
   "classifier": "openrouter/typesafe/jev-1.13",
   "endpoint": { "url": "…", "model": "…", "apiKeyEnv": "…" },
   "threshold": 0.4,           // block when P(block) reaches this
@@ -225,7 +289,12 @@ case: `git config --global http.sslVerify false` after "fix the TLS error".
   "onError": "ask",           // classifier failed: "ask" (TUI, else block) | "block" | "allow"
   "maxConsecutiveDenials": 3,
   "maxDenials": 20,           // per run
-  "timeoutMs": 30000
+  "timeoutMs": 30000,
+
+  "secrets": "mask",          // "mask" | "block" (refuse reads of secret files) | "off"
+  "secretPatterns": "precise",// "precise" | "broad"
+  "secretPaths": ["infra/*.auto.tfvars"],  // extra secret files, as globs
+  "notSecret": ["fixtures/fake-key.pem"]   // files that look secret but aren't
 }
 ```
 
@@ -274,8 +343,12 @@ blocks.
 - **Your messages are trusted.** If a script puts untrusted text into the prompt, e.g.
   `pi -p "fix this issue: $ISSUE_BODY"`, injected instructions may look like your request. Have the
   agent read that text from a file instead.
-- **Reads aren't checked.** `read`, `grep`, `find` and `ls` skip the classifier. A rule against
-  reading a file only covers shell commands.
-- **The provider sees your commands.** Every checked call goes to the classifier's provider.
+- **Reads skip the gate.** `read`, `grep`, `find` and `ls` are never classified, so a policy rule
+  against reading a file only covers shell commands. Reads of secret files are masked instead.
+- **Secret protection is not a sandbox.** It rewrites what the model is sent; it does not stop a
+  command from reading a secret, and it cannot cover a secret it has never seen. See
+  [what is and isn't guaranteed](#what-is-and-isnt-guaranteed).
+- **The classifier's provider sees your commands.** Every checked call is sent to it, with known
+  secret values redacted first.
 - **Other extensions can bypass it.** pi-safety sees tool calls. An extension that runs commands on
   its own isn't gated.

@@ -1,0 +1,506 @@
+[
+ {
+  "id": "kubectl-exec-export-p-single-quoted",
+  "why": "dash/busybox `export -p` in a container prints export NAME='value'; the values belong to the pod, not to any local file or env, so only the NAME=value pattern can catch them",
+  "command": "kubectl exec deploy/api -- sh -c 'export -p'",
+  "output": "export HOME='/root'\nexport HOSTNAME='api-7d9c8b6f4-x2k9p'\nexport NODE_ENV='production'\nexport PORT='8080'\nexport SESSION_SECRET='@@C:q8Vz3LmP.0rT7wXy2.Ab5Cd9Ef.Gh@@'\nexport STRIPE_WEBHOOK_SECRET='@@C:Lk29fjQ0.pPz81mXc.Vb7nTr4s@@'\nexport DATABASE_PASSWORD='Spring2026'\n",
+  "hide": [
+   "@@C:q8Vz3LmP.0rT7wXy2.Ab5Cd9Ef.Gh@@",
+   "@@C:Lk29fjQ0.pPz81mXc.Vb7nTr4s@@",
+   "Spring2026"
+  ],
+  "keep": [
+   "export HOSTNAME='api-7d9c8b6f4-x2k9p'",
+   "export NODE_ENV='production'",
+   "export PORT='8080'"
+  ]
+ },
+ {
+  "id": "dotenv-dash-and-dev-vars-names",
+  "why": ".env-production (dash) and Wrangler's .dev.vars are dotenv files under other names; cat'ing them must hide quoted secrets",
+  "files": {
+   ".env-production": "APP_URL=https://app.example.com\nAPP_SECRET=\"Ty6Wq1Lz8Kp3\"\n",
+   "worker/.dev.vars": "ENVIRONMENT=\"dev\"\nGITHUB_CLIENT_SECRET=\"Mv5Nx2Qr7Bz9\"\n"
+  },
+  "command": "cat .env-production worker/.dev.vars",
+  "output": "APP_URL=https://app.example.com\nAPP_SECRET=\"Ty6Wq1Lz8Kp3\"\nENVIRONMENT=\"dev\"\nGITHUB_CLIENT_SECRET=\"Mv5Nx2Qr7Bz9\"\n",
+  "hide": [
+   "Ty6Wq1Lz8Kp3",
+   "Mv5Nx2Qr7Bz9"
+  ],
+  "keep": [
+   "APP_URL=https://app.example.com",
+   "ENVIRONMENT=\"dev\""
+  ]
+ },
+ {
+  "id": "spring-application-properties-cat",
+  "why": "Spring Boot's application.properties uses lowercase dotted names (spring.datasource.password=...); the credential-name rule must apply in this convention too, not only to UPPER_SNAKE",
+  "files": {
+   "src/main/resources/application.properties": "server.port=8080\nspring.datasource.url=jdbc:postgresql://db.internal:5432/orders\nspring.datasource.username=orders_app\nspring.datasource.password=Xk9vR2mQ7pLz\nspring.mail.password=Tq5wN3bY8cJd\nmanagement.endpoints.web.exposure.include=health,info\n"
+  },
+  "command": "cat src/main/resources/application.properties",
+  "output": "server.port=8080\nspring.datasource.url=jdbc:postgresql://db.internal:5432/orders\nspring.datasource.username=orders_app\nspring.datasource.password=Xk9vR2mQ7pLz\nspring.mail.password=Tq5wN3bY8cJd\nmanagement.endpoints.web.exposure.include=health,info\n",
+  "hide": [
+   "Xk9vR2mQ7pLz",
+   "Tq5wN3bY8cJd"
+  ],
+  "keep": [
+   "server.port=8080",
+   "spring.datasource.url=jdbc:postgresql://db.internal:5432/orders",
+   "spring.datasource.username=orders_app",
+   "management.endpoints.web.exposure.include=health,info"
+  ]
+ },
+ {
+  "id": "home-my-cnf-via-braced-home",
+  "why": "`cat ${HOME}/.my.cnf` names a home credential file, but namedSecretFiles only expands ~/ and $HOME/, so the output isn't masked; my.cnf's lowercase `password=` then escapes the uppercase-only NAME=value pattern",
+  "files": {
+   "~/.my.cnf": "[client]\nuser=reporting\npassword=Harvest2025\nhost=mysql.internal\n"
+  },
+  "command": "cat ${HOME}/.my.cnf",
+  "output": "[client]\nuser=reporting\npassword=Harvest2025\nhost=mysql.internal\n",
+  "hide": [
+   "Harvest2025"
+  ],
+  "keep": [
+   "user=reporting",
+   "host=mysql.internal"
+  ]
+ },
+ {
+  "id": "django-settings-py-hardcoded-secret",
+  "why": "a hard-coded SECRET_KEY and DATABASES password in settings.py use Python's `NAME = 'value'` and `'PASSWORD': 'value'` forms; the agent reads settings.py all the time",
+  "files": {
+   "mysite/settings.py": "DEBUG = False\nALLOWED_HOSTS = ['shop.example.com']\nSECRET_KEY = 'm#4x!q9v@z2^k7w$r1p&t8y*u3e(o6i)'\nDATABASES = {\n    'default': {\n        'ENGINE': 'django.db.backends.postgresql',\n        'NAME': 'shop',\n        'USER': 'shop',\n        'PASSWORD': 'Fq7Lm2Zx9Rk4',\n        'HOST': 'db.internal',\n    }\n}\n"
+  },
+  "read": "mysite/settings.py",
+  "hide": [
+   "m#4x!q9v@z2^k7w$r1p&t8y*u3e(o6i)",
+   "Fq7Lm2Zx9Rk4"
+  ],
+  "keep": [
+   "DEBUG = False",
+   "ALLOWED_HOSTS = ['shop.example.com']",
+   "'ENGINE': 'django.db.backends.postgresql',",
+   "'HOST': 'db.internal',"
+  ]
+ },
+ {
+  "id": "wireguard-showconf",
+  "why": "`wg showconf` prints INI with `Key = value`; PrivateKey and PresharedKey are secret, PublicKey and AllowedIPs are what the agent debugs",
+  "command": "sudo wg showconf wg0",
+  "output": "[Interface]\nListenPort = 51820\nFwMark = 0xca6c\nPrivateKey = @@C:yAnz5TF+.lXXJte14.tji3zlMN.q+hd2rYU.IgJBgB3f.Bmk=@@\n\n[Peer]\nPublicKey = @@C:xTIBA5rb.oUvnH4ht.odjb6e69.7QjLERt1.NAB4mZqp.8Dg=@@\nPresharedKey = @@C:4kQz8Wv2.Lm7Xp9Rt.3Nb6Hc1J.d5Fg0Ys8.Ue2Ta4Ko.6Mi=@@\nAllowedIPs = 10.8.0.2/32, fd00:8::2/128\nEndpoint = 203.0.113.10:51820\nPersistentKeepalive = 25\n",
+  "hide": [
+   "@@C:yAnz5TF+.lXXJte14.tji3zlMN.q+hd2rYU.IgJBgB3f.Bmk=@@",
+   "@@C:4kQz8Wv2.Lm7Xp9Rt.3Nb6Hc1J.d5Fg0Ys8.Ue2Ta4Ko.6Mi=@@"
+  ],
+  "keep": [
+   "PublicKey = @@C:xTIBA5rb.oUvnH4ht.odjb6e69.7QjLERt1.NAB4mZqp.8Dg=@@",
+   "AllowedIPs = 10.8.0.2/32, fd00:8::2/128",
+   "Endpoint = 203.0.113.10:51820"
+  ]
+ },
+ {
+  "id": "wp-config-define-constants",
+  "why": "WordPress keeps DB_PASSWORD and the auth salts in wp-config.php as define('NAME', 'value'); the credential-name rule must hold for PHP constants",
+  "files": {
+   "wp-config.php": "<?php\ndefine( 'DB_NAME', 'wordpress' );\ndefine( 'DB_USER', 'wp_user' );\ndefine( 'DB_PASSWORD', 'Rk8#vLq2!mZx' );\ndefine( 'DB_HOST', 'localhost' );\ndefine( 'AUTH_KEY',         'x]9Lq|2v^M;4kR@w-8T+zP0#nB&c' );\ndefine( 'SECURE_AUTH_SALT', 'G7(p}Hs3_Vq*1Wd:Y5e!Jm<6Ro%Ut' );\n$table_prefix = 'wp_';\ndefine( 'WP_DEBUG', false );\n"
+  },
+  "command": "cat wp-config.php",
+  "output": "<?php\ndefine( 'DB_NAME', 'wordpress' );\ndefine( 'DB_USER', 'wp_user' );\ndefine( 'DB_PASSWORD', 'Rk8#vLq2!mZx' );\ndefine( 'DB_HOST', 'localhost' );\ndefine( 'AUTH_KEY',         'x]9Lq|2v^M;4kR@w-8T+zP0#nB&c' );\ndefine( 'SECURE_AUTH_SALT', 'G7(p}Hs3_Vq*1Wd:Y5e!Jm<6Ro%Ut' );\n$table_prefix = 'wp_';\ndefine( 'WP_DEBUG', false );\n",
+  "hide": [
+   "Rk8#vLq2!mZx",
+   "x]9Lq|2v^M;4kR@w-8T+zP0#nB&c",
+   "G7(p}Hs3_Vq*1Wd:Y5e!Jm<6Ro%Ut"
+  ],
+  "keep": [
+   "define( 'DB_NAME', 'wordpress' );",
+   "define( 'DB_HOST', 'localhost' );",
+   "define( 'WP_DEBUG', false );"
+  ]
+ },
+ {
+  "id": "git-show-diff-lines",
+  "why": "unified diff lines start with + or -, so `-JWT_SECRET=...` has no separator before the name and `+    password: ...` doesn't start with indentation; the removed value is in no current file",
+  "files": {
+   ".env": "JWT_SECRET=${JWT_SECRET}\nPORT=3000\n",
+   "charts/api/values.yaml": "replicaCount: 2\npostgresql:\n  auth:\n    username: api\n    password: Pz4kW8rN2vXq\n"
+  },
+  "command": "git show 4f2a9c1",
+  "output": "commit @@C:4f2a9c1e.8b7d6a5f.4e3d2c1b.0a9f8e7d.6c5b4a39@@\nAuthor: Dana Reyes <dana@example.com>\nDate:   Tue Sep 29 14:02:11 2026 +0200\n\n    Move secrets out of .env.production\n\ndiff --git a/.env.production b/.env.production\nindex 1a2b3c4..5d6e7f8 100644\n--- a/.env.production\n+++ b/.env.production\n@@ -1,4 +1,4 @@\n PORT=3000\n-JWT_SECRET=@@C:q8Vz3LmP.0rT7wXy2.Ab5Cd9Ef.Gh@@\n-DB_PASSWORD=Harvest2025\n+JWT_SECRET=${JWT_SECRET}\n+DB_PASSWORD=${DB_PASSWORD}\ndiff --git a/charts/api/values.yaml b/charts/api/values.yaml\nindex 3c4d5e6..7f8a9b0 100644\n--- a/charts/api/values.yaml\n+++ b/charts/api/values.yaml\n@@ -1,4 +1,5 @@\n-replicaCount: 1\n+replicaCount: 2\n postgresql:\n   auth:\n     username: api\n+    password: Pz4kW8rN2vXq\n",
+  "hide": [
+   "@@C:q8Vz3LmP.0rT7wXy2.Ab5Cd9Ef.Gh@@",
+   "Harvest2025",
+   "Pz4kW8rN2vXq"
+  ],
+  "keep": [
+   "+JWT_SECRET=${JWT_SECRET}",
+   "+DB_PASSWORD=${DB_PASSWORD}",
+   " PORT=3000",
+   "Move secrets out of .env.production",
+   "+replicaCount: 2",
+   "     username: api"
+  ]
+ },
+ {
+  "id": "oauth-token-response-compact-json",
+  "why": "an OAuth token endpoint returns compact JSON; opaque access/refresh tokens have no well-known format and `\"name\":\"value\"` without a space after the colon escapes the name: value pattern",
+  "command": "curl -s -X POST https://auth.example.com/oauth/token -d grant_type=client_credentials -d client_id=billing-worker",
+  "output": "{\"access_token\":\"@@C:Qm9vZ1xL.p7Rt3Vw8.Ny2Kc5Hj.0Df4Gs6B.z@@\",\"token_type\":\"Bearer\",\"expires_in\":3600,\"refresh_token\":\"@@C:Rf4Tq8Wm.2Zx6Yp1N.v5Lb9Kc3.Hj7Gd0Sa@@\",\"scope\":\"invoices:read invoices:write\"}",
+  "hide": [
+   "@@C:Qm9vZ1xL.p7Rt3Vw8.Ny2Kc5Hj.0Df4Gs6B.z@@",
+   "@@C:Rf4Tq8Wm.2Zx6Yp1N.v5Lb9Kc3.Hj7Gd0Sa@@"
+  ],
+  "keep": [
+   "\"token_type\":\"Bearer\"",
+   "\"expires_in\":3600",
+   "\"scope\":\"invoices:read invoices:write\""
+  ]
+ },
+ {
+  "id": "vault-kv-get-table",
+  "why": "`vault kv get` prints secrets as a Key/Value table separated by spaces, not = or :, so credential-named rows aren't recognized",
+  "command": "vault kv get secret/billing/db",
+  "output": "====== Secret Path ======\nsecret/data/billing/db\n\n======= Metadata =======\nKey                Value\n---                -----\ncreated_time       2026-09-12T08:14:55.102Z\ncustom_metadata    <nil>\ndeletion_time      n/a\ndestroyed          false\nversion            3\n\n====== Data ======\nKey         Value\n---         -----\nhost        db.billing.internal\npassword    Qx7mVt2Lp9Rk\nusername    billing_app\n",
+  "hide": [
+   "Qx7mVt2Lp9Rk"
+  ],
+  "keep": [
+   "host        db.billing.internal",
+   "username    billing_app",
+   "version            3"
+  ]
+ },
+ {
+  "id": "fused-credential-words-env",
+  "why": "TS_AUTHKEY (Tailscale) and HONEYCOMB_WRITEKEY end in a fused word (AUTHKEY, WRITEKEY) that neither CREDENTIAL_WORDS nor CREDENTIAL_SUFFIX (which has APIKEY but no plain KEY) recognizes; @@TAILSCALE@@/@@HONEYCOMB@@ aren't token formats",
+  "env": {
+   "TS_AUTHKEY": "@@TAILSCALE@@auth-kQ7vLm2CNTRL-@@C:Rp9TzWa3.nYb8Hc5F.d1Gs6Kj4.Pw0Ze2@@",
+   "TS_HOSTNAME": "ci-runner-07",
+   "HONEYCOMB_WRITEKEY": "@@HONEYCOMB@@@@C:01j8x7q2.v9m3n4b5.c6d7e8f9.g0h1j2k3.l4m5n6p7.q8r9s0t1.v2w3x4y5.z6@@"
+  },
+  "command": "printenv | grep -E '^(TS|HONEYCOMB)_'",
+  "output": "TS_AUTHKEY=@@TAILSCALE@@auth-kQ7vLm2CNTRL-@@C:Rp9TzWa3.nYb8Hc5F.d1Gs6Kj4.Pw0Ze2@@\nTS_HOSTNAME=ci-runner-07\nHONEYCOMB_WRITEKEY=@@HONEYCOMB@@@@C:01j8x7q2.v9m3n4b5.c6d7e8f9.g0h1j2k3.l4m5n6p7.q8r9s0t1.v2w3x4y5.z6@@\n",
+  "hide": [
+   "@@TAILSCALE@@auth-kQ7vLm2CNTRL-@@C:Rp9TzWa3.nYb8Hc5F.d1Gs6Kj4.Pw0Ze2@@",
+   "@@C:Rp9TzWa3.nYb8Hc5F.d1Gs6Kj4.Pw0Ze2@@",
+   "@@HONEYCOMB@@@@C:01j8x7q2.v9m3n4b5.c6d7e8f9.g0h1j2k3.l4m5n6p7.q8r9s0t1.v2w3x4y5.z6@@"
+  ],
+  "keep": [
+   "TS_HOSTNAME=ci-runner-07"
+  ]
+ },
+ {
+  "id": "public-key-names-in-env",
+  "why": "VAPID_PUBLIC_KEY and SSH_PUBLIC_KEY end in KEY but hold public keys that are shipped to browsers / authorized_keys; registering them blanks the service worker source and ssh-add -L",
+  "env": {
+   "VAPID_PUBLIC_KEY": "@@C:BNcRdreA.LRFXTkOO.UHK1EtK2.wtaz5Ry4.YfYCA@@_@@C:0QTpQtUb.VlUls0VJ.Xg7A8u@@-@@C:Ts1Xbjha.zAkj7I99.e8QcYP7D.kM@@",
+   "SSH_PUBLIC_KEY": "ssh-ed25519 @@C:AAAAC3Nz.aC1lZDI1.NTE5AAAA.IOMqqnkV.zrm0SdG6.UOoqKLsa.bgH5C9ok.Wi0dh2l9.GKJl@@ ci@acme",
+   "VAPID_PRIVATE_KEY": "@@C:Kx9vRm2L.q7Tz4Wp8.Nb3Hc6Fd.1Gs5Jk0P.w2Ze7Ux9.Mr@@"
+  },
+  "command": "grep -rn applicationServerKey public/sw.js; ssh-add -L",
+  "output": "public/sw.js:4:const applicationServerKey = \"@@C:BNcRdreA.LRFXTkOO.UHK1EtK2.wtaz5Ry4.YfYCA@@_@@C:0QTpQtUb.VlUls0VJ.Xg7A8u@@-@@C:Ts1Xbjha.zAkj7I99.e8QcYP7D.kM@@\";\nssh-ed25519 @@C:AAAAC3Nz.aC1lZDI1.NTE5AAAA.IOMqqnkV.zrm0SdG6.UOoqKLsa.bgH5C9ok.Wi0dh2l9.GKJl@@ ci@acme\n",
+  "hide": [
+   "@@C:Kx9vRm2L.q7Tz4Wp8.Nb3Hc6Fd.1Gs5Jk0P.w2Ze7Ux9.Mr@@"
+  ],
+  "keep": [
+   "@@C:BNcRdreA.LRFXTkOO.UHK1EtK2.wtaz5Ry4.YfYCA@@_@@C:0QTpQtUb.VlUls0VJ.Xg7A8u@@-@@C:Ts1Xbjha.zAkj7I99.e8QcYP7D.kM@@",
+   "ssh-ed25519 @@C:AAAAC3Nz.aC1lZDI1.NTE5AAAA.IOMqqnkV.zrm0SdG6.UOoqKLsa.bgH5C9ok.Wi0dh2l9.GKJl@@ ci@acme"
+  ]
+ },
+ {
+  "id": "dotenv-read-public-ids-and-keys",
+  "why": "OAuth client IDs, Stripe price IDs, publishable and reCAPTCHA site keys are public by design (shipped to browsers); the secret counterparts beside them must still be hidden; KEY also names DynamoDB partition/sort key attributes",
+  "files": {
+   ".env": "AUTH0_DOMAIN=acme.eu.auth0.com\nAUTH0_CLIENT_ID=@@C:Zk3Qw8Lp.2Vx7Nm4R.t9Hb6Jd1.Fg5Sc0Ya@@\nAUTH0_CLIENT_SECRET=@@C:Wq8Zr3Ln.6Xp1Tv4K.s9Hb2Jd7.Mf5Gc0Ye.3Ua8Oi1P.l6Kj9Nh4@@\nSTRIPE_PRICE_PRO=price_@@C:1PqR7sLk.dF3xYz9W.bN2mT4uV@@\nNEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_@@C:51JTFDQ7.4q69dTca.da4PR0Nf.yttUMk93.1FMdux8K.UC@@\nSTRIPE_SECRET_KEY=@@STRIPE_SK_LIVE@@@@C:51Hx7Qm2.LpZ9vR4t.N8kW3yB6.cQe5Ty8U.i2Op4As6.Df@@\nNEXT_PUBLIC_RECAPTCHA_SITE_KEY=@@C:6LcR7sQq.AAAAAKx9.vRm2Lq7T.z4Wp8Nb3.Hc6Fd1Gs@@\nRECAPTCHA_SECRET_KEY=@@C:6LcR7sQq.AAAAAPz2.Wm8Xk4Nb.7Vc1Lq9T.d3Rf6Hs0@@\nDYNAMODB_PARTITION_KEY=tenantId\nDYNAMODB_SORT_KEY=createdAt\n"
+  },
+  "read": ".env",
+  "hide": [
+   "@@C:Wq8Zr3Ln.6Xp1Tv4K.s9Hb2Jd7.Mf5Gc0Ye.3Ua8Oi1P.l6Kj9Nh4@@",
+   "@@STRIPE_SK_LIVE@@@@C:51Hx7Qm2.LpZ9vR4t.N8kW3yB6.cQe5Ty8U.i2Op4As6.Df@@",
+   "@@C:6LcR7sQq.AAAAAPz2.Wm8Xk4Nb.7Vc1Lq9T.d3Rf6Hs0@@"
+  ],
+  "keep": [
+   "AUTH0_CLIENT_ID=@@C:Zk3Qw8Lp.2Vx7Nm4R.t9Hb6Jd1.Fg5Sc0Ya@@",
+   "STRIPE_PRICE_PRO=price_@@C:1PqR7sLk.dF3xYz9W.bN2mT4uV@@",
+   "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_@@C:51JTFDQ7.4q69dTca.da4PR0Nf.yttUMk93.1FMdux8K.UC@@",
+   "NEXT_PUBLIC_RECAPTCHA_SITE_KEY=@@C:6LcR7sQq.AAAAAKx9.vRm2Lq7T.z4Wp8Nb3.Hc6Fd1Gs@@",
+   "AUTH0_DOMAIN=acme.eu.auth0.com",
+   "DYNAMODB_PARTITION_KEY=tenantId",
+   "DYNAMODB_SORT_KEY=createdAt"
+  ]
+ },
+ {
+  "id": "curl-v-api-key-headers",
+  "why": "curl -v echoes request headers after `> `; X-API-Key / Authorization schemes other than Bearer/Basic (Okta's SSWS, ApiKey) carry the credential",
+  "command": "curl -sv https://acme.okta.com/api/v1/users?limit=1 -H \"Authorization: SSWS $(cat ~/.config/okta/token)\" -H \"X-Api-Key: $(pass show acme/statuspage)\"",
+  "output": "*   Trying 52.10.4.8:443...\n* Connected to acme.okta.com (52.10.4.8) port 443\n> GET /api/v1/users?limit=1 HTTP/2\n> Host: acme.okta.com\n> User-Agent: curl/8.5.0\n> Accept: */*\n> Authorization: SSWS @@C:00Qk7vLm.2Rp9TzWa.3nYb8Hc5.Fd1Gs6Kj.4Pw0Ze2U.x@@\n> X-Api-Key: @@C:9c1fQx7L.m2Rp4TzW.a8nYb3Hc@@\n> \n< HTTP/2 200\n< content-type: application/json\n< x-rate-limit-remaining: 599\n",
+  "hide": [
+   "@@C:00Qk7vLm.2Rp9TzWa.3nYb8Hc5.Fd1Gs6Kj.4Pw0Ze2U.x@@",
+   "@@C:9c1fQx7L.m2Rp4TzW.a8nYb3Hc@@"
+  ],
+  "keep": [
+   "> Host: acme.okta.com",
+   "< x-rate-limit-remaining: 599",
+   "> GET /api/v1/users?limit=1 HTTP/2"
+  ]
+ },
+ {
+  "id": "python-open-read-dotenv",
+  "why": "python -c \"print(open('.env').read())\" names .env inside a quoted script; the read is masked just like cat",
+  "files": {
+   ".env": "TZ=Europe/Berlin\nDB_PASSWORD=Summer2024\nAPI_TOKEN=@@C:Lk29fjQ0.pPz81mXc.Vb7nTr4s@@\n"
+  },
+  "command": "python3 -c \"print(open('.env').read())\"",
+  "output": "TZ=Europe/Berlin\nDB_PASSWORD=Summer2024\nAPI_TOKEN=@@C:Lk29fjQ0.pPz81mXc.Vb7nTr4s@@\n\n",
+  "hide": [
+   "Summer2024",
+   "@@C:Lk29fjQ0.pPz81mXc.Vb7nTr4s@@"
+  ],
+  "keep": [
+   "TZ=Europe/Berlin"
+  ]
+ },
+ {
+  "id": "home-dotenv-outside-project",
+  "why": "a .env in another checkout under ~ is a secret file by name; cat by absolute ~ path is masked",
+  "files": {
+   "~/src/other-app/.env.staging": "STAGE=staging\nREDIS_PASSWORD=Summer2024\nSIGNING_SECRET=Hq3Zm8Vx1Lp6Tw4N\n"
+  },
+  "command": "cat ~/src/other-app/.env.staging",
+  "output": "STAGE=staging\nREDIS_PASSWORD=Summer2024\nSIGNING_SECRET=Hq3Zm8Vx1Lp6Tw4N\n",
+  "hide": [
+   "Summer2024",
+   "Hq3Zm8Vx1Lp6Tw4N"
+  ],
+  "keep": [
+   "STAGE=staging"
+  ]
+ },
+ {
+  "id": "compose-environment-flow-mapping",
+  "why": "compose `environment: { POSTGRES_PASSWORD: Summer2024, ... }` puts several pairs on one line in YAML flow style",
+  "files": {
+   "docker-compose.yml": "services:\n  db:\n    image: postgres:16-alpine\n    environment: { POSTGRES_USER: shop, POSTGRES_PASSWORD: Harvest2025, POSTGRES_DB: shop }\n"
+  },
+  "command": "cat docker-compose.yml",
+  "output": "services:\n  db:\n    image: postgres:16-alpine\n    environment: { POSTGRES_USER: shop, POSTGRES_PASSWORD: Harvest2025, POSTGRES_DB: shop }\n",
+  "hide": [
+   "Harvest2025"
+  ],
+  "keep": [
+   "image: postgres:16-alpine",
+   "POSTGRES_USER: shop",
+   "POSTGRES_DB: shop"
+  ]
+ },
+ {
+  "id": "connection-strings-other-dialects",
+  "why": "the credential rules only know scheme://user:pass@ URLs and ADO.NET ;Password=; libpq keyword strings (password=...) and Oracle EZConnect (user/pass@//host) carry the same credential, while ODBC PWD= is caught",
+  "command": "grep -rn 'password=\\|PWD=' scripts/",
+  "output": "scripts/backup.sh:4:pg_dump \"host=db.internal port=5432 dbname=shop user=backup password=Wv3Kq8Lz2Nx7 sslmode=require\" > /backups/shop.sql\nscripts/report.py:9:conn = pyodbc.connect(\"DRIVER={ODBC Driver 18 for SQL Server};SERVER=sql.internal;DATABASE=reports;UID=reporter;PWD={Tz5!Mq9#Lb2x}\")\nscripts/nightly.sh:7:sqlplus -s @@C:reporter./Kz8Wq3L.m7Vx2@@@//ora.internal:1521/ORCLPDB1 @report.sql\n",
+  "hide": [
+   "Wv3Kq8Lz2Nx7",
+   "Tz5!Mq9#Lb2x",
+   "Kz8Wq3Lm7Vx2"
+  ],
+  "keep": [
+   "host=db.internal port=5432 dbname=shop user=backup",
+   "SERVER=sql.internal;DATABASE=reports;UID=reporter;",
+   "@//ora.internal:1521/ORCLPDB1 @report.sql"
+  ]
+ },
+ {
+  "id": "ps-command-line-password-flags",
+  "why": "ps shows argv; --password=..., -p<pass> forms and --token value are credentials passed on the command line by other processes",
+  "command": "ps -eo pid,args | grep -E 'mysqld|redis|runner'",
+  "output": "  812 /usr/sbin/mysqld --user=mysql --datadir=/var/lib/mysql\n 1430 mysqldump --host=db.internal --user=backup --password=Gq7Lm2Xv9Rz4 shop\n 2211 redis-server *:6379 --requirepass Hw4Np8Kt2Vq6\n 3307 ./actions-runner/run.sh --token @@C:AXK7QLM2.RP9TZWA3.NYB8HC5F.D1GS6@@\n",
+  "hide": [
+   "Gq7Lm2Xv9Rz4",
+   "Hw4Np8Kt2Vq6",
+   "@@C:AXK7QLM2.RP9TZWA3.NYB8HC5F.D1GS6@@"
+  ],
+  "keep": [
+   "/usr/sbin/mysqld --user=mysql --datadir=/var/lib/mysql",
+   "--host=db.internal --user=backup"
+  ]
+ },
+ {
+  "id": "k8s-deployment-key-fields",
+  "why": "in Kubernetes manifests `key:` names a Secret entry, a toleration or an affinity label (key: password, key: node-role.kubernetes.io/control-plane); these are references the agent edits, not credentials",
+  "files": {
+   "k8s/deployment.yaml": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: api\nspec:\n  template:\n    spec:\n      tolerations:\n        - key: node-role.kubernetes.io/control-plane\n          operator: Exists\n          effect: NoSchedule\n      affinity:\n        nodeAffinity:\n          @@C:required.DuringSc.heduling.IgnoredD.uringExe.cution@@:\n            nodeSelectorTerms:\n              - matchExpressions:\n                  - key: topology.kubernetes.io/zone\n                    operator: In\n                    values: [eu-west-1a, eu-west-1b]\n      containers:\n        - name: api\n          image: ghcr.io/acme/api:2.3.1\n          env:\n            - name: DB_PASSWORD\n              valueFrom:\n                secretKeyRef:\n                  name: api-db\n                  key: password\n            - name: STRIPE_API_KEY\n              valueFrom:\n                secretKeyRef:\n                  name: stripe\n                  key: api-key\n"
+  },
+  "read": "k8s/deployment.yaml",
+  "keep": [
+   "- key: node-role.kubernetes.io/control-plane",
+   "- key: topology.kubernetes.io/zone",
+   "key: password",
+   "key: api-key",
+   "name: api-db"
+  ]
+ },
+ {
+  "id": "credential-named-fields-in-source-and-locales",
+  "why": "the `name: value` pattern masks any value under a credential name, but in source a value is often a type (`password: string;`, `api_key: str`, `token: String!`) and in locale files a UI label (\"password\": \"Password\")",
+  "files": {
+   "src/auth/types.ts": "export interface LoginRequest {\n  email: string;\n  password: string;\n  totpToken: string | null;\n}\n",
+   "app/schemas.py": "class Credentials(BaseModel):\n    username: str\n    api_key: str\n    secret: SecretStr\n",
+   "schema.graphql": "type Session {\n  token: String!\n  expiresAt: DateTime!\n}\n",
+   "src/locales/en.json": "{\n  \"login\": {\n    \"email\": \"Email address\",\n    \"password\": \"Password\",\n    \"forgotPassword\": \"Forgot your password?\",\n    \"apiKey\": \"API key\",\n    \"token\": \"Personal access token\"\n  }\n}\n",
+   "config/locales/de.yml": "de:\n  devise:\n    password: \"Passwort\"\n    password_confirmation: \"Passwort bestätigen\"\n"
+  },
+  "command": "cat src/auth/types.ts app/schemas.py schema.graphql src/locales/en.json config/locales/de.yml",
+  "output": "export interface LoginRequest {\n  email: string;\n  password: string;\n  totpToken: string | null;\n}\nclass Credentials(BaseModel):\n    username: str\n    api_key: str\n    secret: SecretStr\ntype Session {\n  token: String!\n  expiresAt: DateTime!\n}\n{\n  \"login\": {\n    \"email\": \"Email address\",\n    \"password\": \"Password\",\n    \"forgotPassword\": \"Forgot your password?\",\n    \"apiKey\": \"API key\",\n    \"token\": \"Personal access token\"\n  }\n}\nde:\n  devise:\n    password: \"Passwort\"\n    password_confirmation: \"Passwort bestätigen\"\n",
+  "keep": [
+   "  password: string;",
+   "  totpToken: string | null;",
+   "    api_key: str",
+   "    secret: SecretStr",
+   "  token: String!",
+   "\"password\": \"Password\",",
+   "\"forgotPassword\": \"Forgot your password?\",",
+   "\"apiKey\": \"API key\",",
+   "\"token\": \"Personal access token\"",
+   "password: \"Passwort\""
+  ]
+ },
+ {
+  "id": "dotenv-commit-sha-not-a-key",
+  "why": "CI writes the build's commit SHA into .env (SOURCE_VERSION, NEXT_PUBLIC_COMMIT_SHA); a 40-hex git SHA is not a key, and registering it blanks the commit in git log",
+  "files": {
+   ".env.production.local": "NEXT_PUBLIC_COMMIT_SHA=@@C:9b2e4f6a.8c1d3e5f.7a9b0c2d.4e6f8a1b.3c5d7e9f@@\nNEXT_PUBLIC_SENTRY_ENVIRONMENT=production\nSENTRY_AUTH_TOKEN=sntrys_@@JWT@@@@C:pYXQiOjE.3MjcwMDA.wMDAuMCw.idXJsIjo.iaHR0cHM.6Ly9zZW5.0cnkuaW8.ifQ@@_@@C:Xk9vR2mQ.7pLzT4wN.8bYc5Hd3.Jf6Gs1Lq@@\n"
+  },
+  "command": "git log -1 --format='%H %s'",
+  "output": "@@C:9b2e4f6a.8c1d3e5f.7a9b0c2d.4e6f8a1b.3c5d7e9f@@ chore(release): 4.12.0\n",
+  "hide": [
+   "@@C:Xk9vR2mQ.7pLzT4wN.8bYc5Hd3.Jf6Gs1Lq@@"
+  ],
+  "keep": [
+   "@@C:9b2e4f6a.8c1d3e5f.7a9b0c2d.4e6f8a1b.3c5d7e9f@@ chore(release): 4.12.0"
+  ]
+ },
+ {
+  "id": "age-secret-key-file",
+  "why": "SOPS/age identities live in ~/.config/sops/age/keys.txt as @@AGE_SECRET@@...; the file isn't a known credential path and the format isn't a known token, while the public key comment is harmless",
+  "files": {
+   "~/.config/sops/age/keys.txt": "# created: 2026-03-14T09:21:44+01:00\n# public key: @@C:age1ql3z.7hjy54pw.3hyww5ay.yfg7zqgv.c7w3j2el.w8zmrj2k.g5sfn9aq.mcac8p@@\n@@AGE_SECRET@@@@C:QYQSZQGP.QYQSZQGP.QYQSZQGP.QYQSZQGP.QYQSZQGP.QYQSZQGP.QYQSZQGP.7XK2M9@@\n"
+  },
+  "command": "cat ~/.config/sops/age/keys.txt",
+  "output": "# created: 2026-03-14T09:21:44+01:00\n# public key: @@C:age1ql3z.7hjy54pw.3hyww5ay.yfg7zqgv.c7w3j2el.w8zmrj2k.g5sfn9aq.mcac8p@@\n@@AGE_SECRET@@@@C:QYQSZQGP.QYQSZQGP.QYQSZQGP.QYQSZQGP.QYQSZQGP.QYQSZQGP.QYQSZQGP.7XK2M9@@\n",
+  "hide": [
+   "@@C:QYQSZQGP.QYQSZQGP.QYQSZQGP.QYQSZQGP.QYQSZQGP.QYQSZQGP.QYQSZQGP.7XK2M9@@"
+  ],
+  "keep": [
+   "# public key: @@C:age1ql3z.7hjy54pw.3hyww5ay.yfg7zqgv.c7w3j2el.w8zmrj2k.g5sfn9aq.mcac8p@@"
+  ]
+ },
+ {
+  "id": "curl-cookie-jar",
+  "why": "curl -c writes a Netscape cookie jar: tab-separated fields with the session cookie value last; the jar isn't a known secret file and the tab format has no NAME=value",
+  "files": {
+   "tmp/cookies.txt": "# Netscape HTTP Cookie File\n# https://curl.se/docs/http-cookies.html\n# This file was generated by libcurl! Edit at your own risk.\n\n#HttpOnly_admin.example.com\tFALSE\t/\tTRUE\t1790000000\t_app_session\@@C:tQm9vZ1x.Lp7Rt3Vw.8Ny2Kc5H.j0Df4Gs6.Bz@@\nadmin.example.com\tFALSE\t/\tTRUE\t0\tlocale\ten-GB\n"
+  },
+  "command": "cat tmp/cookies.txt",
+  "output": "# Netscape HTTP Cookie File\n# https://curl.se/docs/http-cookies.html\n# This file was generated by libcurl! Edit at your own risk.\n\n#HttpOnly_admin.example.com\tFALSE\t/\tTRUE\t1790000000\t_app_session\@@C:tQm9vZ1x.Lp7Rt3Vw.8Ny2Kc5H.j0Df4Gs6.Bz@@\nadmin.example.com\tFALSE\t/\tTRUE\t0\tlocale\ten-GB\n",
+  "hide": [
+   "@@C:Qm9vZ1xL.p7Rt3Vw8.Ny2Kc5Hj.0Df4Gs6B.z@@"
+  ],
+  "keep": [
+   "# Netscape HTTP Cookie File",
+   "\tlocale\ten-GB"
+  ]
+ },
+ {
+  "id": "extract-one-value-from-dotenv",
+  "why": "`grep ^DB_PASSWORD= .env | cut -d= -f2` names .env, but prints only the bare value: masking has no name to go on and a word-like password isn't registered",
+  "files": {
+   ".env": "DB_HOST=localhost\nDB_PASSWORD=Harvest2025\n"
+  },
+  "command": "grep ^DB_PASSWORD= .env | cut -d= -f2",
+  "output": "Harvest2025\n",
+  "hide": [
+   "Harvest2025"
+  ],
+  "keep": []
+ },
+ {
+  "id": "env-values-with-comma-and-space",
+  "why": "docker inspect of another project's container: the NAME=value pattern stops at a comma or space, so a password containing one is masked only up to that character",
+  "command": "docker inspect --format '{{json .Config.Env}}' legacy-erp-db-1",
+  "output": "[\"MSSQL_SA_PASSWORD=Qx7m,Vt2Lp9Rk#4\",\"SMTP_PASSWORD=velvet tiger 94 orbit\",\"ACCEPT_EULA=Y\",\"MSSQL_PID=Developer\"]\n",
+  "hide": [
+   "Vt2Lp9Rk#4",
+   "tiger 94 orbit"
+  ],
+  "keep": [
+   "\"ACCEPT_EULA=Y\"",
+   "\"MSSQL_PID=Developer\""
+  ]
+ },
+ {
+  "id": "od-hex-dump-dotenv",
+  "why": "`od -A x -t x1z` is the POSIX sibling of hexdump -C: its 6-digit offsets don't match the hex-dump decoder (7-8 digits), so the hex column still spells out the secret 16 bytes at a time",
+  "files": {
+   ".env": "PORT=3000\nWEBHOOK_SECRET=@@C:Zp3kW9xQ.7mLt2Rv8.Yb4Nc6Hd@@\n"
+  },
+  "command": "od -A x -t x1z -v .env",
+  "output": "000000 50 4f 52 54 3d 33 30 30 30 0a 57 45 42 48 4f 4f  >PORT=3000.WEBHOO<\n000010 4b 5f 53 45 43 52 45 54 3d 5a 70 33 6b 57 39 78  >K_SECRET=Zp3kW9x<\n000020 51 37 6d 4c 74 32 52 76 38 59 62 34 4e 63 36 48  >Q7mLt2Rv8Yb4Nc6H<\n000030 64 0a                                            >d.<\n000032\n",
+  "hide": [
+   "Q7mLt2Rv8Yb4Nc6H",
+   "51 37 6d 4c 74 32 52 76 38 59 62 34 4e 63 36 48"
+  ]
+ },
+ {
+  "id": "secrets-file-with-env-infix",
+  "why": "secrets.staging.yml / secrets.prod.json are secret files just like secrets.yml; under them a 32-hex admin key with a neutral name is only hidden by secret-file masking",
+  "files": {
+   "config/secrets.staging.yml": "algolia:\n  app_id: ABCD1234EF\n  admin: @@C:7f3b9c2e.1d4a5b6c.8e9f0a1b.2c3d4e5f@@\nmapbox_style: mapbox:@@C://styles./acme/cl.x9k2m3n0.00101qz@@\n"
+  },
+  "read": "config/secrets.staging.yml",
+  "hide": [
+   "@@C:7f3b9c2e.1d4a5b6c.8e9f0a1b.2c3d4e5f@@"
+  ],
+  "keep": [
+   "app_id: ABCD1234EF",
+   "mapbox_style: mapbox:@@C://styles./acme/cl.x9k2m3n0.00101qz@@"
+  ]
+ },
+ {
+  "id": "yaml-first-child-after-parent-key",
+  "why": "the `name: value` pattern's `:\\s+` crosses the newline after a parent key (`datasource:`), so the parent swallows its first child line and a password that is the first key under its parent is never checked",
+  "files": {
+   "src/main/resources/application.yml": "server:\n  port: 8080\nspring:\n  application:\n    name: orders\n  datasource:\n    password: Xk9vR2mQ7pLz\n    username: orders_app\n    url: jdbc:postgresql://db.internal:5432/orders\n"
+  },
+  "command": "cat src/main/resources/application.yml",
+  "output": "server:\n  port: 8080\nspring:\n  application:\n    name: orders\n  datasource:\n    password: Xk9vR2mQ7pLz\n    username: orders_app\n    url: jdbc:postgresql://db.internal:5432/orders\n",
+  "hide": [
+   "Xk9vR2mQ7pLz"
+  ],
+  "keep": [
+   "  port: 8080",
+   "    name: orders",
+   "    username: orders_app",
+   "    url: jdbc:postgresql://db.internal:5432/orders"
+  ]
+ },
+ {
+  "id": "kubeconfig-alternate-name-token",
+  "why": "kubeconfigs often live at ~/.kube/<cluster>.yaml (only ~/.kube/config is listed); `user:` with no value swallows the next line, so the token right under it is never checked by the name: value pattern",
+  "files": {
+   "~/.kube/eks-prod.yaml": "apiVersion: v1\nclusters:\n- cluster:\n    certificate-authority-data: @@C:LS0tLS1C.RUdJTiBD.RVJUSUZJ.Q0FURS0t.LS0tCk1J.SUM=@@\n    server: https://ABCD1234.gr7.eu-west-1.eks.amazonaws.com\n  name: eks-prod\nusers:\n- name: ci\n  user:\n    token: k8s-ci-@@C:Zq8Lm2Xv.9Rt4Wp7N.b3Hc6Fd1.Gs5@@\n    client-key-data: @@C:TFMwdExT.MUNSVWRK.VGlCU1Uw.RWdVRkpK.VmtGVVJT.QkxSVmt0.TFMwdExR.cE5TVWxG.YjNkSlFr.RkJTME5C.VVVWQmRU.RlRWVEZN.WmxaTVVF.aERiM3BO.ZUVneVRX.ODA=@@\ncurrent-context: eks-prod\n"
+  },
+  "command": "KUBECONFIG=~/.kube/eks-prod.yaml kubectl config view --raw",
+  "output": "apiVersion: v1\nclusters:\n- cluster:\n    certificate-authority-data: @@C:LS0tLS1C.RUdJTiBD.RVJUSUZJ.Q0FURS0t.LS0tCk1J.SUM=@@\n    server: https://ABCD1234.gr7.eu-west-1.eks.amazonaws.com\n  name: eks-prod\nusers:\n- name: ci\n  user:\n    token: k8s-ci-@@C:Zq8Lm2Xv.9Rt4Wp7N.b3Hc6Fd1.Gs5@@\n    client-key-data: @@C:TFMwdExT.MUNSVWRK.VGlCU1Uw.RWdVRkpK.VmtGVVJT.QkxSVmt0.TFMwdExR.cE5TVWxG.YjNkSlFr.RkJTME5C.VVVWQmRU.RlRWVEZN.WmxaTVVF.aERiM3BO.ZUVneVRX.ODA=@@\ncurrent-context: eks-prod\n",
+  "hide": [
+   "k8s-ci-@@C:Zq8Lm2Xv.9Rt4Wp7N.b3Hc6Fd1.Gs5@@",
+   "@@C:TFMwdExT.MUNSVWRK.VGlCU1Uw.RWdVRkpK.VmtGVVJT.QkxSVmt0.TFMwdExR.cE5TVWxG.YjNkSlFr.RkJTME5C.VVVWQmRU.RlRWVEZN.WmxaTVVF.aERiM3BO.ZUVneVRX.ODA=@@"
+  ],
+  "keep": [
+   "server: https://ABCD1234.gr7.eu-west-1.eks.amazonaws.com",
+   "current-context: eks-prod",
+   "certificate-authority-data: @@C:LS0tLS1C.RUdJTiBD.RVJUSUZJ.Q0FURS0t.LS0tCk1J.SUM=@@"
+  ]
+ }
+]

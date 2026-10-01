@@ -1,0 +1,448 @@
+[
+ {
+  "id": "crlf-dotenv-read",
+  "why": "mask()'s kv regex `(.*)$` can't consume the \\r of CRLF lines, so a Windows-edited .env masks every line, NODE_ENV and PORT included",
+  "files": {
+   ".env": "NODE_ENV=development\r\nPORT=3000\r\nAPI_KEY=k8Hq2LmZ9xPvR4tN\r\n"
+  },
+  "read": ".env",
+  "hide": [
+   "k8Hq2LmZ9xPvR4tN"
+  ],
+  "keep": [
+   "NODE_ENV=development",
+   "PORT=3000"
+  ]
+ },
+ {
+  "id": "plain-settings-read",
+  "why": "isPlainSetting rejects ordinary settings: inline comments, IANA timezones, credential-less non-http URLs, flag values",
+  "files": {
+   ".env": "NODE_ENV=production\nPORT=8080 # behind nginx\nTZ=America/Chicago\nREDIS_URL=redis://localhost:6379/0\nNODE_OPTIONS=--max-old-space-size=4096\nCORS_ORIGINS=https://app.example.com,https://admin.example.com\nOPENAI_API_KEY=@@SK_PROJ@@@@C:Zr8Kq2Lm.9XvT4pN7.wB3cY6dF.1gH5jQ0s@@\n"
+  },
+  "read": ".env",
+  "hide": [
+   "@@SK_PROJ@@@@C:Zr8Kq2Lm.9XvT4pN7.wB3cY6dF.1gH5jQ0s@@"
+  ],
+  "keep": [
+   "NODE_ENV=production",
+   "PORT=8080",
+   "TZ=America/Chicago",
+   "REDIS_URL=redis://localhost:6379/0",
+   "NODE_OPTIONS=--max-old-space-size=4096",
+   "CORS_ORIGINS=https://app.example.com,https://admin.example.com"
+  ]
+ },
+ {
+  "id": "secret-word-numeric-settings-read",
+  "why": "any name with a TOKEN/PASSWORD/SESSION/AUTH segment is masked even when the value is a TTL, length or public issuer URL",
+  "files": {
+   ".env": "SESSION_TIMEOUT_MINUTES=30\nPASSWORD_MIN_LENGTH=12\nTOKEN_TTL_SECONDS=900\nAUTH_ISSUER_URL=https://auth.example.com/realms/acme\nJWT_SECRET=@@C:Hx3vN8qL.2mZ7kR4t.W9pB@@\n"
+  },
+  "read": ".env",
+  "hide": [
+   "@@C:Hx3vN8qL.2mZ7kR4t.W9pB@@"
+  ],
+  "keep": [
+   "SESSION_TIMEOUT_MINUTES=30",
+   "PASSWORD_MIN_LENGTH=12",
+   "TOKEN_TTL_SECONDS=900",
+   "AUTH_ISSUER_URL=https://auth.example.com/realms/acme"
+  ]
+ },
+ {
+  "id": "laravel-session-driver-database",
+  "why": "SESSION is a FILE_SEGMENT, so SESSION_DRIVER=database registers the word 'database' as a secret and it is replaced in all output",
+  "files": {
+   ".env": "APP_NAME=Laravel\nAPP_ENV=local\nAPP_KEY=base64:@@C:Q2x9vK3m.T7pR1wZ8.nB4cY6dF.0gH5jL2s.Xa9eU3iO.7qM=@@\nAPP_DEBUG=true\nDB_CONNECTION=sqlite\nSESSION_DRIVER=database\nSESSION_LIFETIME=120\nQUEUE_CONNECTION=database\nCACHE_STORE=database\nREDIS_HOST=127.0.0.1\n"
+  },
+  "output": "APP_NAME=Laravel\nAPP_ENV=local\nAPP_KEY=base64:@@C:Q2x9vK3m.T7pR1wZ8.nB4cY6dF.0gH5jL2s.Xa9eU3iO.7qM=@@\nAPP_DEBUG=true\nDB_CONNECTION=sqlite\nSESSION_DRIVER=database\nSESSION_LIFETIME=120\nQUEUE_CONNECTION=database\nCACHE_STORE=database\nREDIS_HOST=127.0.0.1\n",
+  "hide": [
+   "@@C:Q2x9vK3m.T7pR1wZ8.nB4cY6dF.0gH5jL2s.Xa9eU3iO.7qM=@@"
+  ],
+  "keep": [
+   "SESSION_DRIVER=database",
+   "QUEUE_CONNECTION=database",
+   "CACHE_STORE=database"
+  ]
+ },
+ {
+  "id": "auth-provider-github",
+  "why": "AUTH_PROVIDER=github is a 6-char value under a FILE_SEGMENTS name, so 'github' is replaced everywhere, e.g. in git remote -v",
+  "files": {
+   ".env": "AUTH_PROVIDER=github\nGITHUB_CLIENT_ID=Iv1.8a3f2c9d7e1b4a60\nGITHUB_CLIENT_SECRET=@@C:4f9c2a7e.1d8b3f6a.0c5e9d2b.7a4f1c8e.6d3b0a9f@@\n"
+  },
+  "output": "origin\tgit@github.com:acme/webapp.git (fetch)\norigin\tgit@github.com:acme/webapp.git (push)\n",
+  "hide": [],
+  "keep": [
+   "git@github.com:acme/webapp.git"
+  ]
+ },
+ {
+  "id": "hostname-and-bucket-entropy",
+  "why": "the token sweep and isSecretValue register hyphenated hostnames/bucket names with digits (entropy >= 3.5) from .env, so a DB host and S3 bucket get redacted in unrelated output",
+  "files": {
+   ".env": "DB_HOST=analytics-replica-prod-02.internal\nDB_PORT=5432\nS3_BUCKET=acme-prod-user-uploads-2024\nDB_PASSWORD=Pq9xL2vK7mZ4\n"
+  },
+  "output": "psql: error: connection to server at \"analytics-replica-prod-02.internal\" (10.0.3.17), port 5432 failed: Connection timed out\n$ aws s3 ls\n2024-02-11 09:14:03 acme-prod-user-uploads-2024\n2025-06-30 17:41:55 acme-prod-logs\n",
+  "hide": [
+   "Pq9xL2vK7mZ4"
+  ],
+  "keep": [
+   "analytics-replica-prod-02.internal",
+   "acme-prod-user-uploads-2024"
+  ]
+ },
+ {
+  "id": "public-ca-cert-read",
+  "why": "*.pem matches SECRET_NAMES and mask() withholds any BEGIN block, so a public CA certificate is replaced by '[private key withheld]'",
+  "files": {
+   "certs/ca.pem": "@@PEM_BEGIN@@CERTIFICATE-----\@@C:nMIIDdzC.CAl+gAwI.BAgIUQk7.fZ3vR2mN.8pL4xT9w.Y1cB6hJ0.wDQYJKoZ.IhvcNAQE.L@@\@@C:nBQAwSzE.LMAkGA1U.EBhMCVVM.xEzARBgN.VBAoMCkF.jbWUgQ29.ycDEnMCU.GA1UEAww.e@@\@@C:nQWNtZSB.JbnRlcm5.hbCBSb29.0IENBIDI.wMjYwHhc.NMjYwMTA.xMDAwMDA.wWhcNMzY.w@@\n@@PEM_END@@CERTIFICATE-----\n"
+  },
+  "read": "certs/ca.pem",
+  "hide": [],
+  "keep": [
+   "@@PEM_BEGIN@@CERTIFICATE-----",
+   "@@C:MIIDdzCC.Al+gAwIB.AgIUQk7f.Z3vR2mN8.pL4xT9wY.1cB6hJ0w.DQYJKoZI.hvcNAQEL@@"
+  ]
+ },
+ {
+  "id": "file-and-dotenv-linter-output",
+  "why": "maskAttributedLines treats any `.env:` prefixed line as content of .env and masks it, wiping `file` and dotenv-linter diagnostics",
+  "files": {
+   ".env": "NODE_ENV=development\r\nPORT=3000\r\napi_key=k8Hq2LmZ9xPvR4tN\r\nLOG_LEVEL=debug\r\nPORT=3001\r\n"
+  },
+  "output": ".env: ASCII text, with CRLF line terminators\nChecking .env\n.env:3 LowercaseKey: The api_key key should be in uppercase\n.env:5 DuplicatedKey: The PORT key is duplicated\n\nFound 2 problems\n",
+  "hide": [
+   "k8Hq2LmZ9xPvR4tN"
+  ],
+  "keep": [
+   "ASCII text, with CRLF line terminators",
+   "LowercaseKey: The api_key key should be in uppercase",
+   "DuplicatedKey: The PORT key is duplicated"
+  ]
+ },
+ {
+  "id": "pem-header-literal-in-source",
+  "why": "the private-key TOKEN_FORMAT ends in `|$` without the m flag, so a PEM header string literal in source redacts everything to the end of the output",
+  "files": {
+   "src/tls.ts": "import { readFileSync } from \"node:fs\";\n\nexport function assertPkcs8(pem: string) {\n\tif (!pem.includes(\"@@PEM_BEGIN@@PRIVATE KEY-----\")) {\n\t\tthrow new Error(\"expected a PKCS#8 key\");\n\t}\n}\n\nexport function loadCert(path: string) {\n\treturn readFileSync(path, \"utf8\");\n}\n"
+  },
+  "read": "src/tls.ts",
+  "hide": [],
+  "keep": [
+   "throw new Error(\"expected a PKCS#8 key\");",
+   "export function loadCert(path: string) {"
+  ]
+ },
+ {
+  "id": "commented-out-old-key-read",
+  "why": "mask() keeps every `#` line verbatim and fileValues skips them, so a commented-out previous key shows in a masked read",
+  "files": {
+   ".env": "# rotated 2026-09-01, previous key kept for rollback:\n# STRIPE_SECRET=Qw7eRt9yUi3oPa5s\nSTRIPE_SECRET=Mn4bVc8xZl2kJh6g\n"
+  },
+  "read": ".env",
+  "hide": [
+   "Qw7eRt9yUi3oPa5s",
+   "Mn4bVc8xZl2kJh6g"
+  ],
+  "keep": [
+   "STRIPE_SECRET="
+  ]
+ },
+ {
+  "id": "inline-comment-value-compose-config",
+  "why": "fileValues registers `value # comment` as one string, so the bare value (as dotenv/compose resolve it) is never matched",
+  "files": {
+   ".env": "SESSION_SECRET=Qm7vX2pL9kR4tN8w # rotate quarterly\nPORT=3000\n"
+  },
+  "output": "name: webapp\nservices:\n  web:\n    environment:\n      PORT: \"3000\"\n      SESSION_SECRET: Qm7vX2pL9kR4tN8w\n    image: webapp:dev\n",
+  "hide": [
+   "Qm7vX2pL9kR4tN8w"
+  ],
+  "keep": [
+   "image: webapp:dev"
+  ]
+ },
+ {
+  "id": "pw-and-passphrase-names-read",
+  "why": "PW and PASSPHRASE are not in FILE_SEGMENTS and isPlainSetting accepts any 32-char word, so DB_PW and KEYSTORE_PASSPHRASE are shown in a masked read",
+  "files": {
+   ".env": "DB_USER=app\nDB_PW=Vq8rT2mXk4\nKEYSTORE_PASSPHRASE=correct-horse-battery-staple\n"
+  },
+  "read": ".env",
+  "hide": [
+   "Vq8rT2mXk4",
+   "correct-horse-battery-staple"
+  ],
+  "keep": [
+   "DB_USER=app"
+  ]
+ },
+ {
+  "id": "env-pgpassword-mysql-pwd",
+  "why": "env secrets are recognized only by SECRET_SEGMENTS, which misses PGPASSWORD (one segment), MYSQL_PWD and REDISCLI_AUTH",
+  "env": {
+   "PGPASSWORD": "Zt6pW3xK9mQ2",
+   "MYSQL_PWD": "Hb4nR7vL2xC8",
+   "REDISCLI_AUTH": "Fy3qM8kT5wP1",
+   "PGHOST": "db.internal"
+  },
+  "output": "PATH=/usr/local/bin:/usr/bin:/bin\nPGHOST=db.internal\nPGPASSWORD=Zt6pW3xK9mQ2\nMYSQL_PWD=Hb4nR7vL2xC8\nREDISCLI_AUTH=Fy3qM8kT5wP1\nSHELL=/bin/bash\n",
+  "hide": [
+   "Zt6pW3xK9mQ2",
+   "Hb4nR7vL2xC8",
+   "Fy3qM8kT5wP1"
+  ],
+  "keep": [
+   "PGHOST=db.internal",
+   "SHELL=/bin/bash"
+  ]
+ },
+ {
+  "id": "kubeconfig-read",
+  "why": "~/.kube/config is listed in HOME_SECRETS but NOT_SECRET_IN_HOME's `/config$` exempts it, so client keys and tokens are read in the clear",
+  "files": {
+   "~/.kube/config": "apiVersion: v1\nclusters:\n- cluster:\n    certificate-authority-data: @@C:LS0tLS1C.RUdJTiBD.RVJUSUZJ.Q0FURS0t.LS0tCk1J.SURkekND.QWwrZ0F3.SUJBZ0lV.UWs3Zloz.dlIybU44.cEw0eFQ5.d1kxY0I2.aEowd0RR.WUpLb1pJ.aHZjTkFR.RUwKQlFB.d1N6RUxN.QWtHQTFV.RUJoTUNW.Vk14RXpB.UkJnTlZC.QW9NQ2tG.amJXVWdR.Mjl5Y0RF.bk1DVUdB.MVVFQXd3.ZQpRV050.WlNCSmJu.UmxjbTVo.YkNCU2Iy.OTBJRU5C.SURJd01q.WXdIaGNO.TWpZd01U.QXhNREF3.TURBd1do.Y05Nell3.Ci0tLS0t.RU5EIENF.UlRJRklD.QVRFLS0t.LS0K@@\n    server: https://10.0.0.12:6443\n  name: prod\ncontexts:\n- context:\n    cluster: prod\n    user: admin\n  name: prod\ncurrent-context: prod\nkind: Config\nusers:\n- name: admin\n  user:\n    client-certificate-data: @@C:LS0tLS1C.RUdJTiBD.RVJUSUZJ.Q0FURS0t.LS0tCk1J.SURkekND.QWwrZ0F3.SUJBZ0lV.UWs3Zloz.dlIybU44.cEw0eFQ5.d1kxY0I2.aEowd0RR.WUpLb1pJ.aHZjTkFR.RUwKQlFB.d1N6RUxN.QWtHQTFV.RUJoTUNW.Vk14RXpB.UkJnTlZC.QW9NQ2tG.amJXVWdR.Mjl5Y0RF.bk1DVUdB.MVVFQXd3.ZQpRV050.WlNCSmJu.UmxjbTVo.YkNCU2Iy.OTBJRU5C.SURJd01q.WXdIaGNO.TWpZd01U.QXhNREF3.TURBd1do.Y05Nell3.Ci0tLS0t.RU5EIENF.UlRJRklD.QVRFLS0t.LS0K@@\n    client-key-data: @@C:LS0tLS1C.RUdJTiBS.U0EgUFJJ.VkFURSBL.RVktLS0t.LQpNSUlF.b3dJQkFB.S0NBUUVB.dDNtUTl2.WGsyTHA4.UnpONHdZ.YzdIZEYx.c0o2dUdx.MGFCZTVU.bks5b1Zy.Mk14UGxX.CmM4WnlR.NGZIMWpE.N2tTM25M.MHZCNnRS.OW1YMnBF.NXdBOGdV.NGlPMXlO.N3FKM2hD.NmRGMHpL.OXNUMnJW.NWJNOHgK.THA0V25R.N2VZMXVJ.M29BNnNE.OWZHMmhK.NWtaOGNY.MHZCM25N.NnFXOWVS.MnRZNXVJ.OG9QMWFT.NGRGN2dI.MGpLMwot.LS0tLUVO.RCBSU0Eg.UFJJVkFU.RSBLRVkt.LS0tLQo=@@\n- name: ci\n  user:\n    token: @@C:Rk3pX9vQ.2mL7tZ4w.N8bC1dF6.gH0jY5sA@@\n"
+  },
+  "read": "~/.kube/config",
+  "hide": [
+   "@@C:LS0tLS1C.RUdJTiBS.U0EgUFJJ.VkFURSBL.RVktLS0t.LQpNSUlF.b3dJQkFB.S0NB@@",
+   "@@C:Rk3pX9vQ.2mL7tZ4w.N8bC1dF6.gH0jY5sA@@"
+  ],
+  "keep": [
+   "server: https://10.0.0.12:6443",
+   "current-context: prod"
+  ]
+ },
+ {
+  "id": "kubectl-tls-secret-yaml",
+  "why": "redactEncoded only checks decoded base64 against known values, never against TOKEN_FORMATS, so a base64 PEM private key from the cluster passes",
+  "output": "apiVersion: v1\ndata:\n  tls.crt: @@C:LS0tLS1C.RUdJTiBD.RVJUSUZJ.Q0FURS0t.LS0tCk1J.SURkekND.QWwrZ0F3.SUJBZ0lV.UWs3Zloz.dlIybU44.cEw0eFQ5.d1kxY0I2.aEowd0RR.WUpLb1pJ.aHZjTkFR.RUwKQlFB.d1N6RUxN.QWtHQTFV.RUJoTUNW.Vk14RXpB.UkJnTlZC.QW9NQ2tG.amJXVWdR.Mjl5Y0RF.bk1DVUdB.MVVFQXd3.ZQpRV050.WlNCSmJu.UmxjbTVo.YkNCU2Iy.OTBJRU5C.SURJd01q.WXdIaGNO.TWpZd01U.QXhNREF3.TURBd1do.Y05Nell3.Ci0tLS0t.RU5EIENF.UlRJRklD.QVRFLS0t.LS0K@@\n  tls.key: @@C:LS0tLS1C.RUdJTiBQ.UklWQVRF.IEtFWS0t.LS0tCk1J.SUVvd0lC.QUFLQ0FR.RUF0M21R.OXZYazJM.cDhSek40.d1ljN0hk.RjFzSjZ1.R3EwYUJl.NVRuSzlv.VnIyTXhQ.bFcKYzha.eVE0Zkgx.akQ3a1Mz.bkwwdkI2.dFI5bVgy.cEU1d0E4.Z1U0aU8x.eU43cUoz.aEM2ZEYw.eks5c1Qy.clY1Yk04.eApMcDRX.blE3ZVkx.dUkzb0E2.c0Q5Zkcy.aEo1a1o4.Y1gwdkIz.bk02cVc5.ZVIydFk1.dUk4b1Ax.YVM0ZEY3.Z0gwaksz.Ci0tLS0t.RU5EIFBS.SVZBVEUg.S0VZLS0t.LS0K@@\nkind: Secret\nmetadata:\n  name: web-tls\n  namespace: prod\ntype: kubernetes.io/tls\n",
+  "hide": [
+   "@@C:LS0tLS1C.RUdJTiBQ.UklWQVRF.IEtFWS0t.LS0tCk1J.SUVvd0lC.QUFLQ0FR.RUF0@@"
+  ],
+  "keep": [
+   "name: web-tls",
+   "type: kubernetes.io/tls"
+  ]
+ },
+ {
+  "id": "netrc-uuid-api-key",
+  "why": "netrc `password <v>` lines aren't kv, and the token sweep's isSecretValue drops UUIDs, so a Heroku API key in ~/.netrc is never registered",
+  "files": {
+   "~/.netrc": "machine api.heroku.com\n  login dev@example.com\n  password 3f1c9a2e-7b4d-4e8a-9c6f-2d5b8e1a0f47\nmachine git.heroku.com\n  login dev@example.com\n  password 3f1c9a2e-7b4d-4e8a-9c6f-2d5b8e1a0f47\n"
+  },
+  "output": "machine api.heroku.com\n  login dev@example.com\n  password 3f1c9a2e-7b4d-4e8a-9c6f-2d5b8e1a0f47\nmachine git.heroku.com\n  login dev@example.com\n  password 3f1c9a2e-7b4d-4e8a-9c6f-2d5b8e1a0f47\n",
+  "hide": [
+   "3f1c9a2e-7b4d-4e8a-9c6f-2d5b8e1a0f47"
+  ],
+  "keep": [
+   "machine api.heroku.com"
+  ]
+ },
+ {
+  "id": "git-credentials-fill",
+  "why": "fileValues' kv regex splits `https://user:pw@host` at the scheme colon, so the URL password in ~/.git-credentials is never extracted and leaks via `git credential fill`",
+  "files": {
+   "~/.git-credentials": "https://kendo:Bb7xQ2mLp9Wz@bitbucket.org\n"
+  },
+  "output": "protocol=https\nhost=bitbucket.org\nusername=kendo\npassword=Bb7xQ2mLp9Wz\n",
+  "hide": [
+   "Bb7xQ2mLp9Wz"
+  ],
+  "keep": [
+   "host=bitbucket.org"
+  ]
+ },
+ {
+  "id": "aws-secret-leading-slash",
+  "why": "isSecretValue rejects values starting with `/` as paths even under a secret name, and a base64-alphabet AWS secret key can start with `/`",
+  "files": {
+   "~/.aws/credentials": "[default]\naws_access_key_id = @@AWS_AKIA@@Z7QX3MLP9RTW4VNB\naws_secret_access_key = @@C:/Kq8Zr3m.Xv2Lp9Tn.4Wy7Bc1D.f6Gh0JkE.x5Qs2Ru@@\n"
+  },
+  "output": "export AWS_ACCESS_KEY_ID=@@AWS_AKIA@@Z7QX3MLP9RTW4VNB\nexport AWS_SECRET_ACCESS_KEY=@@C:/Kq8Zr3m.Xv2Lp9Tn.4Wy7Bc1D.f6Gh0JkE.x5Qs2Ru@@\n",
+  "hide": [
+   "@@C:/Kq8Zr3m.Xv2Lp9Tn.4Wy7Bc1D.f6Gh0JkE.x5Qs2Ru@@",
+   "@@AWS_AKIA@@Z7QX3MLP9RTW4VNB"
+  ],
+  "keep": [
+   "export AWS_SECRET_ACCESS_KEY="
+  ]
+ },
+ {
+  "id": "redis-url-empty-username",
+  "why": "both fileValues' password regex and URL_PASSWORD require a non-empty username, so the standard `redis://:password@host` form leaks",
+  "files": {
+   ".env": "REDIS_URL=redis://:r3d1sP4ssw0rd@cache.internal:6379/0\n"
+  },
+  "output": "REDIS_URL=redis://:r3d1sP4ssw0rd@cache.internal:6379/0\n",
+  "hide": [
+   "r3d1sP4ssw0rd"
+  ],
+  "keep": [
+   "cache.internal:6379"
+  ]
+ },
+ {
+  "id": "env-url-password-with-at",
+  "why": "URL_PASSWORD stops the password at the first `@`, but URL parsers split at the last one, so most of an unencoded `@` password stays visible",
+  "env": {
+   "DATABASE_URL": "postgres://app:Kx@9mQ2vLp7Rt4Wz@db.internal:5432/orders"
+  },
+  "output": "DATABASE_URL=postgres://app:Kx@9mQ2vLp7Rt4Wz@db.internal:5432/orders\nNODE_ENV=production\n",
+  "hide": [
+   "9mQ2vLp7Rt4Wz"
+  ],
+  "keep": [
+   "NODE_ENV=production"
+  ]
+ },
+ {
+  "id": "kubectl-secret-short-password-b64",
+  "why": "values under 12 chars get no base64 variants and redactEncoded needs 16+ (line) or 24+ chars, so a 10-char password's base64 in a k8s Secret passes",
+  "files": {
+   ".env": "DB_USER=app\nDB_PASSWORD=Tq7zK2wX9p\n"
+  },
+  "output": "apiVersion: v1\ndata:\n  password: VHE3eksyd1g5cA==\n  username: YXBw\nkind: Secret\nmetadata:\n  name: db-credentials\ntype: Opaque\n",
+  "hide": [
+   "VHE3eksyd1g5cA=="
+  ],
+  "keep": [
+   "name: db-credentials"
+  ]
+ },
+ {
+  "id": "act-dot-secrets-read",
+  "why": "`.secrets` (nektos/act's default secret file) matches no SECRET_NAMES pattern, so it is read unmasked and its values are never registered",
+  "files": {
+   ".secrets": "GITHUB_TOKEN=@@GH_P@@@@C:Vb8nM2qX.7kL4pZ9t.R3wY6cF1.dH5jG0sA.2eUi@@\nDOCKERHUB_TOKEN=@@DOCKER_PAT@@@@C:Wq3xN8vK.2mZ7pL4t.R9bY1cF6.dH0@@\nNPM_PUBLISH_PASSWORD=Yt5kQ8wN3zXv\n"
+  },
+  "read": ".secrets",
+  "hide": [
+   "@@GH_P@@@@C:Vb8nM2qX.7kL4pZ9t.R3wY6cF1.dH5jG0sA.2eUi@@",
+   "@@DOCKER_PAT@@@@C:Wq3xN8vK.2mZ7pL4t.R9bY1cF6.dH0@@",
+   "Yt5kQ8wN3zXv"
+  ],
+  "keep": []
+ },
+ {
+  "id": "secrets-yaml-list-and-hex",
+  "why": "fileValues skips `- item` lines and the token sweep drops 64-hex strings, so a list entry and a hex signing secret in secrets.yaml leak via cat",
+  "files": {
+   "config/secrets.yaml": "webhooks:\n  github: @@C:9f2c4e7a.1b8d3f6e.0a5c9b2d.7e4f1a8c.3b6d0e9f.2a5c8b1d.4e7f0a3c.6b9d2e5f@@\napi_keys:\n  - Lr8vQ3nZx6Tp2Wm4\n"
+  },
+  "output": "webhooks:\n  github: @@C:9f2c4e7a.1b8d3f6e.0a5c9b2d.7e4f1a8c.3b6d0e9f.2a5c8b1d.4e7f0a3c.6b9d2e5f@@\napi_keys:\n  - Lr8vQ3nZx6Tp2Wm4\n",
+  "hide": [
+   "@@C:9f2c4e7a.1b8d3f6e.0a5c9b2d.7e4f1a8c.3b6d0e9f.2a5c8b1d.4e7f0a3c.6b9d2e5f@@",
+   "Lr8vQ3nZx6Tp2Wm4"
+  ],
+  "keep": [
+   "webhooks:"
+  ]
+ },
+ {
+  "id": "minified-credentials-json-cat",
+  "why": "a one-line JSON object is not a kv line and the token sweep needs 20+ alnum chars, so a password with symbols in minified credentials.json is never registered",
+  "files": {
+   "credentials.json": "{\"username\":\"deploy-bot\",\"password\":\"Gx7#kP2!vQ9mZ\",\"registry\":\"registry.example.com\"}\n"
+  },
+  "output": "{\"username\":\"deploy-bot\",\"password\":\"Gx7#kP2!vQ9mZ\",\"registry\":\"registry.example.com\"}\n",
+  "hide": [
+   "Gx7#kP2!vQ9mZ"
+  ],
+  "keep": []
+ },
+ {
+  "id": "secret-file-below-depth-6",
+  "why": "projectSecretFiles stops descending at depth 6, so a secrets.yaml seven directories deep in a monorepo is never registered and leaks via cat",
+  "files": {
+   "@@C:packages./backend./src/mai.n/resour.ces/conf.ig/local./secrets@@.yaml": "datasource:\n  url: jdbc:postgresql://localhost:5432/orders\n  password: Np4xR8kQ2vZ7\n"
+  },
+  "output": "datasource:\n  url: jdbc:postgresql://localhost:5432/orders\n  password: Np4xR8kQ2vZ7\n",
+  "hide": [
+   "Np4xR8kQ2vZ7"
+  ],
+  "keep": [
+   "jdbc:postgresql://localhost:5432/orders"
+  ]
+ },
+ {
+  "id": "docker-inspect-env-json",
+  "why": "a .env value inside docker inspect's JSON Env array is replaced, neighbouring settings survive",
+  "files": {
+   ".env": "POSTGRES_USER=app\nPOSTGRES_PASSWORD=Wv8kN3qZ7xLm2Rt5\nPOSTGRES_DB=orders\n"
+  },
+  "output": "[\n    {\n        \"Id\": \"4f1c2a9e7b3d\",\n        \"Config\": {\n            \"Env\": [\n                \"POSTGRES_USER=app\",\n                \"POSTGRES_PASSWORD=Wv8kN3qZ7xLm2Rt5\",\n                \"POSTGRES_DB=orders\",\n                \"PGDATA=/var/lib/postgresql/data\"\n            ],\n            \"Image\": \"postgres:16-alpine\"\n        }\n    }\n]\n",
+  "hide": [
+   "Wv8kN3qZ7xLm2Rt5"
+  ],
+  "keep": [
+   "\"PGDATA=/var/lib/postgresql/data\"",
+   "\"Image\": \"postgres:16-alpine\"",
+   "\"POSTGRES_DB=orders\""
+  ]
+ },
+ {
+  "id": "base64-of-dotenv-wrapped",
+  "why": "`base64 .env` output (76-col wrapped) is decoded and replaced even though the password is short",
+  "files": {
+   ".env": "NODE_ENV=development\nDB_USER=app\nDB_PASSWORD=Rk4mZ9qT\nPORT=3000\n"
+  },
+  "output": "@@C:Tk9ERV9F.TlY9ZGV2.ZWxvcG1l.bnQKREJf.VVNFUj1h.cHAKREJf.UEFTU1dP.UkQ9Ums0.bVo5cVQK.UE9S@@\nVD0zMDAwCg==\n",
+  "hide": [
+   "@@C:Tk9ERV9F.TlY9ZGV2.ZWxvcG1l.bnQKREJf.VVNFUj1h.cHAKREJf.UEFTU1dP.UkQ9Ums0.bVo5cVQK.UE9S@@"
+  ],
+  "keep": []
+ },
+ {
+  "id": "git-shas-and-integrity-with-env-present",
+  "why": "commit SHAs and lockfile integrity hashes survive while a .env with secrets exists",
+  "files": {
+   ".env": "API_KEY=k8Hq2LmZ9xPvR4tN\nDATABASE_URL=postgres://app:Zq4mW8xN2vL7@db.internal:5432/app\n"
+  },
+  "output": "$ git rev-parse HEAD\@@C:n3e9b1c7.a5f2d8e4.b6a0c9f1.d3b7e5a2.c8f4d6b0.e@@\n$ git log --oneline -2\n3e9b1c7 fix: retry db connect\na41f08d chore: bump deps\n$ grep -A1 '\"node_modules/pg\"' package-lock.json\n    \"node_modules/pg\": {\n      \"integrity\": \"sha512-@@C:Zq4mW1Pk.R8vX2nL7.tY3cB6dF.0gH5jQ9s.A2eUi8oP.1aS4dF7g.H0jK3Lp4.WnQ7eY1u.I3oA6sD9.fG2hJ5kZ.8cX0vB3n.Q==@@\",\n",
+  "hide": [
+   "Zq4mW8xN2vL7"
+  ],
+  "keep": [
+   "@@C:3e9b1c7a.5f2d8e4b.6a0c9f1d.3b7e5a2c.8f4d6b0e@@",
+   "3e9b1c7 fix: retry db connect",
+   "sha512-@@C:Zq4mW1Pk.R8vX2nL7.tY3cB6dF.0gH5jQ9s.A2eUi8oP.1aS4dF7g.H0jK3Lp4.WnQ7eY1u.I3oA6sD9.fG2hJ5kZ.8cX0vB3n.Q==@@"
+  ]
+ },
+ {
+  "id": "aws-credentials-standard-read",
+  "why": "a standard ~/.aws/credentials read masks keys and keeps profile structure",
+  "files": {
+   "~/.aws/credentials": "[default]\naws_access_key_id = @@AWS_AKIA@@Q4WX7NZP2LMR8TKB\naws_secret_access_key = @@C:wJalrXUt.nFEMI7K7.MDENGbPx.RfiCY3Kq.9TzLm2Vb@@\n\n[staging]\naws_access_key_id = @@AWS_AKIA@@R8TQ2VXM5NPL3WZC\naws_secret_access_key = @@C:Hn6Lp2Wq.9Zx4Tv7K.s1Md8Bf3.Gj5Rc0Ye.2Ua9Oi4@@\n"
+  },
+  "read": "~/.aws/credentials",
+  "hide": [
+   "@@C:wJalrXUt.nFEMI7K7.MDENGbPx.RfiCY3Kq.9TzLm2Vb@@",
+   "@@C:Hn6Lp2Wq.9Zx4Tv7K.s1Md8Bf3.Gj5Rc0Ye.2Ua9Oi4@@",
+   "@@AWS_AKIA@@Q4WX7NZP2LMR8TKB"
+  ],
+  "keep": [
+   "[default]",
+   "[staging]",
+   "aws_secret_access_key ="
+  ]
+ },
+ {
+  "id": "grep-context-over-env-and-src",
+  "why": "grep -rn -C1 lines attributed to .env are masked (including `-N-` context lines), src lines survive",
+  "files": {
+   ".env": "NODE_ENV=development\nSTRIPE_KEY=Jt5wP8kZ2xQv9Lm3\nSTRIPE_ACCOUNT=acct_live\n",
+   "src/pay.ts": "const key = process.env.STRIPE_KEY;\n"
+  },
+  "output": "./.env-1-NODE_ENV=development\n./.env:2:STRIPE_KEY=Jt5wP8kZ2xQv9Lm3\n./.env-3-STRIPE_ACCOUNT=acct_live\n--\n./src/pay.ts:1:const key = process.env.STRIPE_KEY;\n",
+  "hide": [
+   "Jt5wP8kZ2xQv9Lm3"
+  ],
+  "keep": [
+   "./src/pay.ts:1:const key = process.env.STRIPE_KEY;",
+   "./.env-1-NODE_ENV=development"
+  ]
+ }
+]

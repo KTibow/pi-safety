@@ -1,0 +1,448 @@
+[
+ {
+  "id": "sshpass-env-var-name-lacks-credential-word",
+  "why": "SSHPASS is the variable sshpass(1) reads the password from, but its one word isn't a credential word or suffix (CREDENTIAL_SUFFIX has PASSWORD, not PASS), so the value is never registered and `env` prints it",
+  "env": {
+   "SSHPASS": "Rk7mQ2xV9pLt",
+   "SSH_AUTH_SOCK": "@@C:/run/use.r/1000/k.eyring/s.sh@@"
+  },
+  "command": "env | grep -i ssh",
+  "output": "SSH_AUTH_SOCK=@@C:/run/use.r/1000/k.eyring/s.sh@@\nSSHPASS=Rk7mQ2xV9pLt\n",
+  "hide": [
+   "Rk7mQ2xV9pLt"
+  ],
+  "keep": [
+   "SSH_AUTH_SOCK=@@C:/run/use.r/1000/k.eyring/s.sh@@"
+  ]
+ },
+ {
+  "id": "mariadb-client-short-password-after-p-flag",
+  "why": "A known password shorter than 16 goes through the short regex, which only matches between non-letters; `-pXk82mPq7` has the letter p right before it, and the mysql -p pattern only fires for `mysql`, not the `mariadb` client the official images now ship",
+  "files": {
+   ".env": "MARIADB_ROOT_PASSWORD=Xk82mPq7\nMARIADB_DATABASE=shop\n"
+  },
+  "command": "ps -eo pid,user,args | grep -E 'maria[d]b'",
+  "output": "  48211 root     mariadb -uroot -pXk82mPq7 shop -e SELECT COUNT(*) FROM orders\n  48230 root     mariadb-dump -uroot -pXk82mPq7 --single-transaction shop\n",
+  "hide": [
+   "Xk82mPq7"
+  ],
+  "keep": [
+   "mariadb-dump -uroot",
+   "--single-transaction shop"
+  ]
+ },
+ {
+  "id": "bundle-config-host-keyed-credentials-read",
+  "why": "~/.bundle/config is a home secret file, but Bundler keys credentials by gem host (BUNDLE_GEMS__CONTRIBSYS__COM: \"user:password\"); no credential word in the name and an 8-hex password too short to look random, so the masked read shows it",
+  "files": {
+   "~/.bundle/config": "---\nBUNDLE_PATH: \"vendor/bundle\"\nBUNDLE_JOBS: \"8\"\nBUNDLE_GEMS__CONTRIBSYS__COM: \"c3a91f0e:5d27b4e8\"\nBUNDLE_ENTERPRISE__CONTRIBSYS__COM: \"c3a91f0e:5d27b4e8\"\n"
+  },
+  "read": "~/.bundle/config",
+  "hide": [
+   "5d27b4e8"
+  ],
+  "keep": [
+   "BUNDLE_PATH: \"vendor/bundle\"",
+   "BUNDLE_JOBS: \"8\""
+  ]
+ },
+ {
+  "id": "bundle-config-command-output",
+  "why": "`bundle config` prints every setting from ~/.bundle/config with its source; the host-keyed credential was never registered as a known value, so it passes",
+  "files": {
+   "~/.bundle/config": "---\nBUNDLE_PATH: \"vendor/bundle\"\nBUNDLE_JOBS: \"8\"\nBUNDLE_GEMS__CONTRIBSYS__COM: \"c3a91f0e:5d27b4e8\"\nBUNDLE_ENTERPRISE__CONTRIBSYS__COM: \"c3a91f0e:5d27b4e8\"\n"
+  },
+  "command": "bundle config",
+  "output": "Settings are listed in order of priority. The top value will be used.\ngems.contribsys.com\nSet for the current user (/home/dana/.bundle/config): \"c3a91f0e:5d27b4e8\"\n\nenterprise.contribsys.com\nSet for the current user (/home/dana/.bundle/config): \"c3a91f0e:5d27b4e8\"\n\njobs\nSet for the current user (/home/dana/.bundle/config): 8\n\npath\nSet for the current user (/home/dana/.bundle/config): \"vendor/bundle\"\n",
+  "hide": [
+   "5d27b4e8"
+  ],
+  "keep": [
+   "gems.contribsys.com",
+   "\"vendor/bundle\""
+  ]
+ },
+ {
+  "id": "license-and-routing-keys-excluded-by-word-before",
+  "why": "NOT_CREDENTIAL_BEFORE drops LICENSE KEY and ROUTING KEY, but NEW_RELIC_LICENSE_KEY is New Relic's ingest secret and PAGERDUTY_ROUTING_KEY is the Events v2 integration secret; neither is registered, so `docker compose config` prints both",
+  "files": {
+   ".env": "NEW_RELIC_LICENSE_KEY=@@C:0b7c9e2a.4d6f8a1c.3e5b7d9f.0a2c4e6b.8d0f1a3c@@\nPAGERDUTY_ROUTING_KEY=@@C:e93facc0.4764012d.7bfb0025.00d5d1a6@@\nNEW_RELIC_APP_NAME=shop-api\n"
+  },
+  "command": "docker compose config",
+  "output": "name: shop\nservices:\n  api:\n    environment:\n      NEW_RELIC_APP_NAME: shop-api\n      NEW_RELIC_LICENSE_KEY: @@C:0b7c9e2a.4d6f8a1c.3e5b7d9f.0a2c4e6b.8d0f1a3c@@\n      PAGERDUTY_ROUTING_KEY: @@C:e93facc0.4764012d.7bfb0025.00d5d1a6@@\n    image: ghcr.io/acme/shop-api:1.42.0\n    networks:\n      default: null\nnetworks:\n  default:\n    name: shop_default\n",
+  "hide": [
+   "@@C:0b7c9e2a.4d6f8a1c.3e5b7d9f.0a2c4e6b.8d0f1a3c@@",
+   "@@C:e93facc0.4764012d.7bfb0025.00d5d1a6@@"
+  ],
+  "keep": [
+   "NEW_RELIC_APP_NAME: shop-api",
+   "ghcr.io/acme/shop-api:1.42.0"
+  ]
+ },
+ {
+  "id": "azure-primarykey-json-excluded",
+  "why": "PRIMARY is in NOT_CREDENTIAL_BEFORE[KEY] (database primary keys), but Azure's `keys list` commands name the first access key primaryKey; secondaryKey is masked while primaryKey goes through",
+  "command": "az servicebus namespace authorization-rule keys list -g shop-rg --namespace-name shop-bus -n RootManageSharedAccessKey",
+  "output": "{\n  \"keyName\": \"RootManageSharedAccessKey\",\n  \"primaryConnectionString\": \"Endpoint=sb://shop-bus.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=@@C:pX4mT8vQ.2kL9rW3n.Z7bY5cH1.dF6gJ0sA.+eUo=@@\",\n  \"primaryKey\": \"@@C:pX4mT8vQ.2kL9rW3n.Z7bY5cH1.dF6gJ0sA.+eUo=@@\",\n  \"secondaryConnectionString\": \"Endpoint=sb://shop-bus.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=@@C:Qa8Zr2Wt.6Yu0Io4P.l7Kj3Hg5.Fd9Sx1Cv.+bNm=@@\",\n  \"secondaryKey\": \"@@C:Qa8Zr2Wt.6Yu0Io4P.l7Kj3Hg5.Fd9Sx1Cv.+bNm=@@\"\n}\n",
+  "hide": [
+   "@@C:pX4mT8vQ.2kL9rW3n.Z7bY5cH1.dF6gJ0sA.+eUo=@@",
+   "@@C:Qa8Zr2Wt.6Yu0Io4P.l7Kj3Hg5.Fd9Sx1Cv.+bNm=@@"
+  ],
+  "keep": [
+   "RootManageSharedAccessKey",
+   "sb://shop-bus.servicebus.windows.net/"
+  ]
+ },
+ {
+  "id": "convex-deploy-key-excluded-by-deploy",
+  "why": "DEPLOY is in NOT_CREDENTIAL_BEFORE[KEY] (for public SSH deploy keys), but CONVEX_DEPLOY_KEY is Convex's admin credential; it isn't registered and env prints it",
+  "env": {
+   "CONVEX_DEPLOY_KEY": "prod:happy-otter-123|@@JWT@@@@C:2MiI6ImY.0YjM5ZDE.3YWM4ZTR.iYzE5ODU.zMmE3NjB.kZTQxZmE.5In0=@@",
+   "CONVEX_DEPLOYMENT": "prod:happy-otter-123"
+  },
+  "command": "env | grep CONVEX",
+  "output": "CONVEX_DEPLOYMENT=prod:happy-otter-123\nCONVEX_DEPLOY_KEY=prod:happy-otter-123|@@JWT@@@@C:2MiI6ImY.0YjM5ZDE.3YWM4ZTR.iYzE5ODU.zMmE3NjB.kZTQxZmE.5In0=@@\n",
+  "hide": [
+   "@@JWT@@@@C:2MiI6ImY.0YjM5ZDE.3YWM4ZTR.iYzE5ODU.zMmE3NjB.kZTQxZmE.5In0=@@"
+  ],
+  "keep": [
+   "CONVEX_DEPLOYMENT=prod:happy-otter-123"
+  ]
+ },
+ {
+  "id": "hardhat-mnemonic-read",
+  "why": "A wallet seed phrase under MNEMONIC has no credential word, and twelve lowercase words don't look random, so the masked read of .env shows the phrase that controls the wallet",
+  "files": {
+   ".env": "ALCHEMY_API_KEY=@@C:Qm3vT8kX.r2LpZ9wN.5yB7cD1f.G4hJ6sA0@@\nMNEMONIC=\"rural voyage glimpse orbit tunnel pepper siren cradle velvet hockey drastic lumber\"\nETHERSCAN_API_KEY=@@C:7KX2M9QP.R4VWT8ZB.3NY6HC1J.D5FG0LSA@@\nNETWORK=sepolia\n"
+  },
+  "read": ".env",
+  "hide": [
+   "rural voyage glimpse orbit tunnel pepper siren cradle velvet hockey drastic lumber",
+   "@@C:Qm3vT8kX.r2LpZ9wN.5yB7cD1f.G4hJ6sA0@@"
+  ],
+  "keep": [
+   "NETWORK=sepolia",
+   "MNEMONIC="
+  ]
+ },
+ {
+  "id": "totp-seed-in-compose-config",
+  "why": "TOTP_SEED holds a shared MFA secret; the name has no trigger word, so the value isn't registered and redactNamedValues' NAME lookahead never considers the line",
+  "files": {
+   ".env": "TOTP_SEED=@@C:GZ4XK7QW.2MRT5VNB.3YHJ6LPC.SDFA4E2W@@\nTOTP_ISSUER=Acme Admin\n"
+  },
+  "command": "docker compose config --environment",
+  "output": "TOTP_ISSUER=Acme Admin\nTOTP_SEED=@@C:GZ4XK7QW.2MRT5VNB.3YHJ6LPC.SDFA4E2W@@\n",
+  "hide": [
+   "@@C:GZ4XK7QW.2MRT5VNB.3YHJ6LPC.SDFA4E2W@@"
+  ],
+  "keep": [
+   "TOTP_ISSUER=Acme Admin"
+  ]
+ },
+ {
+  "id": "compose-config-doubles-dollar-in-password",
+  "why": "`docker compose config` (Compose v2) re-escapes $ as $$ in interpolated values; variants() has no $$ form, so a known redis password shows in the command list, where no name is next to it",
+  "files": {
+   ".env": "REDIS_PASSWORD=Xk9$mP2q!vL7wR\n"
+  },
+  "command": "docker compose config",
+  "output": "name: shop\nservices:\n  redis:\n    command:\n      - redis-server\n      - --requirepass\n      - Xk9$$mP2q!vL7wR\n      - --appendonly\n      - \"yes\"\n    image: redis:7.4-alpine\n    networks:\n      default: null\nnetworks:\n  default:\n    name: shop_default\n",
+  "hide": [
+   "mP2q!vL7wR"
+  ],
+  "keep": [
+   "redis-server",
+   "image: redis:7.4-alpine",
+   "--appendonly"
+  ]
+ },
+ {
+  "id": "vault-kv-get-memorable-password",
+  "why": "looksSecret rejects wordy values unless they mix case and digits, so a lowercase hyphenated memorable password (1Password/Bitwarden passphrase default) under `password` in a vault table passes",
+  "command": "vault kv get secret/shop/db",
+  "output": "===== Secret Path =====\nsecret/data/shop/db\n\n======= Metadata =======\nKey                Value\n---                -----\ncreated_time       2026-09-14T17:02:11.428617Z\ncustom_metadata    <nil>\ndeletion_time      n/a\ndestroyed          false\nversion            3\n\n====== Data ======\nKey         Value\n---         -----\npassword    clergy-uphill-veto-dozen\nusername    shop_app\n",
+  "hide": [
+   "clergy-uphill-veto-dozen"
+  ],
+  "keep": [
+   "username    shop_app",
+   "created_time       2026-09-14T17:02:11.428617Z",
+   "version            3"
+  ]
+ },
+ {
+  "id": "long-lowercase-password-not-distinctive",
+  "why": "isDistinctive rejects all-letter values shorter than 20 that aren't made passwords, so an 18-letter password is never registered; exec'ing env in the container prints it unmasked",
+  "files": {
+   ".env": "POSTGRES_USER=shop\nPOSTGRES_PASSWORD=quietharborlantern\n"
+  },
+  "command": "docker compose exec db env",
+  "output": "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:@@C:/usr/lib./postgre.sql/16/b.in@@\nHOSTNAME=4c1f2e9a7b3d\nPOSTGRES_USER=shop\nPOSTGRES_PASSWORD=quietharborlantern\nPG_MAJOR=16\nPGDATA=/var/lib/postgresql/data\nHOME=/root\n",
+  "hide": [
+   "quietharborlantern"
+  ],
+  "keep": [
+   "POSTGRES_USER=shop",
+   "PGDATA=/var/lib/postgresql/data"
+  ]
+ },
+ {
+  "id": "session-id-cookie-shown-by-identifier-word",
+  "why": "SESSIONID is a credential word, but SESSION_ID splits into SESSION + ID and ID is an IDENTIFIER_WORD, so the masked read shows an Instagram sessionid cookie (what instaloader-style tools are configured with)",
+  "files": {
+   ".env": "INSTAGRAM_USERNAME=acme.shop\nINSTAGRAM_SESSION_ID=58291746033%3AqZt7Ym2LkP4xVn%3A11%@@C:3AAYcR8v.J2kLmN0p.Q5sT7uW9.xZ1bD3fH.5jK7mN9p.R@@\n"
+  },
+  "read": ".env",
+  "hide": [
+   "qZt7Ym2LkP4xVn",
+   "@@C:AYcR8vJ2.kLmN0pQ5.sT7uW9xZ.1bD3fH5j.K7mN9pR@@"
+  ],
+  "keep": [
+   "INSTAGRAM_USERNAME=acme.shop"
+  ]
+ },
+ {
+  "id": "teams-webhook-url-shown-by-identifier-word",
+  "why": "An incoming-webhook URL is a bearer credential, but *_URL is an identifier name and Teams/Power Automate webhooks aren't a TOKEN_FORMAT, so the masked read shows it whole",
+  "files": {
+   ".env": "TEAMS_WEBHOOK_URL=https://acme.webhook.office.@@C:com/webh.ookb2/7f.3c2a91@@-4b8e-4d2f-9c61-0a5e8b7d3f12@1e4b9c27-6a3d-4f8e-b250-@@C:9d7c1e3a.5b64/Inc.omingWeb.hook/4d9.f2b7e1c8.a4f6b9e3.d0a5c7b2.e8f1d/6c.2a8e4f@@-1b9d-4a7c-8e3f-@@C:5d0b2c9a.7e16/V2k.X8mQ3vR7.tL2pZ9wN.4yB6cD1f.G5hJ0sA3.eU7oI@@\nAPP_URL=https://shop.acme.example\n"
+  },
+  "read": ".env",
+  "hide": [
+   "@@C:V2kX8mQ3.vR7tL2pZ.9wN4yB6c.D1fG5hJ0.sA3eU7oI@@",
+   "@@C:4d9f2b7e.1c8a4f6b.9e3d0a5c.7b2e8f1d@@"
+  ],
+  "keep": [
+   "APP_URL=https://shop.acme.example",
+   "TEAMS_WEBHOOK_URL="
+  ]
+ },
+ {
+  "id": "git-show-committed-dotenv",
+  "why": "printedSecretFiles only resolves argument tokens as paths, and `git` isn't a content command; `git show HEAD:.env` prints the committed file unmasked, so a plain-word password (only masking hides those) and a hex key under a non-credential name pass",
+  "files": {
+   ".env": "DB_HOST=db\nDB_USER=shop\nDB_PASSWORD=shopadmin\nPAGERDUTY_ROUTING_KEY=@@C:e93facc0.4764012d.7bfb0025.00d5d1a6@@\n"
+  },
+  "command": "git show HEAD:.env",
+  "output": "DB_HOST=db\nDB_USER=shop\nDB_PASSWORD=shopadmin\nPAGERDUTY_ROUTING_KEY=@@C:e93facc0.4764012d.7bfb0025.00d5d1a6@@\n",
+  "hide": [
+   "shopadmin",
+   "@@C:e93facc0.4764012d.7bfb0025.00d5d1a6@@"
+  ],
+  "keep": [
+   "DB_HOST=db",
+   "DB_USER=shop"
+  ]
+ },
+ {
+  "id": "cat-dotenv-glob",
+  "why": "The shell expands `.env*`, but printedSecretFiles checks the literal token `.env*`, which isn't a file, so neither file is masked",
+  "files": {
+   ".env": "DB_PASSWORD=shopadmin\nLOG_LEVEL=info\n",
+   ".env.local": "ADMIN_PIN=482913\nDB_PASSWORD=shopadmin\n"
+  },
+  "command": "cat .env*",
+  "output": "DB_PASSWORD=shopadmin\nLOG_LEVEL=info\nADMIN_PIN=482913\nDB_PASSWORD=shopadmin\n",
+  "hide": [
+   "shopadmin",
+   "482913"
+  ],
+  "keep": [
+   "LOG_LEVEL=info"
+  ]
+ },
+ {
+  "id": "node-dotenv-parsed-dump",
+  "why": "`node -e` is a content command but the path is inside a string, not a token, so nothing is masked; node's object print `DB_PASSWORD: 'shopadmin'` then only meets the pattern layer, which keeps plain words",
+  "files": {
+   ".env": "DB_HOST=db\nDB_PASSWORD=shopadmin\nSESSION_SECRET=keyboard cat\n"
+  },
+  "command": "node -e \"console.log(require('dotenv').config().parsed)\"",
+  "output": "{ DB_HOST: 'db', DB_PASSWORD: 'shopadmin', SESSION_SECRET: 'keyboard cat' }\n",
+  "hide": [
+   "shopadmin",
+   "keyboard cat"
+  ],
+  "keep": [
+   "DB_HOST: 'db'"
+  ]
+ },
+ {
+  "id": "pass-show-piped-to-head",
+  "why": "printsSecret only looks at the last pipeline segment, and `pass show x | head -n1` (the usual way to get just the password line) ends in head, so the password line passes",
+  "command": "pass show work/postgres-prod | head -n1",
+  "output": "hY4!rc-Tq9w#Lm2z\n",
+  "hide": [
+   "hY4!rc-Tq9w#Lm2z"
+  ],
+  "keep": []
+ },
+ {
+  "id": "base64-password-shaped-like-a-path",
+  "why": "isInert treats anything isPath accepts as inert; a 12-character `openssl rand -base64 9` password that starts with / and has another / in it looks like a path, so the masked read shows it and it's never registered",
+  "files": {
+   ".env": "DB_USER=shop\nDB_PASSWORD=/k3Q9+Lm/Xv2\nUPLOAD_DIR=/var/lib/shop/uploads\n"
+  },
+  "read": ".env",
+  "hide": [
+   "/k3Q9+Lm/Xv2"
+  ],
+  "keep": [
+   "UPLOAD_DIR=/var/lib/shop/uploads",
+   "DB_USER=shop"
+  ]
+ },
+ {
+  "id": "terraform-output-json-go-html-escaping",
+  "why": "redactJsonDocument finds the sensitive value but replaces it by its JSON.stringify form; Go's encoder writes & < > as \\u0026 \\u003c \\u003e, so the text never matches and the generated password passes",
+  "command": "terraform output -json",
+  "output": "{\n  \"db_endpoint\": {\n    \"sensitive\": false,\n    \"type\": \"string\",\n    \"value\": \"shop-prod.c9akciq32.us-east-1.rds.amazonaws.com\"\n  },\n  \"db_password\": {\n    \"sensitive\": true,\n    \"type\": \"string\",\n    \"value\": \"Kx9\\u0026mP2q\\u003cvL7tR4z\"\n  }\n}\n",
+  "hide": [
+   "mP2q\\u003cvL7tR4z"
+  ],
+  "keep": [
+   "shop-prod.c9akciq32.us-east-1.rds.amazonaws.com"
+  ]
+ },
+ {
+  "id": "kubectl-get-secrets-list-indented-kind",
+  "why": "maskKubeSecretData (and the masked file rule) need `kind: Secret` at column 0; `kubectl get secrets -o yaml` prints a List with each item's kind indented, so data under non-credential keys is only checked by decoding, which doesn't spot a webhook URL",
+  "command": "kubectl get secrets -n shop -l app=api -o yaml",
+  "output": "apiVersion: v1\nitems:\n- apiVersion: v1\n  data:\n    APP_ENV: cHJvZHVjdGlvbg==\n    TEAMS_WEBHOOK_URL: @@C:aHR0cHM6.Ly9hY21l.LndlYmhv.b2sub2Zm.aWNlLmNv.bS93ZWJo.b29rYjIv.N2YzYzJh.OTEvSW5j.b21pbmdX.ZWJob29r.LzRkOWYy.YjdlMWM4.YTRmNmI5.ZTNkMGE1.YzdiMmU4.ZjFkL1Yy.a1g4bVEz.dlI3dEwy.cFo5d040.eUI2Y0Qx.Zkc1aEow.c0EzZVU3.b0k=@@\n  kind: Secret\n  metadata:\n    creationTimestamp: \"2026-09-02T11:20:41Z\"\n    name: api-env\n    namespace: shop\n    resourceVersion: \"884213\"\n    uid: 2b7e4c19-8f3a-4d61-a0c5-7e9b1d3f6a28\n  type: Opaque\nkind: List\nmetadata:\n  resourceVersion: \"\"\n",
+  "hide": [
+   "@@C:aHR0cHM6.Ly9hY21l.LndlYmhv.b2sub2Zm.aWNlLmNv.bS93ZWJo.b29rYjIv.N2YzYzJh.OTEvSW5j.b21pbmdX.ZWJob29r.LzRkOWYy.YjdlMWM4.YTRmNmI5.ZTNkMGE1.YzdiMmU4.ZjFkL1Yy.a1g4bVEz.dlI3dEwy.cFo5d040.eUI2Y0Qx.Zkc1aEow.c0EzZVU3.b0k=@@"
+  ],
+  "keep": [
+   "name: api-env",
+   "resourceVersion: \"884213\""
+  ]
+ },
+ {
+  "id": "s3-object-keys-look-like-made-passwords",
+  "why": "Bare `key`/`Key` counts as a credential name in output (mask's strict flag is unused), and looksSecret accepts wordy values that mix case and digits; S3 object keys like Reports/Q3/2026.csv match, and redactJsonDocument then replaces them everywhere",
+  "command": "aws s3api list-objects-v2 --bucket acme-finance --prefix Reports/ --query 'Contents[].{Key: Key, Size: Size}'",
+  "output": "[\n    {\n        \"Key\": \"Reports/Q3/Revenue-2026.csv\",\n        \"Size\": 48213\n    },\n    {\n        \"Key\": \"Reports/Q3/Invoices-INV2026-0042.pdf\",\n        \"Size\": 102944\n    }\n]\n",
+  "hide": [],
+  "keep": [
+   "Reports/Q3/Revenue-2026.csv",
+   "Reports/Q3/Invoices-INV2026-0042.pdf"
+  ]
+ },
+ {
+  "id": "vscode-keybindings-key-with-function-key",
+  "why": "`\"key\": \"ctrl+F12\"` is a keyboard shortcut, but key is treated as a credential name and ctrl+F12 has lower, upper and a digit, so isMadePassword masks it",
+  "command": "cat ~/.config/Code/User/keybindings.json",
+  "output": "// Place your key bindings in this file to override the defaults\n[\n    {\n        \"key\": \"ctrl+F12\",\n        \"command\": \"editor.action.goToImplementation\",\n        \"when\": \"editorHasImplementationProvider && editorTextFocus\"\n    },\n    {\n        \"key\": \"shift+alt+F10\",\n        \"command\": \"workbench.action.tasks.build\"\n    }\n]\n",
+  "hide": [],
+  "keep": [
+   "\"key\": \"ctrl+F12\"",
+   "\"key\": \"shift+alt+F10\""
+  ]
+ },
+ {
+  "id": "configmap-values-in-secret-manifest-registered",
+  "why": "isKubeSecret marks the whole multi-document file, and fileValues/maskKubeSecretData treat every `data:` at column 0 as Secret data, so the ConfigMap's values (production, redis-master) become known values replaced in all output; the replacement label `[secret: k8s/api.yaml APP_ENV]` is then itself re-masked by the `secret: value` rule into `[secret: [secret] APP_ENV]`",
+  "files": {
+   "k8s/api.yaml": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: api-config\ndata:\n  APP_ENV: production\n  LOG_LEVEL: debug\n  REDIS_HOST: redis-master\n---\napiVersion: v1\nkind: Secret\nmetadata:\n  name: api-secrets\ntype: Opaque\nstringData:\n  DB_PASSWORD: Vq8rT2mXk4Lp\n"
+  },
+  "command": "kubectl get pods -n shop -L env && kubectl logs deploy/api -n shop --tail=3",
+  "output": "NAME                   READY   STATUS    RESTARTS   AGE   ENV\napi-7d9c8b6f5-x2kqp    1/1     Running   0          41m   production\nredis-master-0         1/1     Running   0          3d    \n{\"level\":\"info\",\"msg\":\"connected to redis\",\"host\":\"redis-master:6379\",\"env\":\"production\"}\n{\"level\":\"info\",\"msg\":\"listening\",\"port\":8080}\n{\"level\":\"debug\",\"msg\":\"cache warm\",\"keys\":1204}\n",
+  "hide": [
+   "Vq8rT2mXk4Lp"
+  ],
+  "keep": [
+   "redis-master-0",
+   "\"host\":\"redis-master:6379\"",
+   "\"env\":\"production\""
+  ]
+ },
+ {
+  "id": "helm-template-configmap-data-masked",
+  "why": "maskKubeSecretData runs on any output with a column-0 `kind: Secret` and masks every column-0 `data:` block, so the ConfigMap rendered next to the Secret loses its plain settings",
+  "command": "helm template api ./chart -f values-prod.yaml",
+  "output": "---\n# Source: api/templates/configmap.yaml\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: api-config\ndata:\n  APP_ENV: production\n  LOG_LEVEL: debug\n  FEATURE_FLAGS: checkout-v2,search-beta\n---\n# Source: api/templates/secret.yaml\napiVersion: v1\nkind: Secret\nmetadata:\n  name: api-secrets\ntype: Opaque\ndata:\n  DB_PASSWORD: VnE4clQybVhrNExw\n",
+  "hide": [
+   "VnE4clQybVhrNExw"
+  ],
+  "keep": [
+   "APP_ENV: production",
+   "LOG_LEVEL: debug",
+   "FEATURE_FLAGS: checkout-v2,search-beta"
+  ]
+ },
+ {
+  "id": "max-tokens-and-oracle-sid-masked-in-read",
+  "why": "TOKENS is singularized to TOKEN and SID is a credential word, so MAX_TOKENS=4096 and ORACLE_SID=FREEPDB1 are masked in a read of .env; FREEPDB1 also becomes a known value replaced in all output",
+  "files": {
+   ".env": "OPENAI_MODEL=gpt-4.1-mini\nOPENAI_MAX_TOKENS=4096\nORACLE_SID=FREEPDB1\nORACLE_PWD=Hq7xT2mVk9Lr\n"
+  },
+  "read": ".env",
+  "output": "LSNRCTL for Linux: Version 23.0.0.0.0 - Production\nService \"FREEPDB1\" has 1 instance(s).\n  Instance \"FREE\", status READY, has 1 handler(s) for this service...\nThe command completed successfully\n",
+  "command": "lsnrctl status | grep -A1 FREEPDB1",
+  "hide": [
+   "Hq7xT2mVk9Lr"
+  ],
+  "keep": [
+   "OPENAI_MAX_TOKENS=4096",
+   "ORACLE_SID=FREEPDB1",
+   "Service \"FREEPDB1\" has 1 instance(s)."
+  ]
+ },
+ {
+  "id": "argocd-admin-initial-password",
+  "why": "`argocd admin initial-password` prints only the generated admin password, but it isn't in SECRET_COMMANDS and the pattern layer has nothing to anchor on",
+  "command": "argocd admin initial-password -n argocd",
+  "output": "kZ3pV8qLmR2xT9wY\n\n This password must be only used for first time login. We strongly recommend you update the password using `argocd account update-password`.\n",
+  "hide": [
+   "kZ3pV8qLmR2xT9wY"
+  ],
+  "keep": [
+   "This password must be only used for first time login."
+  ]
+ },
+ {
+  "id": "jenkins-initial-admin-password-in-logs",
+  "why": "Jenkins logs its setup password on a line of its own; 32 hex characters decode to binary, so neither the blob decoder nor any pattern catches it",
+  "command": "docker logs jenkins 2>&1 | tail -n 12",
+  "output": "*************************************************************\n*************************************************************\n*************************************************************\n\nJenkins initial setup is required. An admin user has been created and a password generated.\nPlease use the following password to proceed to installation:\n\@@C:n9c4e1b7.a2f8d406.3b5a1e7c.3d9f2b86.4@@\n\nThis may also be found at: /var/jenkins_@@C:home/sec.rets/ini.tialAdmi.nPasswor.d@@\n\n*************************************************************\n",
+  "hide": [
+   "@@C:9c4e1b7a.2f8d4063.b5a1e7c3.d9f2b864@@"
+  ],
+  "keep": [
+   "/var/jenkins_@@C:home/sec.rets/ini.tialAdmi.nPasswor.d@@"
+  ]
+ },
+ {
+  "id": "neo4j-auth-user-slash-password",
+  "why": "NEO4J_AUTH holds `user/password` (the official image's format); only the whole string is registered, so the password alone on cypher-shell's command line isn't replaced, and -p isn't a credential flag",
+  "files": {
+   ".env": "NEO4J_AUTH=neo4j/Xk2mP9vLqT\n"
+  },
+  "command": "ps -eo pid,args | grep [c]ypher-shell",
+  "output": "  73104 @@C:/var/lib./neo4j/b.in/cyphe.r@@-shell -a bolt://localhost:7687 -u neo4j -p Xk2mP9vLqT -f /import/seed.cypher\n",
+  "hide": [
+   "Xk2mP9vLqT"
+  ],
+  "keep": [
+   "-a bolt://localhost:7687 -u neo4j",
+   "-f /import/seed.cypher"
+  ]
+ },
+ {
+  "id": "client-capital-and-short-password-flags",
+  "why": "Short password flags (-p, -P) aren't credential names, and only mysql/redis-cli/-u user:pass have special rules; mongosh, sqlcmd and mosquitto pass their passwords through ps",
+  "command": "ps -eo user,args | grep -E '[m]ongosh|[s]qlcmd|[m]osquitto_sub'",
+  "output": "backup   mongosh --quiet -u root -p Rv7nQ2kX9mLt --authenticationDatabase admin mongodb://db:27017/shop --eval db.orders.countDocuments()\netl      /opt/mssql-tools18/bin/sqlcmd -S sql.internal -U etl -P Tw4!zM8qLx2v -d warehouse -Q EXEC dbo.load_daily\niot      mosquitto_sub -h mqtt.internal -u sensors -P Hb3xK9wQ7rTz -t plant/+/temp\n",
+  "hide": [
+   "Rv7nQ2kX9mLt",
+   "Tw4!zM8qLx2v",
+   "Hb3xK9wQ7rTz"
+  ],
+  "keep": [
+   "--authenticationDatabase admin",
+   "-S sql.internal -U etl",
+   "-t plant/+/temp"
+  ]
+ }
+]

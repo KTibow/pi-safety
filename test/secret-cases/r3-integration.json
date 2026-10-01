@@ -1,0 +1,388 @@
+[
+	{
+		"id": "reread-truncated-bash-output-log",
+		"why": "The agent ran `cat .env && pnpm build`; pi truncated it and saved the full output to /tmp/pi-bash-<hex>.log, which the agent then opens with the read tool. That path isn't a secret file and a read has no command, so the .env lines in the log lose the masking `cat .env` got; the plain-word DB_PASSWORD reaches the model",
+		"files": {
+			".env": "NODE_ENV=development\nPORT=3000\nDB_HOST=localhost\nDB_USER=shop\nDB_PASSWORD=shopdev\nSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\nLOG_LEVEL=debug\n"
+		},
+		"output": "NODE_ENV=development\nPORT=3000\nDB_HOST=localhost\nDB_USER=shop\nDB_PASSWORD=shopdev\nSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\nLOG_LEVEL=debug\n\n> shop@1.4.0 build /home/dev/shop\n> next build\n\n  ▲ Next.js 14.2.5\n  - Environments: .env\n\n   Creating an optimized production build ...\n ✓ Compiled successfully\n   Linting and checking validity of types  ...\n ✓ Generating static pages (14/14)\n\nRoute (app)                              Size     First Load JS\n┌ ○ /                                    5.2 kB         92.4 kB\n├ ○ /cart                                3.1 kB         90.3 kB\n└ ƒ /api/orders                          0 B                0 B\n",
+		"hide": [
+			"shopdev",
+			"@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@"
+		],
+		"keep": [
+			"DB_HOST=localhost",
+			"DB_USER=shop",
+			"LOG_LEVEL=debug",
+			"Compiled successfully",
+			"/api/orders"
+		]
+	},
+	{
+		"id": "tail-truncation-cuts-known-token",
+		"why": "next.config.js `env:` inlined INTERNAL_API_TOKEN into a 61KB one-line server chunk. pi's bash tool keeps the last 50KB of the line, which starts in the middle of the token: 32 of its 40 characters, with no name before them, so neither the known-value index (whole values only) nor the patterns catch it",
+		"files": {
+			".env": "INTERNAL_API_TOKEN=@@C:MlT5afeQ.GVLEie9f.C44R6o2G.MXnMfnwg.wsXG8Tql@@\nNEXT_PUBLIC_API_BASE=https://api.shop.test\n"
+		},
+		"command": "cat .@@C:next/ser.ver/app/.api/orde.rs/route@@.js",
+		"output": "@@C:GVLEie9f.C44R6o2G.MXnMfnwg.wsXG8Tql@@\"}});let o=await r.json();return n.NextResponse.json({items:o.items,total:o.total},{status:200})}catch(e){return console.error(\"orders upstream failed\",e),n.NextResponse.json({error:\"upstream\"},{status:502})}}let d=new a.AppRouteRouteModule({definition:{kind:i.x.APP_ROUTE,page:\"/api/orders/route\",pathname:\"/api/orders\",filename:\"route\",bundlePath:\"app/api/orders/route\"},resolvedPagePath:\"@@C:/home/de.v/shop/a.pp/api/o.rders/ro.ute@@.ts\",nextConfigOutput:\"\",userland:s})\n\n[Showing last 50.0KB of line 1 (line is 61.2KB). Full output: /tmp/pi-bash-3f9a1c2b7d4e5f60.log]",
+		"hide": [
+			"@@C:GVLEie9f.C44R6o2G.MXnMfnwg.wsXG8Tql@@"
+		],
+		"keep": [
+			"/api/orders/route",
+			"upstream failed",
+			"/tmp/pi-bash-3f9a1c2b7d4e5f60.log"
+		]
+	},
+	{
+		"id": "cat-env-and-compose-logs-ids-kept",
+		"why": "`cat .env && docker compose logs` masks the whole output as an env file, not just the part cat printed: ULID request ids in the log lines look random and become [secret]. pi's truncation note and its saved-output path must also survive",
+		"files": {
+			".env": "NODE_ENV=development\nPORT=3000\nDB_HOST=localhost\nDB_USER=shop\nDB_PASSWORD=shopdev\nSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\nLOG_LEVEL=debug\n"
+		},
+		"command": "cat .env && docker compose logs --no-color api",
+		"output": "api-1  | 2026-09-30T18:02:11.482Z info  request_id=@@C:01HZX3K9.F2QW8M7R.TN4V6B2C.5D@@ method=GET path=/api/orders status=200 duration_ms=41\napi-1  | 2026-09-30T18:02:12.007Z error request_id=@@C:01HZX3KA.1B7YQ2W9.E4R6T8U0.IP@@ method=POST path=/api/checkout status=500 err=\"connect ECONNREFUSED 127.0.0.1:6379\"\napi-1  | 2026-09-30T18:02:12.010Z info  shutting down worker pid=27\n\n[Showing lines 2412-4411 of 4411. Full output: /tmp/pi-bash-3f9a1c2b7d4e5f60.log]",
+		"keep": [
+			"Full output: /tmp/pi-bash-3f9a1c2b7d4e5f60.log",
+			"request_id=@@C:01HZX3K9.F2QW8M7R.TN4V6B2C.5D@@",
+			"connect ECONNREFUSED 127.0.0.1:6379"
+		]
+	},
+	{
+		"id": "cat-env-glob",
+		"why": "`cat .env*` prints .env, .env.local and .env.example. The literal token `.env*` isn't a file, so the output isn't masked; the plain-word passwords (not distinctive enough to be known values) reach the model",
+		"files": {
+			".env": "DATABASE_HOST=localhost\nPOSTGRES_USER=shop\nPOSTGRES_PASSWORD=pgshop\nREDIS_URL=redis://localhost:6379\n",
+			".env.local": "SMTP_HOST=localhost\nSMTP_PORT=1025\nSMTP_PASSWORD=mailpit\n",
+			".env.example": "DATABASE_HOST=localhost\nPOSTGRES_USER=\nPOSTGRES_PASSWORD=\nSMTP_PASSWORD=\n"
+		},
+		"command": "cat .env*",
+		"output": "DATABASE_HOST=localhost\nPOSTGRES_USER=shop\nPOSTGRES_PASSWORD=pgshop\nREDIS_URL=redis://localhost:6379\nDATABASE_HOST=localhost\nPOSTGRES_USER=\nPOSTGRES_PASSWORD=\nSMTP_PASSWORD=\nSMTP_HOST=localhost\nSMTP_PORT=1025\nSMTP_PASSWORD=mailpit\n",
+		"hide": [
+			"pgshop",
+			"mailpit"
+		],
+		"keep": [
+			"DATABASE_HOST=localhost",
+			"REDIS_URL=redis://localhost:6379",
+			"SMTP_PORT=1025",
+			"POSTGRES_USER=shop"
+		]
+	},
+	{
+		"id": "head-monorepo-env-glob-headers",
+		"why": "`head -n 20 apps/*/.env` prints each file under a `==> path <==` header. The glob isn't a file, and grep-style attribution doesn't know head/tail headers, so neither file is masked",
+		"files": {
+			"apps/api/.env": "PORT=4000\nDB_URL=postgres://localhost:5432/api\nDB_PASSWORD=apidev\nADMIN_PIN=482913\n",
+			"apps/worker/.env": "QUEUE=default\nRABBITMQ_USER=worker\nRABBITMQ_PASSWORD=bunnyhop\n"
+		},
+		"command": "head -n 20 apps/*/.env",
+		"output": "==> apps/api/.env <==\nPORT=4000\nDB_URL=postgres://localhost:5432/api\nDB_PASSWORD=apidev\nADMIN_PIN=482913\n\n==> apps/worker/.env <==\nQUEUE=default\nRABBITMQ_USER=worker\nRABBITMQ_PASSWORD=bunnyhop\n",
+		"hide": [
+			"apidev",
+			"482913",
+			"bunnyhop"
+		],
+		"keep": [
+			"==> apps/api/.env <==",
+			"PORT=4000",
+			"DB_URL=postgres://localhost:5432/api",
+			"RABBITMQ_USER=worker"
+		]
+	},
+	{
+		"id": "cd-sibling-service-cat-env",
+		"why": "pi runs in web/ and the agent does `cd ../billing-api && cat .env`. printedSecretFiles resolves `.env` against ctx.cwd (web/, which has none), and ../billing-api is outside the walked project, so the output is neither masked nor known",
+		"files": {
+			"../billing-api/.env": "PORT=8081\nDB_USER=billing\nDB_PASSWORD=ledger\nINVOICE_PREFIX=INV\nWEBHOOK_SIGNING=@@C:Qm8xT2vR.9pL4kZ7w.N3cB6yH1.dJ5sG0aE@@\n"
+		},
+		"command": "cd ../billing-api && cat .env",
+		"output": "PORT=8081\nDB_USER=billing\nDB_PASSWORD=ledger\nINVOICE_PREFIX=INV\nWEBHOOK_SIGNING=@@C:Qm8xT2vR.9pL4kZ7w.N3cB6yH1.dJ5sG0aE@@\n",
+		"hide": [
+			"ledger",
+			"@@C:Qm8xT2vR.9pL4kZ7w.N3cB6yH1.dJ5sG0aE@@"
+		],
+		"keep": [
+			"PORT=8081",
+			"DB_USER=billing",
+			"INVOICE_PREFIX=INV"
+		]
+	},
+	{
+		"id": "relative-path-to-sibling-env-control",
+		"why": "Control for cd-sibling-service-cat-env: the same file printed as `cat ../billing-api/.env` resolves to a secret file and is masked",
+		"files": {
+			"../billing-api/.env": "PORT=8081\nDB_USER=billing\nDB_PASSWORD=ledger\nINVOICE_PREFIX=INV\nWEBHOOK_SIGNING=@@C:Qm8xT2vR.9pL4kZ7w.N3cB6yH1.dJ5sG0aE@@\n"
+		},
+		"command": "cat ../billing-api/.env",
+		"output": "PORT=8081\nDB_USER=billing\nDB_PASSWORD=ledger\nINVOICE_PREFIX=INV\nWEBHOOK_SIGNING=@@C:Qm8xT2vR.9pL4kZ7w.N3cB6yH1.dJ5sG0aE@@\n",
+		"hide": [
+			"ledger",
+			"@@C:Qm8xT2vR.9pL4kZ7w.N3cB6yH1.dJ5sG0aE@@"
+		],
+		"keep": [
+			"PORT=8081",
+			"DB_USER=billing",
+			"INVOICE_PREFIX=INV"
+		]
+	},
+	{
+		"id": "cd-subdir-cat-env-local",
+		"why": "`cd apps/web && cat .env.local` inside the project: the file is walked, so distinctive values are known, but `.env.local` is resolved against the project root for masking, so the plain-word password is shown",
+		"files": {
+			"apps/web/.env.local": "NEXT_PUBLIC_SITE_URL=http://localhost:3000\nDATABASE_PASSWORD=webshop\nNEXTAUTH_SECRET=@@C:DioTMI8x.K0nXWhWO.ORt6Vrgu.yrFWra75.FlB05PnC.PG9B37Fs@@\n"
+		},
+		"command": "cd apps/web && cat .env.local",
+		"output": "NEXT_PUBLIC_SITE_URL=http://localhost:3000\nDATABASE_PASSWORD=webshop\nNEXTAUTH_SECRET=@@C:DioTMI8x.K0nXWhWO.ORt6Vrgu.yrFWra75.FlB05PnC.PG9B37Fs@@\n",
+		"hide": [
+			"webshop",
+			"@@C:DioTMI8x.K0nXWhWO.ORt6Vrgu.yrFWra75.FlB05PnC.PG9B37Fs@@"
+		],
+		"keep": [
+			"NEXT_PUBLIC_SITE_URL=http://localhost:3000"
+		]
+	},
+	{
+		"id": "git-toplevel-substitution-cat-env",
+		"why": "`cat \"$(git rev-parse --show-toplevel)/.env\"` from a subdirectory: the path is only known after the shell expands it, so the command is not recognized as printing a secret file",
+		"files": {
+			".env": "NODE_ENV=development\nPORT=3000\nDB_HOST=localhost\nDB_USER=shop\nDB_PASSWORD=shopdev\nSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\nLOG_LEVEL=debug\n"
+		},
+		"command": "cat \"$(git rev-parse --show-toplevel)/.env\"",
+		"output": "NODE_ENV=development\nPORT=3000\nDB_HOST=localhost\nDB_USER=shop\nDB_PASSWORD=shopdev\nSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\nLOG_LEVEL=debug\n",
+		"hide": [
+			"shopdev",
+			"@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@"
+		],
+		"keep": [
+			"DB_HOST=localhost",
+			"DB_USER=shop",
+			"LOG_LEVEL=debug"
+		]
+	},
+	{
+		"id": "sudo-u-cat-laravel-env",
+		"why": "`sudo -u www-data cat .env` on a server where the app dir is the cwd: the program is taken to be `-u` (only `sudo` itself is skipped), so the cat isn't recognized and the plain-word DB and mail passwords are shown",
+		"files": {
+			".env": "APP_NAME=Storefront\nAPP_ENV=production\nAPP_KEY=base64:@@C:pgaNm2FG.oL7LZC/z.2+eLHAe/.DkSwQTDw.vw8Bx9i/.9i8=@@\nAPP_URL=https://store.example.test\n\nDB_CONNECTION=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=storefront\nDB_USERNAME=storefront\nDB_PASSWORD=larapass\n\nMAIL_MAILER=smtp\nMAIL_PASSWORD=postmark\n"
+		},
+		"command": "sudo -u www-data cat .env",
+		"output": "APP_NAME=Storefront\nAPP_ENV=production\nAPP_KEY=base64:@@C:pgaNm2FG.oL7LZC/z.2+eLHAe/.DkSwQTDw.vw8Bx9i/.9i8=@@\nAPP_URL=https://store.example.test\n\nDB_CONNECTION=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=storefront\nDB_USERNAME=storefront\nDB_PASSWORD=larapass\n\nMAIL_MAILER=smtp\nMAIL_PASSWORD=postmark\n",
+		"hide": [
+			"larapass",
+			"postmark",
+			"@@C:pgaNm2FG.oL7LZC/z.2+eLHAe/.DkSwQTDw.vw8Bx9i/.9i8=@@"
+		],
+		"keep": [
+			"APP_NAME=Storefront",
+			"DB_HOST=127.0.0.1",
+			"DB_DATABASE=storefront",
+			"MAIL_MAILER=smtp"
+		]
+	},
+	{
+		"id": "docker-compose-exec-cat-env",
+		"why": "`docker compose exec app cat .env` prints the bind-mounted project .env from inside the container; the program is `docker`, so the output isn't masked",
+		"files": {
+			".env": "APP_NAME=Storefront\nAPP_ENV=production\nAPP_KEY=base64:@@C:pgaNm2FG.oL7LZC/z.2+eLHAe/.DkSwQTDw.vw8Bx9i/.9i8=@@\nAPP_URL=https://store.example.test\n\nDB_CONNECTION=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=storefront\nDB_USERNAME=storefront\nDB_PASSWORD=larapass\n\nMAIL_MAILER=smtp\nMAIL_PASSWORD=postmark\n"
+		},
+		"command": "docker compose exec app cat .env",
+		"output": "APP_NAME=Storefront\nAPP_ENV=production\nAPP_KEY=base64:@@C:pgaNm2FG.oL7LZC/z.2+eLHAe/.DkSwQTDw.vw8Bx9i/.9i8=@@\nAPP_URL=https://store.example.test\n\nDB_CONNECTION=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=storefront\nDB_USERNAME=storefront\nDB_PASSWORD=larapass\n\nMAIL_MAILER=smtp\nMAIL_PASSWORD=postmark\n",
+		"hide": [
+			"larapass",
+			"postmark"
+		],
+		"keep": [
+			"APP_NAME=Storefront",
+			"DB_HOST=127.0.0.1",
+			"DB_USERNAME=storefront"
+		]
+	},
+	{
+		"id": "cat-n-env",
+		"why": "`cat -n .env` is masked as a secret file, but each line starts with a line number and a tab, so the KEY=value rule of the mask doesn't match and only the best-effort pattern runs, which skips plain words",
+		"files": {
+			".env": "NODE_ENV=development\nPORT=3000\nDB_HOST=localhost\nDB_USER=shop\nDB_PASSWORD=shopdev\nSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\nLOG_LEVEL=debug\n"
+		},
+		"command": "cat -n .env",
+		"output": "     1\tNODE_ENV=development\n     2\tPORT=3000\n     3\tDB_HOST=localhost\n     4\tDB_USER=shop\n     5\tDB_PASSWORD=shopdev\n     6\tSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\n     7\tLOG_LEVEL=debug",
+		"hide": [
+			"shopdev",
+			"@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@"
+		],
+		"keep": [
+			"DB_HOST=localhost",
+			"DB_USER=shop",
+			"LOG_LEVEL=debug"
+		]
+	},
+	{
+		"id": "bat-decorated-env",
+		"why": "`bat .env` (what many setups alias cat to) prints a gutter with line numbers and │ before each line",
+		"files": {
+			".env": "NODE_ENV=development\nPORT=3000\nDB_HOST=localhost\nDB_USER=shop\nDB_PASSWORD=shopdev\nSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\nLOG_LEVEL=debug\n"
+		},
+		"command": "bat .env",
+		"output": "───────┬────────────────────────────────────────────\n       │ File: .env\n───────┼────────────────────────────────────────────\n   1   │ NODE_ENV=development\n   2   │ PORT=3000\n   3   │ DB_HOST=localhost\n   4   │ DB_USER=shop\n   5   │ DB_PASSWORD=shopdev\n   6   │ SESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\n   7   │ LOG_LEVEL=debug\n───────┴────────────────────────────────────────────",
+		"hide": [
+			"shopdev",
+			"@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@"
+		],
+		"keep": [
+			"File: .env",
+			"DB_HOST=localhost",
+			"DB_USER=shop",
+			"LOG_LEVEL=debug"
+		]
+	},
+	{
+		"id": "mcp-filesystem-read-env",
+		"why": "An MCP filesystem server's read_text_file tool returns .env as plain text. index.ts masks only the built-in `read` tool and recognized shell commands, so this output gets no masking (the harness can only show it as output without a command)",
+		"files": {
+			".env": "NODE_ENV=development\nPORT=3000\nDB_HOST=localhost\nDB_USER=shop\nDB_PASSWORD=shopdev\nSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\nLOG_LEVEL=debug\n"
+		},
+		"output": "NODE_ENV=development\nPORT=3000\nDB_HOST=localhost\nDB_USER=shop\nDB_PASSWORD=shopdev\nSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\nLOG_LEVEL=debug\n",
+		"hide": [
+			"shopdev",
+			"@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@"
+		],
+		"keep": [
+			"DB_HOST=localhost",
+			"DB_USER=shop",
+			"LOG_LEVEL=debug"
+		]
+	},
+	{
+		"id": "tail-deploy-key-not-id-named",
+		"why": "Debugging `Load key: invalid format`, the agent checks the end of a CI deploy key with `tail -n 4`. The file is a private key but not named id_* or *.key/*.pem, so it isn't a secret file (no known lines), and without the BEGIN line the private-key pattern doesn't fire",
+		"files": {
+			"deploy/ci_deploy_rsa": "@@PEM_BEGIN@@OPENSSH PRIVATE KEY-----\@@C:nb3BlbnN.zaC1rZXk.tdjEAAAA.ABG5vbmU.AAAAEbm9.uZQAAAAA.AAAABAAA.AMwAAAAt.zc2gtZW@@\@@C:n0uQztoo.Ij2zpCsa.OYRa3AQd.XFF13X20.ZfwMgmQl.R6YToWk5.jOZUg2dS.PQgTrPU8.7QNczXA@@\@@C:nGMvSEel.yTf3vrS8.Yr8OEJXJ.CWRpHgDC.WySTLe/l.Uw6Z6xq6.6OYcDV6w.RyWOwonH.DyjX8qg@@\@@C:n5YiodNV.Z+inE+mN.6clTGfcD.WYBXuf0T.jDMHO6Hy.2HMcEM5k.vrF+uj7s.yxYNrXUE.1AQHAyA@@\@@C:nWxZazfw.T47j6bNm.+iRvBIGR.VW5qqO/g.ZAz7SET+.nIsFPh2B./P5/z9lx.BAoUkR8L.AMyVeLQ@@\@@C:nq0/bItb.TLknPqfE.FRwpB1wa.Uifhtd0J.76k5p8/y.ZoSG8Q7a.Z4nkXmW/.QorSU1AW.uyUwl6w=.=@@\n@@PEM_END@@OPENSSH PRIVATE KEY-----\n"
+		},
+		"command": "tail -n 4 deploy/ci_deploy_rsa",
+		"output": "@@C:5YiodNVZ.+inE+mN6.clTGfcDW.YBXuf0Tj.DMHO6Hy2.HMcEM5kv.rF+uj7sy.xYNrXUE1.AQHAyA@@\@@C:nWxZazfw.T47j6bNm.+iRvBIGR.VW5qqO/g.ZAz7SET+.nIsFPh2B./P5/z9lx.BAoUkR8L.AMyVeLQ@@\@@C:nq0/bItb.TLknPqfE.FRwpB1wa.Uifhtd0J.76k5p8/y.ZoSG8Q7a.Z4nkXmW/.QorSU1AW.uyUwl6w=.=@@\n@@PEM_END@@OPENSSH PRIVATE KEY-----\n",
+		"hide": [
+			"@@C:5YiodNVZ.+inE+mN6.clTGfcDW.YBXuf0Tj.DMHO6Hy2.HMcEM5kv.rF+uj7sy.xYNrXUE1.AQHAyA@@",
+			"@@C:WxZazfwT.47j6bNm+.iRvBIGRV.W5qqO/gZ.Az7SET+n.IsFPh2B/.P5/z9lxB.AoUkR8LA.MyVeLQ@@",
+			"@@C:q0/bItbT.LknPqfEF.RwpB1waU.ifhtd0J7.6k5p8/yZ.oSG8Q7aZ.4nkXmW/Q.orSU1AWu.yUwl6w@@"
+		]
+	},
+	{
+		"id": "source-env-then-tests-ids-kept",
+		"why": "`source .env && npx vitest run` loads the env file without printing it, but `source` counts as a content command, so the whole test output is masked as if it were the env file: cuid ids, ULIDs and migration names in it become [secret]",
+		"files": {
+			".env": "NODE_ENV=development\nPORT=3000\nDB_HOST=localhost\nDB_USER=shop\nDB_PASSWORD=shopdev\nSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\nLOG_LEVEL=debug\n"
+		},
+		"command": "source .env && npx vitest run tests/orders.test.ts",
+		"output": "\n RUN  v1.6.0 /home/dev/shop\n\nstdout | tests/orders.test.ts > orders > creates an order\napplied migration 20240611093012_add_orders\ncreated order @@C:clx8k2m9.v0000qz7.f3h8d1a2.b@@ for user @@C:clx8k2m9.v0001qz7.fh2k4n6p.8@@\n\n ❯ tests/orders.test.ts (3 tests | 1 failed) 412ms\n   × orders > refunds an order\n     → expected 'refunded' to be 'pending' // Object.is equality\n\n FAIL  tests/orders.test.ts > orders > refunds an order\nAssertionError: expected 'refunded' to be 'pending' // Object.is equality\n ❯ tests/orders.test.ts:48:31\n\n Test Files  1 failed (1)\n      Tests  1 failed | 2 passed (3)",
+		"hide": [
+			"shopdev",
+			"@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@"
+		],
+		"keep": [
+			"20240611093012_add_orders",
+			"@@C:clx8k2m9.v0000qz7.f3h8d1a2.b@@",
+			"@@C:clx8k2m9.v0001qz7.fh2k4n6p.8@@",
+			"tests/orders.test.ts:48:31",
+			"1 failed | 2 passed (3)"
+		]
+	},
+	{
+		"id": "node-env-file-seed-ids-kept",
+		"why": "`node --env-file=.env prisma/seed.mjs` is the pattern index.ts itself allows in block mode as loading secrets without printing them, yet node counts as a content command and the token after `=` is the env file, so the seed output (cuid and ULID ids) is masked as an env file",
+		"files": {
+			".env": "NODE_ENV=development\nPORT=3000\nDB_HOST=localhost\nDB_USER=shop\nDB_PASSWORD=shopdev\nSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\nLOG_LEVEL=debug\n"
+		},
+		"command": "node --env-file=.env prisma/seed.mjs",
+		"output": "Seeding database...\n  user   @@C:clx8k2m9.v0001qz7.fh2k4n6p.8@@  ada@example.test\n  user   @@C:clx8k2m9.v0002qz7.fx9w3e5r.7@@  grace@example.test\n  order  @@C:01HZX3K9.F2QW8M7R.TN4V6B2C.5D@@  2 items  $48.00\nSeeded 2 users, 1 order in 312ms\n",
+		"keep": [
+			"@@C:clx8k2m9.v0001qz7.fh2k4n6p.8@@",
+			"@@C:clx8k2m9.v0002qz7.fx9w3e5r.7@@",
+			"@@C:01HZX3K9.F2QW8M7R.TN4V6B2C.5D@@",
+			"Seeded 2 users, 1 order"
+		]
+	},
+	{
+		"id": "gen-python-token-urlsafe",
+		"why": "The agent generates a session secret to put in .env; the bare token goes to the model before it is ever written to a file",
+		"command": "python3 -c \"import secrets; print(secrets.token_urlsafe(32))\"",
+		"output": "-@@C:Z8pyKBpp.COzYfMXO.Rtr6@@-@@C:whqC3fDr.D5jc1IyW.DcR4M@@\n",
+		"hide": [
+			"-@@C:Z8pyKBpp.COzYfMXO.Rtr6@@-@@C:whqC3fDr.D5jc1IyW.DcR4M@@"
+		]
+	},
+	{
+		"id": "gen-rails-secret",
+		"why": "`bin/rails secret` prints a 128-hex secret_key_base on its own line",
+		"command": "bin/rails secret",
+		"output": "@@C:6c3ea6e4.a318021c.cb78889e.7771fd29.d56b6647.2e795342.cb4705b2.a3dc217a.5238fab9.4f96eb79.3e21d75c.ce9c347f.f7755a25.be4e7dba.73bed0c4.7a2e7331@@\n",
+		"hide": [
+			"@@C:6c3ea6e4.a318021c.cb78889e.7771fd29.d56b6647.2e795342.cb4705b2.a3dc217a.5238fab9.4f96eb79.3e21d75c.ce9c347f.f7755a25.be4e7dba.73bed0c4.7a2e7331@@"
+		]
+	},
+	{
+		"id": "gen-artisan-key-show",
+		"why": "`php artisan key:generate --show` prints a new APP_KEY without writing it",
+		"command": "php artisan key:generate --show",
+		"output": "base64:@@C:pgaNm2FG.oL7LZC/z.2+eLHAe/.DkSwQTDw.vw8Bx9i/.9i8=@@\n",
+		"hide": [
+			"@@C:pgaNm2FG.oL7LZC/z.2+eLHAe/.DkSwQTDw.vw8Bx9i/.9i8=@@"
+		]
+	},
+	{
+		"id": "gen-django-secret-key",
+		"why": "Django's get_random_secret_key() for a new settings value",
+		"command": "python3 -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'",
+		"output": "gatw7!p$$69w4gzl^1an^va%dce)palu2#kjw*!9f_)8@9w@&c\n",
+		"hide": [
+			"gatw7!p$$69w4gzl^1an^va%dce)palu2#kjw*!9f_)8@9w@&c"
+		]
+	},
+	{
+		"id": "cat-env-and-build-direct-control",
+		"why": "Control for reread-truncated-bash-output-log: the same output straight from `cat .env && pnpm build` is masked, and the build table survives",
+		"files": {
+			".env": "NODE_ENV=development\nPORT=3000\nDB_HOST=localhost\nDB_USER=shop\nDB_PASSWORD=shopdev\nSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\nLOG_LEVEL=debug\n"
+		},
+		"command": "cat .env && pnpm build",
+		"output": "NODE_ENV=development\nPORT=3000\nDB_HOST=localhost\nDB_USER=shop\nDB_PASSWORD=shopdev\nSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\nLOG_LEVEL=debug\n\n> shop@1.4.0 build /home/dev/shop\n> next build\n\n  ▲ Next.js 14.2.5\n  - Environments: .env\n\n   Creating an optimized production build ...\n ✓ Compiled successfully\n   Linting and checking validity of types  ...\n ✓ Generating static pages (14/14)\n\nRoute (app)                              Size     First Load JS\n┌ ○ /                                    5.2 kB         92.4 kB\n├ ○ /cart                                3.1 kB         90.3 kB\n└ ƒ /api/orders                          0 B                0 B\n",
+		"hide": [
+			"shopdev",
+			"@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@"
+		],
+		"keep": [
+			"DB_HOST=localhost",
+			"DB_USER=shop",
+			"LOG_LEVEL=debug",
+			"Compiled successfully",
+			"/api/orders",
+			"First Load JS"
+		]
+	},
+	{
+		"id": "edit-tool-result-on-env",
+		"why": "pi's edit tool result for a secret file names the file only; nothing to hide, nothing to lose",
+		"files": {
+			".env": "NODE_ENV=development\nPORT=3000\nDB_HOST=localhost\nDB_USER=shop\nDB_PASSWORD=shopdev\nSESSION_SECRET=@@C:tyoywDqD.g8avpUv8.UGIZMoMs.SN1mAl6K@@\nLOG_LEVEL=debug\n"
+		},
+		"output": "Successfully replaced 1 block(s) in .env.",
+		"keep": [
+			"Successfully replaced 1 block(s) in .env."
+		]
+	},
+	{
+		"id": "write-then-grep-new-env-value",
+		"why": "The agent appended a generated token to .env.local with a heredoc and greps it back; the grep line is attributed to the secret file",
+		"files": {
+			".env.local": "FEATURE_FLAGS=checkout-v2\nPREVIEW_TOKEN=@@C:Jx4mQ9vT.2kL7pR3w.Z8nB5cY1.hD6sF0aG@@\n"
+		},
+		"command": "grep -n PREVIEW_TOKEN .env.local",
+		"output": "2:PREVIEW_TOKEN=@@C:Jx4mQ9vT.2kL7pR3w.Z8nB5cY1.hD6sF0aG@@\n",
+		"hide": [
+			"@@C:Jx4mQ9vT.2kL7pR3w.Z8nB5cY1.hD6sF0aG@@"
+		],
+		"keep": [
+			"2:PREVIEW_TOKEN="
+		]
+	}
+]

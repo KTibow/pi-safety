@@ -1,0 +1,419 @@
+[
+ {
+  "id": "rust-config-struct-secret-generic-field-types",
+  "why": "Reading a Rust settings module (secrecy crate): field types like Secret<String>, SecretBox<str>, Arc<Mutex<Key>> are code, not values; masking them breaks the agent's later edits of these lines",
+  "files": {
+   "src/configuration.rs": "use secrecy::{ExposeSecret, Secret, SecretString};\nuse serde::Deserialize;\n\n#[derive(Debug, Deserialize)]\npub struct DatabaseSettings {\n    pub username: String,\n    pub password: Secret<String>,\n    pub port: u16,\n    pub host: String,\n    pub database_name: String,\n    pub require_ssl: bool,\n}\n\n#[derive(Debug, Deserialize)]\npub struct AuthSettings {\n    pub hmac_secret: SecretString,\n    pub api_token: SecretBox<str>,\n    pub signing_key: Arc<Mutex<Key>>,\n    pub token_ttl_secs: u64,\n}\n\nimpl DatabaseSettings {\n    pub fn connect_options(&self) -> PgConnectOptions {\n        PgConnectOptions::new()\n            .host(&self.host)\n            .username(&self.username)\n            .password(self.password.expose_secret())\n            .port(self.port)\n    }\n}\n"
+  },
+  "read": "src/configuration.rs",
+  "keep": [
+   "pub password: Secret<String>,",
+   "pub api_token: SecretBox<str>,",
+   "pub signing_key: Arc<Mutex<Key>>,",
+   "pub hmac_secret: SecretString,",
+   ".password(self.password.expose_secret())"
+  ]
+ },
+ {
+  "id": "ts-interface-generic-and-typed-array-fields",
+  "why": "Reading a TypeScript interface: credential-named properties typed Record<…>, Branded<…>, Token<…>, Array<…> and Uint8Array are declarations; a value can't contain < or be a builtin type name",
+  "files": {
+   "src/auth/session.ts": "import type { CryptoKey } from \"node:crypto\";\n\nexport interface Session {\n  id: string;\n  userId: string;\n  token: string | null;\n  refreshToken?: Promise<string>;\n  apiKeys: Record<string, string>;\n  password: Branded<string, \"Password\">;\n  secret: Uint8Array;\n  signingKey: CryptoKey;\n  sessionToken: Token<\"session\">;\n  credentials: Array<Credential>;\n  expiresAt: Date;\n}\n\nexport type TokenPair = { accessToken: string; refreshToken: string };\nexport type Keys = { signingKey: Uint8Array; verifyKey: Uint8Array | KeyLike };\n"
+  },
+  "read": "src/auth/session.ts",
+  "keep": [
+   "apiKeys: Record<string, string>;",
+   "password: Branded<string, \"Password\">;",
+   "secret: Uint8Array;",
+   "sessionToken: Token<\"session\">;",
+   "credentials: Array<Credential>;",
+   "signingKey: Uint8Array; verifyKey: Uint8Array | KeyLike",
+   "refreshToken?: Promise<string>;"
+  ]
+ },
+ {
+  "id": "cargo-build-error-secret-type",
+  "why": "cargo build error output quotes the offending source line and the fix suggestion; the type annotation Secret<String> must survive so the agent can apply the suggested edit",
+  "command": "cargo build",
+  "output": "   Compiling zero2prod v0.1.0 (/home/dev/zero2prod)\nerror[E0308]: mismatched types\n  --> src/configuration.rs:41:34\n   |\n41 |     let password: Secret<String> = settings.database.password.clone().expose_secret();\n   |                   --------------   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Secret<String>`, found `&String`\n   |                   |\n   |                   expected due to this\n   |\n   = note: expected struct `Secret<String>`\n           found reference `&String`\nhelp: consider removing the `.expose_secret()` call\n   |\n41 -     let password: Secret<String> = settings.database.password.clone().expose_secret();\n41 +     let password: Secret<String> = settings.database.password.clone();\n   |\n\nFor more information about this error, try `rustc --explain E0308`.\nerror: could not compile `zero2prod` (lib) due to 1 previous error\n",
+  "keep": [
+   "let password: Secret<String> = settings.database.password.clone().expose_secret();",
+   "41 +     let password: Secret<String> = settings.database.password.clone();",
+   "expected `Secret<String>`, found `&String`"
+  ]
+ },
+ {
+  "id": "tsc-error-uint8array-annotation",
+  "why": "tsc --pretty output quotes `const secret: Uint8Array = …` and a type literal; Uint8Array has a digit and mixed case, which made it look like a made-up password",
+  "command": "npx tsc --noEmit",
+  "output": "src/auth/jwt.ts:14:7 - error TS2322: Type 'string' is not assignable to type 'Uint8Array'.\n\n14 const secret: Uint8Array = env.JWT_SECRET;\n         ~~~~~~\n\nsrc/auth/keys.ts:8:3 - error TS2741: Property 'verifyKey' is missing in type '{ signingKey: Uint8Array; }' but required in type 'Keys'.\n\n8   signingKey: Uint8Array;\n    ~~~~~~~~~~\n\n\nFound 2 errors in 2 files.\n\nErrors  Files\n     1  src/auth/jwt.ts:14\n     1  src/auth/keys.ts:8\n",
+  "keep": [
+   "14 const secret: Uint8Array = env.JWT_SECRET;",
+   "'{ signingKey: Uint8Array; }'",
+   "8   signingKey: Uint8Array;"
+  ]
+ },
+ {
+  "id": "sourcemap-sourcescontent-type-annotations",
+  "why": "cat of a .map file: sourcesContent embeds the TypeScript source with \\n escapes; its type annotations must survive like the source itself",
+  "command": "cat dist/index.cjs.map",
+  "output": "{\"version\":3,\"file\":\"index.cjs\",\"sources\":[\"../src/config.ts\"],\"sourcesContent\":[\"export interface DbConfig {\\n  host: string;\\n  password: Secret<string>;\\n  signingKey: Uint8Array;\\n}\\n\"],\"names\":[\"host\",\"password\",\"signingKey\"],\"mappings\":\"AAAA\"}\n",
+  "keep": [
+   "password: Secret<string>;",
+   "signingKey: Uint8Array;"
+  ]
+ },
+ {
+  "id": "deploy-script-auth-header-and-mysql-variable-refs",
+  "why": "Reading a deploy script: `Bearer ${ACME_API_KEY}`, `-p\"$MYSQL_ROOT_PASSWORD\"` and `Bearer $(gcloud …)` are shell references, not values; masking `$(gcloud auth` even corrupts the command line",
+  "files": {
+   "scripts/deploy.sh": "#!/usr/bin/env bash\n# Deploys the current build to the staging cluster.\nset -euo pipefail\n\n: \"${ACME_API_KEY:?ACME_API_KEY must be set}\"\n: \"${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set}\"\n\nAPI=https://api.acme.dev/v1\nrelease_id=$(git rev-parse --short HEAD)\n\ncurl -fsSL -X POST \\\n  -H \"Authorization: Bearer ${ACME_API_KEY}\" \\\n  -H \"Content-Type: application/json\" \\\n  --data \"{\\\"release\\\":\\\"${release_id}\\\"}\" \\\n  \"$API/deployments\"\n\nmysql -h db.staging.internal -u root -p\"$MYSQL_ROOT_PASSWORD\" -e 'SELECT 1' app\ncurl -H \"Authorization: Bearer $(gcloud auth print-identity-token)\" https://acme-api-staging.a.run.app/healthz\necho \"deployed ${release_id}\"\n"
+  },
+  "read": "scripts/deploy.sh",
+  "keep": [
+   "-H \"Authorization: Bearer ${ACME_API_KEY}\" \\",
+   "-u root -p\"$MYSQL_ROOT_PASSWORD\" -e 'SELECT 1' app",
+   "-H \"Authorization: Bearer $(gcloud auth print-identity-token)\" https://acme-api-staging.a.run.app/healthz",
+   ": \"${ACME_API_KEY:?ACME_API_KEY must be set}\""
+  ]
+ },
+ {
+  "id": "github-workflow-auth-header-secrets-expressions",
+  "why": "Reading a GitHub Actions workflow: `Bearer ${{ secrets.SLACK_BOT_TOKEN }}` and `Bearer $SENTRY_AUTH_TOKEN` are expressions resolved by the runner, and the agent edits these files often",
+  "files": {
+   ".github/workflows/release.yml": "name: release\non:\n  push:\n    tags: [\"v*\"]\npermissions:\n  contents: read\n  id-token: write\njobs:\n  publish:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n          registry-url: https://registry.npmjs.org\n      - run: npm ci && npm publish --provenance\n        env:\n          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}\n      - name: Notify Slack\n        run: |\n          curl -fsS -X POST https://slack.com/api/chat.postMessage \\\n            -H \"Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}\" \\\n            -H 'Content-type: application/json; charset=utf-8' \\\n            --data '{\"channel\":\"#releases\",\"text\":\"Published ${{ github.ref_name }}\"}'\n      - name: Create Sentry release\n        run: |\n          curl -fsS https://sentry.@@C:io/api/0./organiz.ations/a.cme/rele.ases/@@ \\\n            -H \"Authorization: Bearer $SENTRY_AUTH_TOKEN\" \\\n            -H 'Content-Type: application/json' \\\n            -d \"{\\\"version\\\":\\\"${GITHUB_REF_NAME}\\\",\\\"projects\\\":[\\\"web\\\"]}\"\n        env:\n          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}\n"
+  },
+  "read": ".github/workflows/release.yml",
+  "keep": [
+   "-H \"Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}\" \\",
+   "-H \"Authorization: Bearer $SENTRY_AUTH_TOKEN\" \\",
+   "NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}"
+  ]
+ },
+ {
+  "id": "helm-template-auth-header-values-ref",
+  "why": "Reading a Helm template: `Authorization: Bearer {{ .Values.upstream.token }}` is a template expression; masking leaves `[secret] .Values.upstream.token }}`, a broken template",
+  "files": {
+   "@@C:charts/g.ateway/t.emplates./configm.ap@@.yaml": "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: {{ include \"gateway.fullname\" . }}-nginx\ndata:\n  upstream.conf: |\n    location /api/ {\n      proxy_pass http://{{ .Values.upstream.host }}:{{ .Values.upstream.port }};\n      proxy_set_header Authorization \"Bearer {{ .Values.upstream.token }}\";\n      proxy_set_header X-Request-Id $request_id;\n    }\n  probe.http: |\n    GET /healthz HTTP/1.1\n    Host: {{ .Values.upstream.host }}\n    Authorization: Bearer {{ .Values.upstream.token }}\n"
+  },
+  "read": "@@C:charts/g.ateway/t.emplates./configm.ap@@.yaml",
+  "keep": [
+   "Authorization: Bearer {{ .Values.upstream.token }}",
+   "proxy_set_header Authorization \"Bearer {{ .Values.upstream.token }}\";"
+  ]
+ },
+ {
+  "id": "readme-auth-docs-header-placeholders",
+  "why": "Reading a README that documents auth: `Bearer $ACME_API_KEY`, `Bearer <token>`, `Token YOUR_API_KEY` and `%ACME_API_KEY%` are placeholders the docs must keep",
+  "files": {
+   "README.md": "# acme-sdk\n\n## Authentication\n\nEvery request needs an API key. Create one under **Settings → API keys** and pass it in the `Authorization` header:\n\n```bash\nexport ACME_API_KEY=...   # from the dashboard\ncurl https://api.acme.dev/v1/projects \\\n  -H \"Authorization: Bearer $ACME_API_KEY\"\n```\n\nThe raw HTTP request looks like this:\n\n```http\nGET /v1/projects HTTP/1.1\nHost: api.acme.dev\nAuthorization: Bearer <token>\nAccept: application/json\n```\n\nSelf-hosted servers older than 3.0 expect the `Token` scheme instead:\n\n```http\nAuthorization: Token YOUR_API_KEY\n```\n\nOn Windows (cmd.exe):\n\n```bat\ncurl -H \"Authorization: Bearer %ACME_API_KEY%\" https://api.acme.dev/v1/projects\n```\n\nWith the SDK:\n\n```ts\nimport { Acme } from \"@acme/sdk\";\nconst acme = new Acme({ apiKey: process.env.ACME_API_KEY });\n```\n\n| Option     | Type     | Description                                  |\n| ---------- | -------- | -------------------------------------------- |\n| `apiKey`   | `string` | Your secret API key (starts with `acme_sk_`) |\n| `token`    | `string` | OAuth access token, instead of `apiKey`      |\n"
+  },
+  "read": "README.md",
+  "keep": [
+   "-H \"Authorization: Bearer $ACME_API_KEY\"",
+   "Authorization: Bearer <token>",
+   "Authorization: Token YOUR_API_KEY",
+   "-H \"Authorization: Bearer %ACME_API_KEY%\"",
+   "apiKey: process.env.ACME_API_KEY"
+  ]
+ },
+ {
+  "id": "changelog-authorization-token-scheme-mention",
+  "why": "A CHANGELOG entry mentions the `Authorization: Token <key>` scheme in backticks; masking eats the closing backtick",
+  "files": {
+   "CHANGELOG.md": "# Changelog\n\n## [4.2.0] - 2024-11-03\n\n### Added\n- `apiKey` option on `createClient()`; `token` still works but is deprecated (#812)\n- Support for `Authorization: Token <key>` headers used by self-hosted servers (#805)\n- `--token-file` flag for `acme deploy`, so tokens no longer appear in `ps` output\n\n### Fixed\n- Passwords containing `#` were truncated when read from `.env` (#798)\n- `refreshToken()` no longer retries forever on HTTP 401\n\n### Security\n- Bumped `jsonwebtoken` to 9.0.2 (CVE-2022-23529)\n"
+  },
+  "read": "CHANGELOG.md",
+  "keep": [
+   "Support for `Authorization: Token <key>` headers used by self-hosted servers (#805)",
+   "Passwords containing `#` were truncated"
+  ]
+ },
+ {
+  "id": "i18n-french-json-labels-with-apostrophes-and-parens",
+  "why": "Reading a locale file: UI labels under credential-named keys contain apostrophes, parentheses and accents (\"Jeton d'accès\", \"Clé secrète (facultative)\"); they are sentences, not secrets",
+  "files": {
+   "src/locales/fr.json": "{\n  \"auth\": {\n    \"email\": \"Adresse e-mail\",\n    \"password\": \"Mot de passe\",\n    \"passwordHint\": \"Au moins 12 caractères\",\n    \"forgotPassword\": \"Mot de passe oublié ?\",\n    \"token\": \"Jeton d'accès\",\n    \"apiKey\": \"Clé d'API\",\n    \"secret\": \"Ne partagez jamais ce secret\",\n    \"secretKey\": \"Clé secrète (facultative)\",\n    \"passphrase\": \"Phrase de passe (facultative)\",\n    \"pin\": \"Code PIN (4 à 6 chiffres)\",\n    \"submit\": \"Se connecter\"\n  }\n}\n"
+  },
+  "read": "src/locales/fr.json",
+  "keep": [
+   "\"token\": \"Jeton d'accès\"",
+   "\"apiKey\": \"Clé d'API\"",
+   "\"secretKey\": \"Clé secrète (facultative)\"",
+   "\"passphrase\": \"Phrase de passe (facultative)\"",
+   "\"pin\": \"Code PIN (4 à 6 chiffres)\"",
+   "\"password\": \"Mot de passe\""
+  ]
+ },
+ {
+  "id": "i18n-rails-spanish-yaml-labels",
+  "why": "Reading a Rails/Devise locale: quoted Spanish labels with ¿, parentheses and abbreviations under password/token keys",
+  "files": {
+   "config/locales/devise.es.yml": "es:\n  devise:\n    sessions:\n      new:\n        email: Correo electrónico\n        password: \"Contraseña (mín. 12 caracteres)\"\n        forgot_password: \"¿Olvidaste tu contraseña?\"\n        token: \"Token de acceso (solo lectura)\"\n        api_key: \"Clave de API: guárdala en un lugar seguro\"\n        remember_me: Recordarme\n"
+  },
+  "read": "config/locales/devise.es.yml",
+  "keep": [
+   "password: \"Contraseña (mín. 12 caracteres)\"",
+   "forgot_password: \"¿Olvidaste tu contraseña?\"",
+   "token: \"Token de acceso (solo lectura)\""
+  ]
+ },
+ {
+  "id": "i18n-flat-english-json-labels",
+  "why": "Flat-key English messages: labels with '#', apostrophes, parentheses and an en dash",
+  "files": {
+   "messages/en.json": "{\n  \"settings.apiKeys.title\": \"API keys\",\n  \"settings.apiKeys.token\": \"Token #1\",\n  \"settings.apiKeys.secret\": \"Don't share this secret with anyone\",\n  \"settings.apiKeys.authToken\": \"Authentication token (read-only)\",\n  \"settings.security.password\": \"Password (min. 12 chars)\",\n  \"settings.security.pin\": \"PIN (4–6 digits)\",\n  \"settings.security.passphrase\": \"Recovery passphrase\"\n}\n"
+  },
+  "read": "messages/en.json",
+  "keep": [
+   "\"Token #1\"",
+   "\"Don't share this secret with anyone\"",
+   "\"Authentication token (read-only)\"",
+   "\"Password (min. 12 chars)\"",
+   "\"PIN (4–6 digits)\"",
+   "\"Recovery passphrase\""
+  ]
+ },
+ {
+  "id": "python-dsn-builders-format-placeholders",
+  "why": "Reading Python that builds URLs: `{password}`, `{settings.REDIS_PASSWORD}` and `%s` in the password slot of a URL are interpolation placeholders",
+  "files": {
+   "app/db.py": "import os\nfrom sqlalchemy import create_engine\n\nfrom .settings import settings\n\n\ndef database_url(user: str, password: str, host: str, port: int = 5432, db: str = \"app\") -> str:\n    return f\"postgresql+psycopg://{user}:{password}@{host}:{port}/{db}\"\n\n\ndef redis_url() -> str:\n    return f\"redis://:{settings.REDIS_PASSWORD}@{settings.REDIS_HOST}:6379/0\"\n\n\ndef legacy_dsn(user, password, host, name):\n    return \"postgres://%s:%s@%s/%s\" % (user, password, host, name)\n\n\nengine = create_engine(database_url(settings.DB_USER, settings.DB_PASSWORD, settings.DB_HOST))\n"
+  },
+  "read": "app/db.py",
+  "keep": [
+   "f\"postgresql+psycopg://{user}:{password}@{host}:{port}/{db}\"",
+   "f\"redis://:{settings.REDIS_PASSWORD}@{settings.REDIS_HOST}:6379/0\"",
+   "\"postgres://%s:%s@%s/%s\" % (user, password, host, name)"
+  ]
+ },
+ {
+  "id": "dsn-builders-go-ts-cs-php",
+  "why": "Connection strings assembled with Sprintf verbs, template literals, C# interpolation and PHP variables: `%s`, `${encodeURIComponent(password)}`, `{password}`, `$password` are code",
+  "files": {
+   "internal/db/dsn.go": "package db\n\nimport \"fmt\"\n\nfunc (c Config) DSN() string {\n\treturn fmt.Sprintf(\"postgres://%s:%s@%s:%d/%s?sslmode=%s\", c.User, c.Password, c.Host, c.Port, c.Name, c.SSLMode)\n}\n",
+   "src/mongo.ts": "export const mongoUrl = (user: string, password: string, cluster: string) =>\n  `mongodb+srv://${user}:${encodeURIComponent(password)}@${cluster}/?retryWrites=true&w=majority`;\n",
+   "Data/Db.cs": "public static string ConnectionString(string host, string user, string password) =>\n    $\"Server={host};Database=app;User Id={user};Password={password};TrustServerCertificate=True\";\n",
+   "src/db.php": "<?php\n$dsn = \"pgsql:host=$host;port=5432;dbname=$db;user=$user;password=$password\";\n$pdo = new PDO($dsn);\n"
+  },
+  "command": "cat internal/db/dsn.go src/mongo.ts Data/Db.cs src/db.php",
+  "output": "package db\n\nimport \"fmt\"\n\nfunc (c Config) DSN() string {\n\treturn fmt.Sprintf(\"postgres://%s:%s@%s:%d/%s?sslmode=%s\", c.User, c.Password, c.Host, c.Port, c.Name, c.SSLMode)\n}\nexport const mongoUrl = (user: string, password: string, cluster: string) =>\n  `mongodb+srv://${user}:${encodeURIComponent(password)}@${cluster}/?retryWrites=true&w=majority`;\npublic static string ConnectionString(string host, string user, string password) =>\n    $\"Server={host};Database=app;User Id={user};Password={password};TrustServerCertificate=True\";\n<?php\n$dsn = \"pgsql:host=$host;port=5432;dbname=$db;user=$user;password=$password\";\n$pdo = new PDO($dsn);\n",
+  "keep": [
+   "fmt.Sprintf(\"postgres://%s:%s@%s:%d/%s?sslmode=%s\"",
+   "`mongodb+srv://${user}:${encodeURIComponent(password)}@${cluster}/",
+   "User Id={user};Password={password};TrustServerCertificate=True",
+   "user=$user;password=$password\""
+  ]
+ },
+ {
+  "id": "compose-url-password-required-var",
+  "why": "Compose `${VAR:?}` (required) interpolation in a URL's password slot is a reference, like the plain `${VAR}` form that already survives",
+  "files": {
+   "docker-compose.yml": "services:\n  api:\n    build: .\n    environment:\n      - DATABASE_URL=postgres://app:${POSTGRES_PASSWORD:?}@db:5432/app\n      - REDIS_URL=redis://:${REDIS_PASSWORD:?}@cache:6379/0\n    depends_on: [db, cache]\n"
+  },
+  "read": "docker-compose.yml",
+  "keep": [
+   "REDIS_URL=redis://:${REDIS_PASSWORD:?}@cache:6379/0",
+   "DATABASE_URL=postgres://app:${POSTGRES_PASSWORD:?}@db:5432/app"
+  ]
+ },
+ {
+  "id": "pem-armor-strip-helper-ts",
+  "why": "Source that strips PEM armor with .replace() on two consecutive lines: the BEGIN line and END line are treated as a (bodiless) key block and merged, deleting a line of code",
+  "files": {
+   "src/keys.ts": "import { createPrivateKey, type KeyObject } from \"node:crypto\";\n\n/** Accepts a PKCS#8 key with or without its armor, as people paste it into env vars. */\nexport function loadPrivateKey(input: string): KeyObject {\n  const body = input\n    .replace(\"@@PEM_BEGIN@@PRIVATE KEY-----\", \"\")\n    .replace(\"@@PEM_END@@PRIVATE KEY-----\", \"\")\n    .replace(/\\s+/g, \"\");\n  return createPrivateKey({ key: Buffer.from(body, \"base64\"), format: \"der\", type: \"pkcs8\" });\n}\n"
+  },
+  "read": "src/keys.ts",
+  "keep": [
+   ".replace(\"@@PEM_BEGIN@@PRIVATE KEY-----\", \"\")\n    .replace(\"@@PEM_END@@PRIVATE KEY-----\", \"\")\n    .replace(/\\s+/g, \"\");"
+  ]
+ },
+ {
+  "id": "pem-armor-strip-helper-python",
+  "why": "Same pattern in Python with an RSA header: two string literals on adjacent lines are not a key",
+  "files": {
+   "app/crypto.py": "def strip_armor(pem: str) -> bytes:\n    body = (\n        pem.replace(\"@@PEM_BEGIN@@RSA PRIVATE KEY-----\", \"\")\n        .replace(\"@@PEM_END@@RSA PRIVATE KEY-----\", \"\")\n        .strip()\n    )\n    return base64.b64decode(body)\n"
+  },
+  "read": "app/crypto.py",
+  "keep": [
+   "pem.replace(\"@@PEM_BEGIN@@RSA PRIVATE KEY-----\", \"\")\n        .replace(\"@@PEM_END@@RSA PRIVATE KEY-----\", \"\")"
+  ]
+ },
+ {
+  "id": "rfc4231-hmac-vectors-go-test",
+  "why": "Go test table of RFC 4231 vectors: the 0x0b-repeated key has 1 bit of entropy per char and cannot be a secret; data and digests must also survive",
+  "files": {
+   "hmacutil/hmac_test.go": "package hmacutil\n\n// Test vectors from RFC 4231, section 4.\nvar rfc4231 = []struct {\n\tname   string\n\tkey    string\n\tdata   string\n\tsha256 string\n}{\n\t{\n\t\tname:   \"test case 1\",\n\t\tkey:    \"@@C:0b0b0b0b.0b0b0b0b.0b0b0b0b.0b0b0b0b.0b0b0b0b@@\",\n\t\tdata:   \"4869205468657265\",\n\t\tsha256: \"@@C:b0344c61.d8db3853.5ca8afce.af0bf12b.881dc200.c9833da7.26e9376c.2e32cff7@@\",\n\t},\n\t{\n\t\tname:   \"test case 3\",\n\t\tkey:    \"@@C:aaaaaaaa.aaaaaaaa.aaaaaaaa.aaaaaaaa.aaaaaaaa@@\",\n\t\tdata:   \"@@C:dddddddd.dddddddd.dddddddd.dddddddd.dddddddd.dddddddd.dddddddd.dddddddd.dddddddd.dddddddd.dddddddd.dddddddd.dddd@@\",\n\t\tsha256: \"@@C:773ea91e.36800e46.854db8eb.d09181a7.2959098b.3ef8c122.d9635514.ced565fe@@\",\n\t},\n}\n"
+  },
+  "read": "hmacutil/hmac_test.go",
+  "keep": [
+   "key:    \"@@C:0b0b0b0b.0b0b0b0b.0b0b0b0b.0b0b0b0b.0b0b0b0b@@\"",
+   "key:    \"@@C:aaaaaaaa.aaaaaaaa.aaaaaaaa.aaaaaaaa.aaaaaaaa@@\"",
+   "sha256: \"@@C:b0344c61.d8db3853.5ca8afce.af0bf12b.881dc200.c9833da7.26e9376c.2e32cff7@@\""
+  ]
+ },
+ {
+  "id": "rails-erb-reference-registered-as-known-value",
+  "why": "config/secrets.yml holds ERB lookups, not values; registering `<%= ENV.fetch(\"AWS_SECRET_ACCESS_KEY\") %>` as a known secret replaces the same lookup in config/storage.yml, which the agent reads and edits",
+  "files": {
+   "config/secrets.yml": "production:\n  secret_key_base: <%= ENV[\"SECRET_KEY_BASE\"] %>\n  aws_secret_access_key: <%= ENV.fetch(\"AWS_SECRET_ACCESS_KEY\") %>\n",
+   "config/storage.yml": "local:\n  service: Disk\n  root: <%= Rails.root.join(\"storage\") %>\n\namazon:\n  service: S3\n  access_key_id: <%= ENV.fetch(\"AWS_ACCESS_KEY_ID\") %>\n  secret_access_key: <%= ENV.fetch(\"AWS_SECRET_ACCESS_KEY\") %>\n  region: us-east-1\n  bucket: acme-uploads-<%= Rails.env %>\n"
+  },
+  "read": "config/storage.yml",
+  "keep": [
+   "secret_access_key: <%= ENV.fetch(\"AWS_SECRET_ACCESS_KEY\") %>",
+   "access_key_id: <%= ENV.fetch(\"AWS_ACCESS_KEY_ID\") %>"
+  ]
+ },
+ {
+  "id": "spring-property-placeholder-registered-as-known-value",
+  "why": "application-secrets.yml points at a property (`${db.password}`); registering the placeholder as a known value masks it in application.yml and in grep output",
+  "files": {
+   "src/main/resources/application-secrets.yml": "spring:\n  datasource:\n    password: ${db.password}\n  security:\n    oauth2:\n      client:\n        registration:\n          github:\n            client-secret: ${github.client-secret}\n",
+   "src/main/resources/application.yml": "spring:\n  datasource:\n    url: jdbc:postgresql://localhost:5432/app\n    username: ${db.username}\n    password: ${db.password}\n  security:\n    oauth2:\n      client:\n        registration:\n          github:\n            client-id: ${github.client-id}\n            client-secret: ${github.client-secret}\n"
+  },
+  "read": "src/main/resources/application.yml",
+  "keep": [
+   "password: ${db.password}",
+   "client-secret: ${github.client-secret}"
+  ]
+ },
+ {
+  "id": "vitest-auth-tests-obvious-fakes",
+  "why": "Unit tests with obviously fake credentials (test-password, @@STRIPE_SK_TEST@@123, fake-api-key) must read back verbatim so edits match",
+  "files": {
+   "test/auth.test.ts": "import { describe, it, expect, vi } from \"vitest\";\nimport Stripe from \"stripe\";\nimport { hashPassword, verifyPassword, issueToken } from \"../src/auth\";\n\nvi.mock(\"../src/mailer\");\n\ndescribe(\"auth\", () => {\n  it(\"verifies a correct password\", async () => {\n    const hash = await hashPassword(\"correct-horse-battery-staple\");\n    expect(await verifyPassword(\"correct-horse-battery-staple\", hash)).toBe(true);\n  });\n\n  it(\"rejects the wrong password\", async () => {\n    const password = \"test-password\";\n    const hash = await hashPassword(password);\n    expect(await verifyPassword(\"wrong-password\", hash)).toBe(false);\n  });\n\n  it(\"issues tokens\", async () => {\n    const token = await issueToken({ sub: \"user_123\" }, { secret: \"test-secret\", ttl: \"15m\" });\n    expect(token.split(\".\")).toHaveLength(3);\n  });\n\n  it(\"charges with the test key\", async () => {\n    const stripe = new Stripe(\"@@STRIPE_SK_TEST@@123\", { apiVersion: \"2024-06-20\" });\n    const apiKey = \"fake-api-key\";\n    expect(stripe).toBeDefined();\n  });\n});\n"
+  },
+  "read": "test/auth.test.ts",
+  "keep": [
+   "const password = \"test-password\";",
+   "new Stripe(\"@@STRIPE_SK_TEST@@123\", { apiVersion: \"2024-06-20\" })",
+   "const apiKey = \"fake-api-key\";",
+   "{ secret: \"test-secret\", ttl: \"15m\" }",
+   "hashPassword(\"correct-horse-battery-staple\")",
+   "verifyPassword(\"wrong-password\", hash)"
+  ]
+ },
+ {
+  "id": "hardcoded-openai-key-in-source",
+  "why": "A real-format project key hardcoded in source with a FIXME: the key must go, the code around it must stay",
+  "files": {
+   "src/llm.ts": "import OpenAI from \"openai\";\n\n// FIXME: move to env before merging\nconst client = new OpenAI({ apiKey: \"@@SK_PROJ@@@@C:Q7vM2xT9.kR4wZ8nB.3cY6hL1p.F5dJ0gS2.aE7uK9iO.x3Wq@@\" });\n\nexport async function summarize(text: string): Promise<string> {\n  const res = await client.chat.completions.create({ model: \"gpt-4o-mini\", messages: [{ role: \"user\", content: text }] });\n  return res.choices[0]?.message?.content ?? \"\";\n}\n"
+  },
+  "read": "src/llm.ts",
+  "hide": [
+   "@@SK_PROJ@@@@C:Q7vM2xT9.kR4wZ8nB.3cY6hL1p.F5dJ0gS2.aE7uK9iO.x3Wq@@"
+  ],
+  "keep": [
+   "const client = new OpenAI({ apiKey: \"",
+   "model: \"gpt-4o-mini\""
+  ]
+ },
+ {
+  "id": "dotenv-value-hardcoded-in-test-fixture",
+  "why": "A key from .env was pasted into a test fixture: the known value must be replaced there too, while the fake values beside it stay",
+  "files": {
+   ".env": "STRIPE_SECRET_KEY=@@STRIPE_SK_LIVE@@@@C:51Hq7RmT.2xKp9WvN.4bZc8LdY.f3GjA6sE.0uQ@@\nSTRIPE_PUBLISHABLE_KEY=pk_live_@@C:51Hq7RmT.2xKp9WvN.4bZcPUBL.ISHABLEk.3y@@\n",
+   "test/fixtures/stripe.ts": "export const stripeKeys = {\n  live: \"@@STRIPE_SK_LIVE@@@@C:51Hq7RmT.2xKp9WvN.4bZc8LdY.f3GjA6sE.0uQ@@\", // TODO: remove\n  test: \"@@STRIPE_SK_TEST@@123\",\n  publishable: \"pk_test_123\",\n};\n"
+  },
+  "command": "grep -rn sk_ test/",
+  "output": "test/fixtures/stripe.ts:2:  live: \"@@STRIPE_SK_LIVE@@@@C:51Hq7RmT.2xKp9WvN.4bZc8LdY.f3GjA6sE.0uQ@@\", // TODO: remove\ntest/fixtures/stripe.ts:3:  test: \"@@STRIPE_SK_TEST@@123\",\n",
+  "hide": [
+   "@@STRIPE_SK_LIVE@@@@C:51Hq7RmT.2xKp9WvN.4bZc8LdY.f3GjA6sE.0uQ@@",
+   "8LdYf3GjA6sE0uQ"
+  ],
+  "keep": [
+   "test/fixtures/stripe.ts:3:  test: \"@@STRIPE_SK_TEST@@123\",",
+   "// TODO: remove"
+  ]
+ },
+ {
+  "id": "go-auth-config-struct-tags-and-test",
+  "why": "Go struct tags name credentials (env:\"SIGNING_KEY,required\") and a test has a fake key; tags, defaults and the expected digest must survive",
+  "files": {
+   "internal/auth/config.go": "package auth\n\nimport (\n\t\"crypto/hmac\"\n\t\"crypto/sha256\"\n\t\"encoding/base64\"\n\t\"errors\"\n)\n\n// ErrInvalidToken is returned when a token fails verification.\nvar ErrInvalidToken = errors.New(\"auth: invalid token\")\n\ntype Config struct {\n\tSigningKey    []byte        `json:\"signing_key\" env:\"SIGNING_KEY,required\"`\n\tTokenTTL      time.Duration `json:\"token_ttl\" env:\"TOKEN_TTL\" envDefault:\"15m\"`\n\tIssuer        string        `json:\"issuer\" env:\"JWT_ISSUER\"`\n\tPasswordCost  int           `yaml:\"password_cost\" default:\"12\"`\n\tSessionCookie string        `json:\"session_cookie\" default:\"__Host-session\"`\n}\n\nfunc (c *Config) Sign(payload []byte) string {\n\tmac := hmac.New(sha256.New, c.SigningKey)\n\tmac.Write(payload)\n\treturn base64.RawURLEncoding.EncodeToString(mac.Sum(nil))\n}\n\nfunc TestSign(t *testing.T) {\n\tc := &Config{SigningKey: []byte(\"test-signing-key\")}\n\tgot := c.Sign([]byte(\"hello\"))\n\twant := \"@@C:ZdzRnJ3R.k1R6OBZ8.u2vKpXN1.cS0yZ3d4.V0JxT2NY.b2c@@\"\n\tif got != want {\n\t\tt.Fatalf(\"Sign() = %q, want %q\", got, want)\n\t}\n}\n"
+  },
+  "read": "internal/auth/config.go",
+  "keep": [
+   "`json:\"signing_key\" env:\"SIGNING_KEY,required\"`",
+   "envDefault:\"15m\"",
+   "default:\"__Host-session\"",
+   "SigningKey: []byte(\"test-signing-key\")",
+   "want := \"@@C:ZdzRnJ3R.k1R6OBZ8.u2vKpXN1.cS0yZ3d4.V0JxT2NY.b2c@@\""
+  ]
+ },
+ {
+  "id": "java-csharp-auth-config-classes",
+  "why": "Spring @Value placeholders, constants and C# options classes with credential-named members",
+  "files": {
+   "@@C:src/main./java/co.m/acme/S.ecurityC.onfig@@.java": "@Configuration\npublic class SecurityConfig {\n    @Value(\"${jwt.secret}\")\n    private String jwtSecret;\n\n    @Value(\"${app.auth.token-expiration-ms:3600000}\")\n    private long tokenExpirationMs;\n\n    private static final String TOKEN_PREFIX = \"Bearer \";\n    private static final String HEADER_STRING = \"Authorization\";\n    private static final int PASSWORD_MIN_LENGTH = 12;\n\n    @Bean\n    public PasswordEncoder passwordEncoder() {\n        return new BCryptPasswordEncoder(12);\n    }\n\n    public String generateToken(UserDetails user) {\n        Key key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));\n        return Jwts.builder().setSubject(user.getUsername()).signWith(key, SignatureAlgorithm.HS256).compact();\n    }\n}\npublic class AuthOptions\n{\n    public const string SectionName = \"Auth\";\n    public string Authority { get; set; } = \"https://login.microsoftonline.com/common/v2.0\";\n    public string ClientSecret { get; set; } = string.Empty;\n    public TimeSpan TokenLifetime { get; set; } = TimeSpan.FromMinutes(15);\n    private readonly byte[] _signingKey = Encoding.UTF8.GetBytes(configuration[\"Jwt:Key\"]!);\n    var token = new JwtSecurityToken(issuer, audience, claims, expires: DateTime.UtcNow.AddMinutes(15), signingCredentials: creds);\n    Dictionary<string, string> apiKeys = new();\n    IReadOnlyList<SecureString> passwords = Array.Empty<SecureString>();\n}\n"
+  },
+  "read": "@@C:src/main./java/co.m/acme/S.ecurityC.onfig@@.java",
+  "keep": [
+   "@Value(\"${jwt.secret}\")",
+   "private static final String TOKEN_PREFIX = \"Bearer \";",
+   "public string ClientSecret { get; set; } = string.Empty;",
+   "Dictionary<string, string> apiKeys = new();",
+   "IReadOnlyList<SecureString> passwords = Array.Empty<SecureString>();",
+   "configuration[\"Jwt:Key\"]!"
+  ]
+ },
+ {
+  "id": "terraform-secret-plumbing",
+  "why": "Terraform that wires secrets by reference (random_password.db.result, data.aws_ssm_parameter.api_key.value) and has a key_name and pgp_key label",
+  "files": {
+   "infra/main.tf": "variable \"db_password\" {\n  type        = string\n  sensitive   = true\n  description = \"Master password for the RDS instance\"\n}\nresource \"random_password\" \"db\" {\n  length           = 32\n  special          = true\n  override_special = \"!#$%&*()-_=+[]{}<>:?\"\n}\nresource \"aws_db_instance\" \"main\" {\n  identifier          = \"acme-prod-db\"\n  username            = \"acme_admin\"\n  password            = random_password.db.result\n  kms_key_id          = aws_kms_key.rds.arn\n  skip_final_snapshot = false\n}\nresource \"aws_secretsmanager_secret_version\" \"db\" {\n  secret_id     = aws_secretsmanager_secret.db.id\n  secret_string = jsonencode({ username = \"acme_admin\", password = random_password.db.result })\n}\nresource \"aws_iam_access_key\" \"ci\" {\n  user    = aws_iam_user.ci.name\n  pgp_key = \"keybase:acme_ops\"\n}\noutput \"ci_secret_access_key\" {\n  value     = aws_iam_access_key.ci.encrypted_secret\n  sensitive = true\n}\nresource \"tls_private_key\" \"deploy\" {\n  algorithm = \"ED25519\"\n}\nresource \"aws_key_pair\" \"deploy\" {\n  key_name   = \"deploy-2024\"\n  public_key = tls_private_key.deploy.public_key_openssh\n}\ndata \"aws_ssm_parameter\" \"api_key\" {\n  name            = \"/acme/prod/api-key\"\n  with_decryption = true\n}\nlocals {\n  api_key   = data.aws_ssm_parameter.api_key.value\n  token_ttl = 3600\n}\n"
+  },
+  "read": "infra/main.tf",
+  "keep": [
+   "password            = random_password.db.result",
+   "override_special = \"!#$%&*()-_=+[]{}<>:?\"",
+   "pgp_key = \"keybase:acme_ops\"",
+   "api_key   = data.aws_ssm_parameter.api_key.value",
+   "key_name   = \"deploy-2024\""
+  ]
+ },
+ {
+  "id": "openapi-graphql-sql-auth-schemas",
+  "why": "API and DB schemas full of credential-named fields with types, formats and constraints",
+  "files": {
+   "openapi.yaml": "openapi: 3.1.0\ncomponents:\n  securitySchemes:\n    ApiKeyAuth:\n      type: apiKey\n      in: header\n      name: X-API-Key\n    bearerAuth:\n      type: http\n      scheme: bearer\n      bearerFormat: JWT\n  schemas:\n    TokenResponse:\n      type: object\n      required: [access_token, token_type]\n      properties:\n        access_token:\n          type: string\n        token_type:\n          type: string\n          example: Bearer\n        refresh_token:\n          type: string\n          format: password\n          writeOnly: true\n        password:\n          type: string\n          minLength: 12\n          pattern: '^(?=.*[A-Z])(?=.*\\d).{12,}$'\n        apiKey:\n          $ref: '#/components/schemas/ApiKey'\n        client_secret:\n          type: string\n          format: byte\n          x-go-type: SecretBytes\nsecurity:\n  - ApiKeyAuth: []\n  - bearerAuth: [read:users, write:users]\n",
+   "schema.graphql": "type Mutation {\n  login(email: String!, password: String!): AuthPayload!\n  rotateApiKey(projectId: ID!): ApiKey!\n  resetPassword(token: String!, newPassword: String!): Boolean!\n}\ntype AuthPayload {\n  token: String!\n  refreshToken: String\n  user: User!\n}\ntype ApiKey {\n  id: ID!\n  prefix: String!\n  secret: String @deprecated(reason: \"Only returned on creation\")\n  createdAt: DateTime!\n}\ninput SignupInput {\n  password: String! @constraint(minLength: 12)\n  passwordConfirmation: String!\n}\n",
+   "migrations/001_users.sql": "CREATE TABLE users (\n    id            BIGSERIAL PRIMARY KEY,\n    email         CITEXT NOT NULL UNIQUE,\n    password_hash TEXT NOT NULL,\n    api_key       VARCHAR(64) UNIQUE,\n    reset_token   UUID,\n    session_token CHAR(43),\n    otp_secret    BYTEA,\n    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()\n);\nCREATE INDEX idx_users_api_key ON users (api_key) WHERE api_key IS NOT NULL;\nALTER TABLE api_tokens ADD COLUMN token_digest BYTEA NOT NULL;\nCREATE ROLE app_rw LOGIN PASSWORD NULL;\nGRANT SELECT, INSERT ON users TO app_rw;\nINSERT INTO users (email, password_hash) VALUES ('seed@example.com', crypt('changeme', gen_salt('bf')));\nUPDATE users SET password_hash = $1, reset_token = NULL WHERE id = $2;\nSELECT id, email FROM users WHERE api_key = $1 AND revoked_at IS NULL;\n"
+  },
+  "command": "cat openapi.yaml schema.graphql migrations/001_users.sql",
+  "output": "openapi: 3.1.0\ncomponents:\n  securitySchemes:\n    ApiKeyAuth:\n      type: apiKey\n      in: header\n      name: X-API-Key\n    bearerAuth:\n      type: http\n      scheme: bearer\n      bearerFormat: JWT\n  schemas:\n    TokenResponse:\n      type: object\n      required: [access_token, token_type]\n      properties:\n        access_token:\n          type: string\n        token_type:\n          type: string\n          example: Bearer\n        refresh_token:\n          type: string\n          format: password\n          writeOnly: true\n        password:\n          type: string\n          minLength: 12\n          pattern: '^(?=.*[A-Z])(?=.*\\d).{12,}$'\n        apiKey:\n          $ref: '#/components/schemas/ApiKey'\n        client_secret:\n          type: string\n          format: byte\n          x-go-type: SecretBytes\nsecurity:\n  - ApiKeyAuth: []\n  - bearerAuth: [read:users, write:users]\ntype Mutation {\n  login(email: String!, password: String!): AuthPayload!\n  rotateApiKey(projectId: ID!): ApiKey!\n  resetPassword(token: String!, newPassword: String!): Boolean!\n}\ntype AuthPayload {\n  token: String!\n  refreshToken: String\n  user: User!\n}\ntype ApiKey {\n  id: ID!\n  prefix: String!\n  secret: String @deprecated(reason: \"Only returned on creation\")\n  createdAt: DateTime!\n}\ninput SignupInput {\n  password: String! @constraint(minLength: 12)\n  passwordConfirmation: String!\n}\nCREATE TABLE users (\n    id            BIGSERIAL PRIMARY KEY,\n    email         CITEXT NOT NULL UNIQUE,\n    password_hash TEXT NOT NULL,\n    api_key       VARCHAR(64) UNIQUE,\n    reset_token   UUID,\n    session_token CHAR(43),\n    otp_secret    BYTEA,\n    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()\n);\nCREATE INDEX idx_users_api_key ON users (api_key) WHERE api_key IS NOT NULL;\nALTER TABLE api_tokens ADD COLUMN token_digest BYTEA NOT NULL;\nCREATE ROLE app_rw LOGIN PASSWORD NULL;\nGRANT SELECT, INSERT ON users TO app_rw;\nINSERT INTO users (email, password_hash) VALUES ('seed@example.com', crypt('changeme', gen_salt('bf')));\nUPDATE users SET password_hash = $1, reset_token = NULL WHERE id = $2;\nSELECT id, email FROM users WHERE api_key = $1 AND revoked_at IS NULL;\n",
+  "keep": [
+   "format: password",
+   "pattern: '^(?=.*[A-Z])(?=.*\\d).{12,}$'",
+   "x-go-type: SecretBytes",
+   "resetPassword(token: String!, newPassword: String!): Boolean!",
+   "password: String! @constraint(minLength: 12)",
+   "api_key       VARCHAR(64) UNIQUE,",
+   "CREATE ROLE app_rw LOGIN PASSWORD NULL;"
+  ]
+ },
+ {
+  "id": "lockfiles-and-known-hosts",
+  "why": "Lockfile integrity hashes, go.sum lines and SSH host keys are public and dense with base64",
+  "command": "cat package-lock.json yarn.lock Cargo.lock go.sum ~/.ssh/known_hosts",
+  "output": "    \"node_modules/jsonwebtoken\": {\n      \"version\": \"9.0.2\",\n      \"resolved\": \"https://registry.npmjs.org/jsonwebtoken/-/jsonwebtoken-9.0.2.tgz\",\n      \"integrity\": \"sha512-@@C:PRp66vJ8.65SSqOlg.qS8hujT5.U4AOgMfh.rwYIuIhf.KaoSCZci.rrmASQr8.CX7cUg+R.Mih+hgzn.rjp99o+W.4pJLHQ==@@\",\n      \"dependencies\": {\n        \"jws\": \"^3.2.2\",\n        \"lodash.includes\": \"^4.3.0\",\n        \"semver\": \"^7.5.4\"\n      }\n    },\n    \"node_modules/keygrip\": {\n      \"version\": \"1.1.0\",\n      \"resolved\": \"https://registry.npmjs.org/keygrip/-/keygrip-1.1.0.tgz\",\n      \"integrity\": \"sha512-@@C:iYSchDJ+.liQ8iwbS.I2QqsQOv.qv58eJCE.anyJPJi+.Khyu8smk.cKSFUCbP.wzFcL7YV.QZ6WZYGK.VsOEdhG1.CT4sHw==@@\",\n      \"dependencies\": { \"tsscmp\": \"1.0.6\" }\n    },\n    \"node_modules/passport-http-bearer\": {\n      \"version\": \"1.0.1\",\n      \"resolved\": \"https://registry.npmjs.org/passport-http-bearer/-/passport-http-bearer-1.0.1.tgz\",\n      \"integrity\": \"sha1-@@C:FHRp6jZp.4qhMYWfv.mdu3fh8A.mKg=@@\"\n    },\njsonwebtoken@^9.0.2:\n  version \"9.0.2\"\n  resolved \"https://registry.yarnpkg.com/jsonwebtoken/-/jsonwebtoken-9.0.2.tgz#@@C:65ff91f4.abef1784.697d4095.2bb1998c.504caaf3@@\"\n  integrity sha512-@@C:PRp66vJ8.65SSqOlg.qS8hujT5.U4AOgMfh.rwYIuIhf.KaoSCZci.rrmASQr8.CX7cUg+R.Mih+hgzn.rjp99o+W.4pJLHQ==@@\n[[package]]\nname = \"secrecy\"\nversion = \"0.8.0\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\nchecksum = \"@@C:9bd1c54e.a06cfd2f.6b632197.04de0b9b.4f72dcc2.b8fdef82.0be6cd79.9780e91e@@\"\ngolang.org/x/crypto v0.28.0 h1:@@C:GXm2NjJr.Paiv/h1t.b2UH8Qfg.C/hOf/+z.0p6PT8o1.w7Y=@@\ngolang.org/x/crypto v0.28.0/go.mod h1:@@C:rmgy+3RH.xRZMyY0j.jAJShp2z.gEdOqj2A.O7U0pYme.Q7U=@@\ngithub.com ssh-ed25519 @@C:AAAAC3Nz.aC1lZDI1.NTE5AAAA.IOMqqnkV.zrm0SdG6.UOoqKLsa.bgH5C9ok.Wi0dh2l9.GKJl@@\ngithub.com ecdsa-sha2-nistp256 @@C:AAAAE2Vj.ZHNhLXNo.YTItbmlz.dHAyNTYA.AAAIbmlz.dHAyNTYA.AABBBEmK.SENjQEez.OmxkZMy7.opKgwFB9.nkt5YRrY.MjNuG5N8.7uRgg6CL.rbo5wAdT./y6v0mKV.0U2w0WZ2.YB/++Tpo.ckg=@@\n|1|@@C:kXz5n8cF.q1u3Yx7m.M3p0wqY9.d2s=@@|@@C:q3w8vZbN.2c1pL4kQ.0eT7rY6u.I9o=@@ ssh-ed25519 @@C:AAAAC3Nz.aC1lZDI1.NTE5AAAA.IHf3r2Uq.1QpFJ0vJ.b1q0n6mV.Zr2c8l5a.1y4m0K7W.q9s3@@\n",
+  "keep": [
+   "sha512-@@C:PRp66vJ8.65SSqOlg.qS8hujT5.U4AOgMfh.rwYIuIhf.KaoSCZci.rrmASQr8.CX7cUg+R.Mih+hgzn.rjp99o+W.4pJLHQ==@@",
+   "h1:@@C:GXm2NjJr.Paiv/h1t.b2UH8Qfg.C/hOf/+z.0p6PT8o1.w7Y=@@",
+   "@@C:AAAAC3Nz.aC1lZDI1.NTE5AAAA.IOMqqnkV.zrm0SdG6.UOoqKLsa.bgH5C9ok.Wi0dh2l9.GKJl@@",
+   "|1|@@C:kXz5n8cF.q1u3Yx7m.M3p0wqY9.d2s=@@|@@C:q3w8vZbN.2c1pL4kQ.0eT7rY6u.I9o=@@"
+  ]
+ },
+ {
+  "id": "minified-bundle-auth-helpers",
+  "why": "A minified CommonJS bundle with token/password/secret properties set to empty strings, template literals and labels",
+  "command": "cat node_modules/@acme/auth/dist/index.cjs",
+  "output": "\"use strict\";var e=require(\"crypto\");function t(t,n){if(!n.secret)throw new TypeError(\"secret is required\");const r=e.createHmac(\"sha256\",n.secret);return r.update(t),r.digest(\"base64url\")}const n={token:\"\",password:\"\",apiKey:void 0,secret:null},r=(e,t={})=>({...n,...t,token:e.headers.authorization?.replace(/^Bearer\\s+/i,\"\")??\"\"});function o(e){return{headers:{Authorization:`Bearer ${e.token}`,\"X-Api-Key\":e.apiKey}}}const s=\"Bearer \",i={password:\"Password\",token:\"Token\",secret:\"Secret\",apiKey:\"API key\"};module.exports={sign:t,fromRequest:r,toHeaders:o,PREFIX:s,labels:i};\n//# sourceMappingURL=index.cjs.map\n",
+  "keep": [
+   "const n={token:\"\",password:\"\",apiKey:void 0,secret:null}",
+   "Authorization:`Bearer ${e.token}`",
+   "i={password:\"Password\",token:\"Token\",secret:\"Secret\",apiKey:\"API key\"}"
+  ]
+ }
+]
