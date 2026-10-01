@@ -527,7 +527,8 @@ export default function (pi: ExtensionAPI) {
 		// A read of a secret file shows the file masked; scrub() does the same for commands that print one.
 		const readPath = maskReads.delete(event.toolCallId) ? resolveToolPath(event.input.path, ctx.cwd) : undefined;
 		const command = typeof event.input.command === "string" ? event.input.command : typeof event.input.code === "string" ? event.input.code : "";
-		const masked = readPath !== undefined;
+		// A failed call carries no file content, so masking it would only destroy the path in the message.
+		const masked = readPath !== undefined && !event.isError;
 		const fileName = readPath ? basename(readPath) : "";
 		const touched =
 			(EDIT_TOOLS.has(event.toolName) && resolveToolPath(event.input.path, ctx.cwd)) ||
@@ -536,7 +537,7 @@ export default function (pi: ExtensionAPI) {
 		// If scrubbing itself fails, withhold the output rather than pass it on unchecked.
 		const clean = (text: string) => {
 			try {
-				return secrets!.scrub(text, ctx.cwd, masked, fileName, command);
+				return secrets!.scrub(text, ctx.cwd, masked, fileName, event.isError ? "" : command);
 			} catch (err) {
 				return `[pi-safety withheld this output: checking it for secrets failed (${(err as Error).message})]`;
 			}
