@@ -51,5 +51,6 @@
  {"id":"codes-and-licenses-variants","why":"Door codes and licenses in short forms","output":"door: 4821\nLockbox: 7730\ndriver license number is S530-4821-6672\nsec code 482","hide":["4821","7730","S530-4821-6672","482"]},
  {"id":"prose-password-variants","why":"Password sentences with an adverb, and app passwords","output":"the staging password is now Winter2024!\nsmtp password: qwer tyui opas dfgh\nYour app password for your device:\nwxyz abcd efgh ijkl\napple app-specific password: mnop-qrst-uvwx-yzab","hide":["Winter2024!","qwer tyui opas dfgh","wxyz abcd efgh ijkl","mnop-qrst-uvwx-yzab"]},
  {"id":"two-factor-variants","why":"Dash-grouped keys introduced as codes","output":"Enter this code instead: HXDM-VJEC-JJWS-RB3H\nUse this code in your app: 5JYR KQ2N 7M3Y WOXT","hide":["HXDM-VJEC-JJWS-RB3H","5JYR KQ2N 7M3Y WOXT"]},
- {"id":"magic-login-link","why":"Slack-style magic login links","output":"https://acme.slack.com/z-app-12345/magic-@@C:login/Kx.81kP0qLm.2Vb7Rt9s.We4YuZ@@","hide":["@@C:Kx81kP0q.Lm2Vb7Rt.9sWe4YuZ@@"]}
+ {"id":"magic-login-link","why":"Slack-style magic login links","output":"https://acme.slack.com/z-app-12345/magic-@@C:login/Kx.81kP0qLm.2Vb7Rt9s.We4YuZ@@","hide":["@@C:Kx81kP0q.Lm2Vb7Rt.9sWe4YuZ@@"]},
+ {"id":"labels-across-blank-lines-and-bullets","why":"A form with a blank line or a bullet between the label and the value","output":"SSN:\n\n512384471\n\nCard number:\n  - 5412664609774884\n\nPIN:\r\n\r\n8306","hide":["512384471","5412664609774884","8306"]}
 ]

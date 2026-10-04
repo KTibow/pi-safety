@@ -408,8 +408,11 @@ function redactSignInLinks(text: string): string {
 
 /** Spaces, including the no-break space that forms and PDFs paste. */
 const SP = String.raw`[ \t\u00a0]`;
-/** Between a label and its value: `SSN: `, `card number is `, `"cvv": "`, `PIN #`, a table cell, a line break. */
-const LABEL_GAP = String.raw`${SP}{0,3}(?:[_ -]?(?:number|num|no\.?|#)${SP}{0,3})?["']?${SP}{0,3}(?:(?:is|was)${SP}{0,3})?(?:[:=#|-]${SP}{0,3}|'s${SP}{1,3})?(?:\\n|\r?\n)?${SP}{0,3}["'(*\`]{0,2}`;
+/**
+ * Between a label and its value: `SSN: `, `card number is `, `"cvv": "`, `PIN #`, a table cell, up to
+ * two line breaks (a blank line in a form), and a bullet.
+ */
+const LABEL_GAP = String.raw`${SP}{0,3}(?:[_ -]?(?:number|num|no\.?|#)${SP}{0,3})?["']?${SP}{0,3}(?:(?:is|was)${SP}{0,3})?(?:[:=#|-]${SP}{0,3}|'s${SP}{1,3})?(?:(?:\\n|\r?\n)${SP}{0,3}){0,2}(?:[-*•]${SP}{1,3})?["'(*\`]{0,2}`;
 
 /** A value right after one of the labels; the label and gap are group 1, the value group 2. */
 function labeled(label: string, value: string): RegExp {

@@ -61,7 +61,7 @@ pi-safety is split into layers:
 | `secrets.ts` | Secret protection: which files and names hold credentials, masking, and redaction |
 | `bip39.ts` | The BIP39 wordlist, for recognizing wallet recovery phrases |
 | `test/eval.ts` | 43 labeled actions, including injection attempts, scored against a classifier |
-| `test/secrets-eval.ts` | 555 labeled secret cases in `test/secret-cases/`, scored against `secrets.ts` |
+| `test/secrets-eval.ts` | 556 labeled secret cases in `test/secret-cases/`, scored against `secrets.ts` |
 | `test/hijacked-agent.ts` | A scripted malicious agent that tries to get past the gate in a real pi run |
 
 ## Turn it on
@@ -251,7 +251,7 @@ value is. `DB_PASSWORD` and `client-key-data` hold credentials; `PASSWORD_MIN_LE
 - **Best effort.** A secret pi-safety has never seen. This is the same caveat gitleaks and GitHub
   Actions' log masking carry.
 
-Measured on 555 labeled cases, written by four rounds of adversarial agents:
+Measured on 556 labeled cases, written by four rounds of adversarial agents:
 
 | | Known values leaked | Harmless text hidden | Unknown secrets missed |
 |---|---|---|---|
