@@ -59,8 +59,9 @@ pi-safety is split into layers:
 | `index.ts` | Enabling, the fast path, building state, calling the classifier, blocking, and the hooks that rewrite output |
 | `questions.ts` | The gate's policy: the two questions and the default definitions of dangerous and routine |
 | `secrets.ts` | Secret protection: which files and names hold credentials, masking, and redaction |
+| `bip39.ts` | The BIP39 wordlist, for recognizing wallet recovery phrases |
 | `test/eval.ts` | 43 labeled actions, including injection attempts, scored against a classifier |
-| `test/secrets-eval.ts` | 502 labeled secret cases in `test/secret-cases/`, scored against `secrets.ts` |
+| `test/secrets-eval.ts` | 555 labeled secret cases in `test/secret-cases/`, scored against `secrets.ts` |
 | `test/hijacked-agent.ts` | A scripted malicious agent that tries to get past the gate in a real pi run |
 
 ## Turn it on
@@ -232,6 +233,7 @@ model sees it. This works whether or not the gate is on.
 | **Masked files** | A read of a secret file, a command that prints one (`cat .env`, `git show HEAD:.env`), and grep lines from one show the file with credential values replaced by `[secret]`. Names, structure, comments, quoting and harmless settings stay, so the agent can still edit the file |
 | **Known values** | Every credential in a secret file under the project, a credential file in your home directory, or a credential-named environment variable is replaced wherever it appears: JSON-, URL-, shell- and hex-escaped, inside base64 and hex blobs, and when output cut the value short |
 | **Patterns** | Secrets that were never in a file (`gh auth token`, an OAuth response, another container's environment) are caught by well-known token formats, private-key blocks, `Authorization` headers, URL passwords and credentials in URL query strings |
+| **Personal data** | What people paste into chats and get in emails: SSNs, card numbers and security codes, PINs and door codes, passport and driver's license numbers, wallet recovery phrases, two-factor setup keys and backup codes, recovery keys, and reset or magic sign-in links. A bare number is hidden only when a checksum or the issuing rules confirm it (Luhn for cards, the SSA's rules for SSNs, the BIP39 checksum for phrases); after a label like `SSN:` or `card number`, a mistyped one is hidden too. Published test cards and example SSNs stay |
 
 What counts as a credential is decided by a name's last meaningful word, the word that says what the
 value is. `DB_PASSWORD` and `client-key-data` hold credentials; `PASSWORD_MIN_LENGTH`, `TOKEN_URL`,
@@ -249,15 +251,16 @@ value is. `DB_PASSWORD` and `client-key-data` hold credentials; `PASSWORD_MIN_LE
 - **Best effort.** A secret pi-safety has never seen. This is the same caveat gitleaks and GitHub
   Actions' log masking carry.
 
-Measured on 502 labeled cases, written by three rounds of adversarial agents:
+Measured on 555 labeled cases, written by four rounds of adversarial agents:
 
 | | Known values leaked | Harmless text hidden | Unknown secrets missed |
 |---|---|---|---|
-| `"secretPatterns": "precise"` (default) | 0 | 0 | 110 |
-| `"secretPatterns": "broad"` | 0 | 18 | 45 |
+| `"secretPatterns": "precise"` (default) | 0 | 0 | 113 |
+| `"secretPatterns": "broad"` | 0 | 18 | 44 |
 
-"Broad" also hides credential-named values in any output (`password=…`, `"token": "…"`, `--api-key …`).
-It catches 65 more unknown secrets, and in exchange it hides things an agent needs: type annotations
+"Broad" also hides credential-named values in any output (`password=…`, `"token": "…"`, `--api-key …`)
+and passwords given in sentences (`the wifi password is …`).
+It catches 69 more unknown secrets, and in exchange it hides things an agent needs: type annotations
 like `password: Secret<String>`, i18n labels, `Authorization: Bearer <token>` in documentation, and S3
 object keys. A `[secret]` written into source that the agent later edits breaks that edit, so the
 default is "precise".

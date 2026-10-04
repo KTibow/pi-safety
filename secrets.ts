@@ -16,14 +16,17 @@
  *    replaced everywhere without wrecking output, so only masking hides them.
  * 3. Patterns, for secrets that were never in a file: well-known token formats, private keys, URL
  *    passwords, Authorization headers, and credential-named values (`password=…`, `"token": "…"`,
- *    `--api-key …`) whose value also looks like a secret. This layer is best effort.
+ *    `--api-key …`) whose value also looks like a secret, and personal data people paste into chats:
+ *    SSNs, cards, PINs, recovery phrases and codes, one-time sign-in links. This layer is best effort.
  *
  * Every regex here runs on untrusted output, so each is linear: bounded repetition, no `\s` across lines.
  */
 
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { BIP39_WORDS } from "./bip39.ts";
 
 export type SecretsMode = "off" | "mask" | "block";
 
@@ -45,10 +48,10 @@ export interface SecretsConfig {
 const CREDENTIAL_WORDS = new Set([
 	"KEY", "APIKEY", "TOKEN", "SECRET", "PASSWORD", "PASSWD", "PASS", "PWD", "PW", "PASSPHRASE",
 	"CREDENTIAL", "CREDENTIALS", "COOKIE", "PAT", "AUTH", "SALT", "SIG", "SIGNATURE", "PIN", "REQUIREPASS",
-	"SID", "SESSIONID", "SESSID", "MNEMONIC", "SEED", "PHRASE",
+	"SID", "SESSIONID", "SESSID", "MNEMONIC", "SEED", "PHRASE", "PASSCODE", "PSK",
 ]);
 /** Single words that end in a credential word: PGPASSWORD, AUTHKEY, WRITEKEY. */
-const CREDENTIAL_SUFFIX = /(PASSWORD|PASSWD|PASSPHRASE|TOKEN|SECRET|APIKEY|AUTH|AUTHKEY|WRITEKEY|SECRETKEY|PRIVATEKEY|ACCESSKEY|SESSID|SESSIONID|PASS)$/;
+const CREDENTIAL_SUFFIX = /(PASSWORD|PASSWD|PASSPHRASE|PASSCODE|TOKEN|SECRET|APIKEY|AUTH|AUTHKEY|WRITEKEY|SECRETKEY|PRIVATEKEY|ACCESSKEY|SESSID|SESSIONID|PASS)$/;
 /** Last words that describe a form of the word before: `client-key-data`, `SECRET_B64`, `secret_key_base`. */
 const WRAPPER_WORDS = new Set(["DATA", "VALUE", "B64", "BASE64", "ENC", "ENCODED", "RAW", "HEX", "BASE", "STRING"]);
 /** Last words that only qualify the word before: `API_KEY_V2`, `DB_PASSWORD_PROD`, `KEYS`. */
@@ -233,7 +236,9 @@ function looksSecret(raw: string): boolean {
 	if (v.length < 6 || v.length > 8_192 || isInert(v) || isCode(raw)) return false;
 	if (/^\p{L}{1,12}[!?]?$/u.test(v) || /^\d{1,8}$/.test(v)) return false;
 	if (/^[a-z][a-z0-9+.-]*:\/\/[^@\s]*$/i.test(v) || /^[\w.-]+@[\w.-]+\.\w+$/.test(v)) return false;
-	return !isWordy(v) || isMadePassword(v);
+	// Groups of capitals and digits: recovery and license keys like `A3-ABC123-DEF456-…`.
+	const mixedGroups = v.split("-").filter((g) => /\d/.test(g) && /[A-Z]/.test(g)).length;
+	return !isWordy(v) || isMadePassword(v) || (/^[A-Z0-9]{2,8}(-[A-Z0-9]{4,8}){3,}$/.test(v) && mixedGroups >= 2);
 }
 
 // --- Patterns found in any output ----------------------------------------------------------------
@@ -272,6 +277,12 @@ const TOKEN_FORMATS: [string, RegExp][] = [
 	["Fly.io token", /\bfm[12]_[A-Za-z0-9+/=_-]{50,}/g],
 	["Mailgun key", /\bkey-[0-9a-f]{32}\b/g],
 	["SendGrid key", /\bSG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{32,}/g],
+	["Telegram bot token", /\b\d{8,10}:AA[A-Za-z0-9_-]{33}(?![\w-])/g],
+	["Discord bot token", /\b[MNO][A-Za-z0-9_-]{23,25}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{27,38}(?![\w-])/g],
+	["Notion token", /\bntn_[A-Za-z0-9]{40,}\b|\bsecret_[A-Za-z0-9]{43}\b/g],
+	["Venice key", /\bVENICE_INFERENCE_KEY_(?=[A-Za-z_-]{0,40}\d)[A-Za-z0-9_-]{20,}/g],
+	// The `<vendor>_sk_` convention: `aria_sk_…`, ElevenLabs' `sk_…`.
+	["API key", /\b(?:[a-z][a-z0-9]{1,15}_)?sk_(?!live_|test_)(?=[A-Za-z]{0,40}\d)[A-Za-z0-9]{24,}\b/g],
 	["JWT", /\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g],
 ];
 
@@ -363,18 +374,324 @@ function isUrlPassword(value: string): boolean {
 	return !/^(user|username|pass|password|passwd|pwd|secret|token|credentials)$/i.test(value);
 }
 
+/** Path segments of one-time links: `/reset/<token>`, `/auth/magic-link/<token>`, `/verify-email/<token>`. */
+const SIGN_IN_SEGMENT = /^(?:(?:password|email|account|user|magic)[-_]?)?(?:reset|verify|verification|confirm|confirmation|magic|login|signin|sign[-_]in|activate|activation|invite|invitation|unlock|recover|recovery|otp|claim|passwordless|onetime|one[-_]time)(?:[-_]?(?:password|email|account|links?|tokens?|login))?$/i;
+/** Query parameters that carry a one-time login: OAuth and Firebase codes, CAS tickets. */
+const SIGN_IN_PARAM = /^(code|oobcode|otp|ticket)$/i;
+
+/**
+ * Reset, magic sign-in and verification links, which log in whoever opens them: a random token in the
+ * path after `/reset/`, `/magic-link/`, `/verify/`, or in the query as `?code=`. Emails are full of them.
+ */
+function redactSignInLinks(text: string): string {
+	if (!/https?:\/\//i.test(text)) return text;
+	return text.replace(/\bhttps?:\/\/[^\s"'<>`)\]]{1,2000}/gi, (url) => {
+		const q = url.search(/[?#]/);
+		const segments = (q < 0 ? url : url.slice(0, q)).split("/");
+		const at = segments.findIndex((s, i) => i >= 3 && SIGN_IN_SEGMENT.test(s));
+		// Laravel and Django reset tokens are hex, but so are commit hashes, so hex counts only right after the keyword.
+		const path = segments.map((s, i) => (at >= 0 && i > at && (isRandomToken(s) || (i === at + 1 && /^[0-9a-f]{32,}$/i.test(s))) ? "[secret]" : s)).join("/");
+		const query = (q < 0 ? "" : url.slice(q)).replace(/([?&#])([\w.-]{1,60})=([^&#]{1,1000})/g, (m, sepr, name, value) =>
+			(at >= 0 || SIGN_IN_PARAM.test(name)) && !/^utm_/i.test(name) && isRandomToken(value) ? `${sepr}${name}=[secret]` : m,
+		);
+		return path + query;
+	});
+}
+
+// --- Personal data ---------------------------------------------------------------------------
+//
+// Identity numbers, payment cards, door codes and account recovery material, which people paste into
+// chats and which arrive in emails. None of it is ever in a .env, so only patterns catch it. A bare
+// number is hidden only when a checksum or the issuing rules confirm it; after a label (`SSN:`, `card
+// number`) a mistyped one is hidden too, since 15 right digits of a card still leak it. Published
+// test numbers and examples stay, because tests and docs need them.
+
+/** Spaces, including the no-break space that forms and PDFs paste. */
+const SP = String.raw`[ \t\u00a0]`;
+/** Between a label and its value: `SSN: `, `card number is `, `"cvv": "`, `PIN #`, a table cell, a line break. */
+const LABEL_GAP = String.raw`${SP}{0,3}(?:[_ -]?(?:number|num|no\.?|#)${SP}{0,3})?["']?${SP}{0,3}(?:(?:is|was)${SP}{0,3})?(?:[:=#|-]${SP}{0,3}|'s${SP}{1,3})?(?:\\n|\r?\n)?${SP}{0,3}["'(*\`]{0,2}`;
+
+/** A value right after one of the labels; the label and gap are group 1, the value group 2. */
+function labeled(label: string, value: string): RegExp {
+	return new RegExp(String.raw`((?:\b|(?<=_)|(?<=\\[nrt]))(?:${label})${LABEL_GAP})(${value})(?![\w-]|[.,]\d)`, "gi");
+}
+
+/** Example SSNs printed on cards, forms and docs, which the SSA never issued or retired. */
+const EXAMPLE_SSNS = new Set(["123456789", "078051120", "219099999", "987654320"]);
+
+/** Whether nine digits follow the SSA's issuing rules: no 000, 666 or 00 parts; 9xx only as an ITIN. */
+function isIssuedSsn(d: string): boolean {
+	if (/^(000|666)|^\d{3}00|0000$/.test(d) || EXAMPLE_SSNS.has(d) || /^(\d)\1+$/.test(d)) return false;
+	return d[0] !== "9" || /^9\d\d(5\d|6[0-5]|7\d|8[0-8]|9[0-24-9])/.test(d);
+}
+
+function luhn(digits: string): boolean {
+	let sum = 0;
+	for (let i = 0; i < digits.length; i++) {
+		let d = digits.charCodeAt(digits.length - 1 - i) - 48;
+		if (i % 2) d = d * 2 > 9 ? d * 2 - 9 : d * 2;
+		sum += d;
+	}
+	return sum % 10 === 0;
+}
+
+/** A card number by its network's prefix and length, and the Luhn check. */
+function isCardNumber(d: string): boolean {
+	const n = d.length;
+	const fits =
+		(/^4/.test(d) && (n === 16 || n === 19)) ||
+		(/^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[01]|2720)/.test(d) && n === 16) ||
+		(/^3[47]/.test(d) && n === 15) ||
+		(/^(6011|64[4-9]|65|62|35(2[89]|[3-8]))/.test(d) && n >= 16 && n <= 19) ||
+		(/^3(0[0-5]|[689])/.test(d) && n >= 14 && n <= 19);
+	return fits && luhn(d);
+}
+
+/** Published test cards (Stripe, Braintree, Adyen) that no pattern below already exempts. */
+const TEST_CARDS = new Set([
+	"378282246310005", "371449635398431", "378734493671000", "2223003122003222", "6011000990139424", "3566002020360505",
+	"30569309025904", "38520000023237", "3056930009020004", "36227206271667", "5425233430109903", "2222420000001113",
+	"4917484589897107", "4035501000000008", "4360000001000005", "6250941006528599", "4012000033330026", "4000056655665556",
+	"4000002760003184", "4000003720000278",
+]);
+
+/** A test card: a published one, or a number made of repeats (`4242 4242…`, `4000 0000…`, `5105 1051…`). */
+function isTestCard(d: string): boolean {
+	return TEST_CARDS.has(d) || /(\d)\1{4}|(\d\d)\2{3}|(\d{3})\3{2}/.test(d);
+}
+
+/**
+ * Card numbers: four groups of four, Amex's 4-6-5, Diners' 4-6-4, or the digits run together. Not as
+ * a value under a JSON key or after `=` (`"value": 4…`, `id=4…`), or in a CSV cell, where it's an
+ * identifier; the labeled rule catches `card_number=…` and `"cardNumber": …`.
+ */
+const CARD = new RegExp(String.raw`(?:(?<=\\[nrt])|(?<![\w\\.+/=:,#@<-]|\d[ -]|["']${SP}{0,3}:${SP}{0,3}["']?|=${SP}{0,3}["']?))(?:\d{4}([ -])\d{4}\1\d{4}\1\d{4}(?:\1\d{3})?|\d{4}([ -])\d{6}\2\d{4,5}|\d{13,19})(?![\w-]|[.,]\d|[ -]\d)`, "g");
+/** A dashed SSN with no label, which must also follow the issuing rules. */
+const SSN = /(?:(?<=\\[nrt])|(?<![\w\\.$/-]|\d ))(\d{3})-(\d{2})-(\d{4})(?![\w-]|[.,]\d)/g;
+/** Words before a number that make it an identifier: `order 4…`, `span 4…`, `docket no. 512-…`. */
+const ID_BEFORE = /\b(?:ids?|order|invoice|tracking|ref|reference|account|acct|ts|timestamp|seq|offset|nonce|hash|serial|span|parent|trace|txn|transaction|ticket|case|docket|part|model|sku|item|phone|tel|fax|no\.?|number|#)[ \t#:.]{0,3}$/i;
+
+const SSN_LABEL = String.raw`SSNs?|SS${SP}?#|social${SP}security|social|ITIN|taxpayer${SP}identification|tax${SP}?id`;
+const CARD_LABEL = String.raw`(?:credit|debit|bank|payment|visa|mastercard|amex)${SP}card|card|CC`;
+const CVV_LABEL = String.raw`CVV2?|CVC2?|security${SP}code|sec${SP}code|card${SP}code|card${SP}verification(?:${SP}code|${SP}value)?`;
+const CODE_LABEL = String.raw`PIN(?:${SP}code)?|passcode|pass${SP}code|door|lockbox|lock${SP}box|keypad|(?:door|gate|alarm|garage|keypad|key${SP}pad|entry|lockbox|lock${SP}box|lock|safe|unlock|disarm|voicemail|house|apartment|apt|elevator|mailbox)${SP}?(?:code|pin)`;
+const PASSPORT_LABEL = String.raw`passport`;
+const LICENSE_LABEL = String.raw`driver'?s?'?${SP}?licen[cs]e|driving${SP}licen[cs]e|DLN|DL(?=${SP}{0,2}(?:#|number|no\b|num))`;
+/** PINs from manuals and defaults, which aren't anyone's. */
+const DEFAULT_PINS = /^(0000|1234|12345|123456|(\d)\2+)$/;
+
+/** Hides the personal data above, labeled or confirmed by a checksum. */
+function redactPersonal(text: string): string {
+	text = redactBackupCodes(redactTotpKeys(redactSeedPhrases(text)))
+		// App passwords as Google and Apple print them: `abcd efgh ijkl mnop`, `abcd-efgh-ijkl-mnop`.
+		.replace(new RegExp(String.raw`(\bpassword\b[^\n]{0,40}?[:\n]${SP}{0,3})([a-z]{4}(?:${SP}[a-z]{4}){3}|[a-z]{4}(?:-[a-z]{4}){3})(?![\w-])`, "gi"), (m, head, v) =>
+			v === v.toLowerCase() ? `${head}[secret: app password]` : m,
+		);
+	if (!/\d{3}/.test(text)) return text;
+	text = text.replace(/[\uff10-\uff19]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/(?<=\d)[\u00a0\u2010-\u2015](?=\d)/g, (c) => (c === "\u00a0" ? " " : "-"));
+	const digits = (v: string) => v.replace(/\D/g, "");
+	return text
+		.replace(labeled(SSN_LABEL, String.raw`\d{3}[- .]?\d{2}[- .]?\d{4}`), (m, head, v) =>
+			EXAMPLE_SSNS.has(digits(v)) || /^(\d)\1+$/.test(digits(v)) ? m : `${head}[secret: SSN]`,
+		)
+		.replace(SSN, (m, a, b, c, offset: number, str: string) =>
+			isIssuedSsn(a + b + c) && !ID_BEFORE.test(str.slice(Math.max(0, offset - 20), offset)) ? "[secret: SSN]" : m,
+		)
+		.replace(labeled(CARD_LABEL, String.raw`\d[\d -]{11,22}\d`), (m, head, v) => {
+			const d = digits(v);
+			return d.length >= 13 && d.length <= 19 && !isTestCard(d) ? `${head}[secret: card number]` : m;
+		})
+		.replace(CARD, (m, _a, _b, offset: number, str: string) => {
+			const d = digits(m);
+			return isCardNumber(d) && !isTestCard(d) && !ID_BEFORE.test(str.slice(Math.max(0, offset - 20), offset)) ? "[secret: card number]" : m;
+		})
+		.replace(labeled(CVV_LABEL, String.raw`\d{3,4}`), "$1[secret: card security code]")
+		.replace(labeled(CODE_LABEL, String.raw`[*#]?\d{4,10}[#*]?`), (m, head, v) => (DEFAULT_PINS.test(digits(v)) ? m : `${head}[secret: code]`))
+		.replace(labeled(PASSPORT_LABEL, String.raw`[A-Z0-9]{6,9}`), (m, head, v) => (/\d/.test(v) && v === v.toUpperCase() ? `${head}[secret: passport number]` : m))
+		.replace(labeled(LICENSE_LABEL, String.raw`[A-Z0-9](?:[A-Z0-9]|[ -](?=[A-Z0-9])){5,19}`), (m, head, v) =>
+			(v.match(/\d/g)?.length ?? 0) >= 4 && v === v.toUpperCase() ? `${head}[secret: license number]` : m,
+		)
+		// BitLocker recovery keys: eight groups of six digits, each a multiple of 11.
+		.replace(/\b\d{6}(?:-\d{6}){7}\b/g, (m) => (m.split("-").every((g) => Number(g) % 11 === 0) ? "[secret: recovery key]" : m))
+		// 1Password Secret Keys.
+		.replace(/\bA3-[A-Z0-9]{6}-[A-Z0-9]{5,6}(?:-[A-Z0-9]{5}){4}\b/g, "[secret: recovery key]");
+}
+
+/** Base32 secrets printed in docs (Google Authenticator's wiki, RFC 6238), which aren't anyone's. */
+const EXAMPLE_TOTP = /^(JBSWY3DPEHPK3PXP|GEZDGNBVGY3TQOJQ)/;
+
+/**
+ * Two-factor setup keys, the permanent seed behind every code an authenticator shows: base32, in
+ * groups of four or run together, near the words that introduce one (`Can't scan? Enter this key`).
+ * Hex-only groups are GPG fingerprints, not base32 keys.
+ */
+function redactTotpKeys(text: string): string {
+	if (!/key|secret|2fa|factor|mfa|otp|authenticator|code/i.test(text)) return text;
+	const re = new RegExp(String.raw`(?:(?<=\\[nrt])|(?<![\w\\/+=-]))(?:[A-Z2-7]{4}(?:([ -])[A-Z2-7]{4}(?:\1[A-Z2-7]{4}){2,14})|[a-z2-7]{4}(?:([ -])[a-z2-7]{4}(?:\2[a-z2-7]{4}){2,14})|[A-Z2-7]{16,64})(?![\w/+=-])`, "g");
+	return text.replace(re, (m, _a, _b, offset: number, str: string) => {
+		const key = m.replace(/[ -]/g, "");
+		const grouped = key !== m;
+		if ((key.match(/[2-7]/g)?.length ?? 0) < (grouped ? 1 : 2) || /^[A-F2-7]+$/i.test(key) || EXAMPLE_TOTP.test(key.toUpperCase())) return m;
+		const before = str.slice(Math.max(0, offset - 80), offset);
+		const trigger = grouped ? /\b(key|secret|code|2fa|two[- ]factor|mfa|totp|otp|authenticator)\b/i : /\b(key|secret|2fa|two[- ]factor|mfa|totp|otp|authenticator)\b/i;
+		return trigger.test(before) ? "[secret: 2FA setup key]" : m;
+	});
+}
+
+/** One backup code: `8f3k-2m9q`, `a1b2c-3d4e5`, `1234 5678`. */
+const BACKUP_CODE = String.raw`(?:\d{4} \d{4}|(?=[A-Za-z0-9-]{0,60}\d)[A-Za-z0-9]{4,16}(?:-[A-Za-z0-9]{3,16}){0,7})`;
+const BACKUP_CODE_RE = new RegExp(String.raw`(?<![\w#-])${BACKUP_CODE}(?![\w-])`, "g");
+const BULLET = String.raw`(?:[-*•]|\d{1,2}[.)]|\[[ x]\])`;
+const BACKUP_CODE_LINE = new RegExp(String.raw`^[ \t]{0,10}${BULLET}?[ \t]{0,5}${BACKUP_CODE}(?:[ \t,;|]{1,6}(?:${BULLET}[ \t]{1,4})?${BACKUP_CODE}){0,9}[ \t,;]{0,3}\r?$`);
+const BACKUP_LABEL = /\b(?:backup|recovery|emergency|rescue|scratch|one[- ]time|single[- ]use)[ \t]codes?\b|\brecovery[ \t]keys?\b/i;
+/** What follows a label that introduces codes: `:`, `are`, `(save these):`, or nothing, as in a heading. */
+const BACKUP_INTRO = /^[ \t]{0,3}(?:\([^)\n]{0,60}\)[ \t]{0,3})?(?:(?:[:=]|\bare\b|\bis\b)(.*)|[ \t]*\r?$)/;
+
+/**
+ * Two-factor backup codes and recovery keys: after a label that introduces them, the codes on its line
+ * and the lines of codes under it. Each one signs in once without the second factor.
+ */
+function redactBackupCodes(text: string): string {
+	if (!BACKUP_LABEL.test(text)) return text;
+	const mask = (s: string) =>
+		s.replace(BACKUP_CODE_RE, (code) => (code.length >= 6 && !/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(code) ? "[secret: backup code]" : code));
+	// Lines and their separators, so `\n` escapes in a JSON chat export split lines too.
+	const parts = text.split(/(\r?\n|\\n)/);
+	for (let i = 0; i < parts.length; i += 2) {
+		const label = parts[i].length < 2000 ? parts[i].match(BACKUP_LABEL) : null;
+		if (!label) continue;
+		const end = label.index! + label[0].length;
+		const intro = parts[i].slice(end).match(BACKUP_INTRO);
+		if (!intro) continue;
+		if (intro[1]) parts[i] = parts[i].slice(0, end) + parts[i].slice(end).replace(intro[1], mask(intro[1]));
+		for (let j = i + 2, blanks = 0; j < parts.length && j <= i + 80; j += 2) {
+			if (!parts[j].trim()) {
+				if (++blanks > 2) break;
+				continue;
+			}
+			if (!BACKUP_CODE_LINE.test(parts[j])) break;
+			parts[j] = mask(parts[j]);
+			i = j;
+		}
+	}
+	return parts.join("");
+}
+
+const BIP39_INDEX = new Map(BIP39_WORDS.map((w, i) => [w, i]));
+
+/** Whether wordlist words are a BIP39 phrase: a valid length, and the last word's checksum bits match. */
+function isSeedPhrase(words: string[]): boolean {
+	if (![12, 15, 18, 21, 24].includes(words.length)) return false;
+	const bits = words.map((w) => BIP39_INDEX.get(w)!.toString(2).padStart(11, "0")).join("");
+	const entropyBits = (words.length * 32) / 3;
+	const bytes = Buffer.alloc(entropyBits / 8);
+	for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(bits.slice(i * 8, i * 8 + 8), 2);
+	const check = createHash("sha256").update(bytes).digest()[0].toString(2).padStart(8, "0").slice(0, words.length / 3);
+	return bits.slice(entropyBits) === check;
+}
+
+/** Words that introduce a phrase, and can lead its run since they're wordlist words too. */
+const PHRASE_LEAD = /^(seed|phrase|secret|word|recovery|backup|wallet)$/;
+const PHRASE_LABEL = /seed|mnemonic|recovery phrase|secret phrase|backup phrase|\b(12|24)[- ]words?\b/i;
+/** Between the words of a phrase: spaces, line breaks, list numbering. Not quotes or commas, which make a list in code. */
+const PHRASE_GAP = /^(?:[ \t]|\r?\n|\\n|\d{1,2}[.)](?!\d)|#\d{1,2}(?!\d)|\*\*\d{1,2}\.\*\*)+$/;
+
+/**
+ * Wallet recovery phrases: a run of exactly 12, 15, 18, 21 or 24 wordlist words, numbered or not,
+ * that passes the checksum or follows a label like `seed phrase`. A run of any other length is a word
+ * list, phrases with repeated words are test vectors, and so are lines that also hold hex or an xprv.
+ */
+function redactSeedPhrases(text: string): string {
+	const spans: [number, number][] = [];
+	let run: { word: string; start: number; end: number }[] = [];
+	const close = () => {
+		let lead = 0;
+		while (lead < run.length && PHRASE_LEAD.test(run[lead].word)) lead++;
+		const words = run.slice(lead).map((r) => r.word);
+		if ([12, 15, 18, 21, 24].includes(words.length) && new Set(words).size >= words.length * 0.8) {
+			const start = run[lead].start;
+			const end = run.at(-1)!.end;
+			const lineStart = text.lastIndexOf("\n", start) + 1;
+			const lineEnd = text.indexOf("\n", end);
+			const line = text.slice(lineStart, lineEnd < 0 ? undefined : lineEnd);
+			const vector = line.length < 4000 && /[0-9a-f]{32}|xprv/i.test(line);
+			if (!vector && (isSeedPhrase(words) || PHRASE_LABEL.test(text.slice(Math.max(0, start - 60), start)))) spans.push([start, end]);
+		}
+		run = [];
+	};
+	// `\n` escapes (a phrase in JSON) separate words; blanking them keeps every offset.
+	for (const m of text.replace(/\\[nrt]/g, "  ").matchAll(/(?<![A-Za-z])[A-Za-z]{3,8}(?![A-Za-z])/g)) {
+		const word = m[0].toLowerCase();
+		const start = m.index!;
+		if (run.length) {
+			const gap = text.slice(run.at(-1)!.end, start);
+			if (gap.length > 24 || !PHRASE_GAP.test(gap)) close();
+		}
+		if (BIP39_INDEX.has(word)) run.push({ word, start, end: start + m[0].length });
+		else close();
+	}
+	close();
+	if (!spans.length) return text;
+	const out: string[] = [];
+	let at = 0;
+	for (const [start, end] of spans) {
+		out.push(text.slice(at, start), "[secret: recovery phrase]");
+		at = end;
+	}
+	return out.join("") + text.slice(at);
+}
+
 /** A value as it appears after a name: quoted, or unquoted up to a delimiter. */
 const VALUE = String.raw`("(?:[^"\\\n]|\\.){1,500}"|'[^'\n]{1,500}'|[^\s"',;&)}\]|│]{1,500})`;
 /** A name that could be a credential's; others never match, so they can't swallow the pairs inside their values. */
-const NAME = String.raw`((?=[\w.-]{0,80}?(?:key|token|secret|pass|pwd|pw\b|auth|cred|cookie|sig|salt|pin|pat\b|sid\b|sess))[A-Za-z_][\w.-]{0,80})`;
+const NAME = String.raw`((?=[\w.-]{0,80}?(?:key|token|secret|pass|pwd|pw\b|psk|auth|cred|cookie|sig|salt|pin|pat\b|sid\b|sess))[A-Za-z_][\w.-]{0,80})`;
 
-const NAMED_TRIGGER = /key|token|secret|pass|pwd|pw|auth|cred|cookie|sig|salt|pin|pat|sid|sess|bearer|basic|:\/\/|define|value|@\/\/|\.\.\.|│|redis|-u |--user|mysql/i;
+const NAMED_TRIGGER = /key|token|secret|pass|pwd|pw|psk|auth|cred|cookie|sig|salt|pin|pat|sid|sess|bearer|basic|:\/\/|define|value|@\/\/|\.\.\.|│|redis|-u |--user|mysql/i;
 
 /** Kubernetes env entries: `- name: DB_PASSWORD`, then `value: <literal>` on the next line. */
 function envValueLine(lines: string[], i: number, line = lines[i]): string | undefined {
 	const envName = lines[i - 1]?.match(/^[ \t]{0,40}-[ \t]{1,5}name:[ \t]{0,5}["']?([\w.-]{1,80})["']?[ \t]{0,5}\r?$/)?.[1];
 	if (!envName || !isCredentialName(envName)) return undefined;
 	return line.replace(/^([ \t]{0,40}value:[ \t]{0,5})(\S.{0,500})$/, (m, a, value) => (isInert(cleanValue(value)) ? m : `${a}[secret]`));
+}
+
+/** A credential named in a sentence: `my netflix password is …`, `the wifi password's …`, `API key was: …`. */
+const PROSE_PAIR = /\b([A-Za-z][\w-]{0,40}(?:[ \t][A-Za-z][\w-]{0,40})?)('s[ \t]{1,3}|[ \t]{1,3}(?:is|was)(?:[ \t]{1,3}(?:now|still|currently|actually|just))?[ \t]{0,3}:?[ \t]{1,3})(["'`]?)([^\s"'`]{1,300}?)\3(?=[.,;!?)\]]{0,3}(?:[\s"'`]|\\n|$))/g;
+/** Words that follow `password is` in sentences about passwords rather than ones that give one. */
+const PROSE_WORDS = new Set([
+	"required", "incorrect", "invalid", "wrong", "correct", "missing", "empty", "blank", "set", "unset", "stored", "hashed",
+	"encrypted", "saved", "changed", "reset", "expired", "too", "not", "the", "a", "an", "your", "my", "our", "their", "his",
+	"her", "its", "this", "that", "same", "different", "still", "now", "also", "being", "been", "case", "case-sensitive",
+	"sensitive", "mandatory", "weak", "strong", "long", "short", "okay", "fine", "good", "bad", "there", "here", "generated",
+	"random", "provided", "given", "sent", "shown", "hidden", "visible", "used", "needed", "protected", "secure", "insecure",
+	"valid", "unique", "only", "just", "always", "never", "usually", "probably", "somewhere", "written", "printed", "rotated",
+	"revoked", "compromised", "leaked", "known", "unknown", "fake", "real", "temporary", "new", "old", "updated", "string",
+	"str", "number", "int", "boolean", "bool", "text", "varchar", "bytes", "object", "any", "unknown", "nullable", "ignored",
+	"correctly", "configured", "supported", "accepted", "rejected", "disabled", "enabled", "displayed", "masked", "redacted",
+	"what", "which", "where", "when", "why", "how", "something", "anything", "nothing", "everything", "easy", "hard", "simple",
+	"complex", "complicated", "different", "safe", "unsafe", "secret", "private", "public", "important", "useless", "gone",
+	"bcrypt", "scrypt", "argon2", "argon2i", "argon2d", "argon2id", "pbkdf2", "md5", "sha1", "sha256", "sha512", "sha-1",
+	"sha-256", "sha-512", "plaintext", "salted", "changeit", "optional", "configurable", "immutable", "readonly",
+]);
+
+/**
+ * Whether a credential named in prose is followed by its value. Keys and tokens must look random;
+ * a password can be any word, so one is taken when it ends the sentence or holds a digit, and isn't
+ * a word that describes passwords (`password is incorrect`).
+ */
+function isProseSecret(name: string, raw: string, quoted: boolean, after: string): boolean {
+	// The whole word as written, not a suffix: `the compass is …` names no credential.
+	const last = words(name).at(-1) ?? "";
+	// Markdown and HTML around a word (`**required**`, `<code>sub</code>`) aren't part of it.
+	const value = raw.replace(/^(?:\*{1,2}|_{1,2}|<\w{1,10}>)|(?:\*{1,2}|_{1,2}|<\/\w{1,10}>)$/g, "");
+	if (value.length < 4 || isInert(value) || isCode(value) || isPlaceholder(value) || /^[A-Z][A-Z0-9]*_[A-Z0-9_]+$/.test(value)) return false;
+	if (/^(KEY|APIKEY|TOKEN|SECRET|CREDENTIALS?)$/.test(last)) return isCredentialName(name) && isRandomToken(value);
+	if (!/^(PASSWORD|PASSWD|PASSCODE|PASSPHRASE|PWD|PW)$/.test(last)) return false;
+	const lower = value.toLowerCase();
+	if (COMMON_WORDS.has(lower) || PROSE_WORDS.has(lower) || DEFAULT_PINS.test(value) || /^\d{1,3}[-–]\d{1,3}$/.test(value)) return false;
+	if (raw !== value || /^[a-z]+(-[a-z]+)+$/.test(value)) return false;
+	if (looksSecret(value)) return true;
+	return quoted || /\d/.test(value) || /^[.,;!?)\]]{0,3}[ \t]*(?:$|\r|\\n|(?:and|but|so|btw|if|or|lol|thanks|thx|please|pls|then|for|ok)\b)/i.test(after);
 }
 
 /**
@@ -442,6 +759,9 @@ function redactNamedValues(text: string): string {
 		if (/;/.test(line)) {
 			line = line.replace(/(^|[;"'\s])((?:User )?Password|Pwd|AccountKey|SharedAccessKey|SharedAccessSignature)=([^;"'\s]{1,500})/gi, "$1$2=[secret]");
 		}
+		line = line.replace(PROSE_PAIR, (m, name, link, q, value, offset: number, str: string) =>
+			isProseSecret(name, value, q !== "", str.slice(offset + m.length)) ? `${name}${link}${q}[secret]${q}` : m,
+		);
 		// Tables: `password    hunter2`, `│ JWT_SECRET │ value │`.
 		line = line.replace(/^([ \t│|]{0,10})([A-Za-z_][\w.-]{0,80})([ \t]{2,80}|[ \t]{0,80}[│|][ \t]{0,10})([^\s│|][^│|\n]{0,400}?)([ \t]{0,40}(?:[│|].{0,400})?\r?)$/, (m, a, name, sepr, value, end) =>
 			mask(name, value) ? `${a}${name}${sepr}[secret]${end}` : m,
@@ -449,6 +769,10 @@ function redactNamedValues(text: string): string {
 		// Dot-leader rows (`artisan config:show`): `connections ⇁ mysql ⇁ password ...... value`.
 		line = line.replace(/^(.{0,300}?)([A-Za-z_][\w-]{0,80})([ \t]\.{3,300}[ \t]{1,5})(\S.{0,400}?)([ \t]{0,20}\r?)$/, (m, a, name, sepr, value, end) =>
 			mask(name, value) ? `${a}${name}${sepr}[secret]${end}` : m,
+		);
+		// nmcli --show-secrets: `802-11-wireless-security.psk:   value`, whose name starts with a digit.
+		line = line.replace(/^([ \t]{0,10}(?:802-11-wireless-security|802-1x|wifi-sec|vpn\.secrets)\.(?:psk|password|wep-key\d|leap-password|private-key-password|[\w-]{0,40}password)[ \t]{0,10}:[ \t]{1,40})(\S.{0,400}?)([ \t]*\r?)$/, (m, a, v, end) =>
+			isInert(cleanValue(v)) || v === "--" || /^<hidden>$/.test(v) ? m : `${a}[secret]${end}`,
 		);
 		// redis.conf and redis-cli: `requirepass value`, ACL `user name on >password`, CONFIG GET pairs.
 		line = line
@@ -1044,6 +1368,7 @@ export class Secrets {
 		text = this.redactBlobs(text);
 		text = this.replaceKnown(text);
 		text = redactFormats(text, (name) => `[secret: ${name}]`);
+		text = redactPersonal(redactSignInLinks(text));
 		return broad ? redactNamedValues(text) : redactUnmistakable(text);
 	}
 
