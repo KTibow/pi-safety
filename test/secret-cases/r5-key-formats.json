@@ -1,0 +1,52 @@
+[
+ {
+  "id": "surplus-key-support-ticket",
+  "why": "Surplus buyer keys pasted in curl, bare, and cut short by a mistyped copy; request ids next to them are not secrets",
+  "output": "curl https://api.surplus.example/v1/chat -H \"Authorization: Bearer inf_@@C:dcwg9eyx.bwnfdpa7.me01kfsy.hewsibcy@@\"\nstill failing with inf_@@C:1hjrq6bf.cd5ijzzb.vqminy6a.kvhpwo@@, request id req_@@C:c11d7d6a.0f998f6a.251e7c61.ec26bc18@@, org org_@@C:01YJRAHC.9NPXF4YR.D62KVEJC.8Q@@",
+  "hide": [
+   "inf_@@C:dcwg9eyx.bwnfdpa7.me01kfsy.hewsibcy@@",
+   "inf_@@C:1hjrq6bf.cd5ijzzb.vqminy6a.kvhpwo@@"
+  ],
+  "keep": [
+   "req_@@C:c11d7d6a.0f998f6a.251e7c61.ec26bc18@@",
+   "org_@@C:01YJRAHC.9NPXF4YR.D62KVEJC.8Q@@",
+   "Authorization: Bearer [secret"
+  ]
+ },
+ {
+  "id": "surplus-media-job-token",
+  "why": "a media job's polling token is a bearer capability",
+  "output": "{\"job_id\": \"@@C:0187M58S.V9JZP1EE.QBRT9RNJ.YX@@\", \"job_token\": \"mjt_@@C:01P79QKS.5CHVN1Q9.6HCZQ6ZM.M4@@\", \"status\": \"queued\"}",
+  "hide": [
+   "mjt_@@C:01P79QKS.5CHVN1Q9.6HCZQ6ZM.M4@@"
+  ],
+  "keep": [
+   "\"status\": \"queued\""
+  ]
+ },
+ {
+  "id": "aws-key-pair-pasted",
+  "why": "a customer pastes an access key id and secret on one line; the secret has a slash, which naive token regexes stop at",
+  "output": "here are the bedrock creds: @@AWS_AKIA@@BPM67RVN2ZQRDXAY @@C:C1/4fZI+.reBT+IQB.2znYQBCS.ySqpR3Ji.vaZ9JGhq@@",
+  "hide": [
+   "@@AWS_AKIA@@BPM67RVN2ZQRDXAY",
+   "@@C:C1/4fZI+.reBT+IQB.2znYQBCS.ySqpR3Ji.vaZ9JGhq@@"
+  ],
+  "keep": [
+   "here are the bedrock creds:"
+  ]
+ },
+ {
+  "id": "gateway-key-with-dots",
+  "why": "newer @@SK_DASH@@llm- gateway keys carry dots and underscores in the body; a match that stops at the first dot leaks the rest. The sentence-ending period stays",
+  "output": "new key is @@SK_DASH@@llm-NBPlMPeTCYvyXQ_nlOfmGhRaKFc.o7TGqCiUQWBY0gt_UDcdo5.m5iEUSz0. the seller side uses si_seller_@@C:rny6xl2i.tnh6qpij.rw206x5d.lkawp907@@.",
+  "hide": [
+   "@@SK_DASH@@llm-NBPlMPeTCYvyXQ_nlOfmGhRaKFc.o7TGqCiUQWBY0gt_UDcdo5.m5iEUSz0",
+   "si_seller_@@C:rny6xl2i.tnh6qpij.rw206x5d.lkawp907@@",
+   "m5iEUSz0"
+  ],
+  "keep": [
+   "new key is [secret: API key]. the seller side"
+  ]
+ }
+]

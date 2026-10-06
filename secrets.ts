@@ -245,10 +245,13 @@ function looksSecret(raw: string): boolean {
 
 /** Well-known token formats (from gitleaks, pi-redact and the providers' docs). */
 const TOKEN_FORMATS: [string, RegExp][] = [
+	// A secret key next to its key id or under its own name; before the key id itself, which it looks behind for.
+	["AWS secret key", /(?<=\b(?:(?:AKIA|ASIA)[A-Z0-9]{16}[ \t"',:=|]{1,10}|(?:aws_secret_access_key|AWS_SECRET_ACCESS_KEY|secret_access_key|SecretAccessKey)["']?[ \t]{0,5}[:=][ \t]{0,5}["']?))(?=[A-Za-z0-9/+]{0,39}[a-z])(?=[A-Za-z0-9/+]{0,39}[A-Z])(?=[A-Za-z0-9/+]{0,39}\d)[A-Za-z0-9/+]{40}(?![A-Za-z0-9/+=])/g],
 	["AWS key", /\b(AKIA|ASIA)[A-Z0-9]{16}\b/g],
 	["GitHub token", /\b(gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{60,})\b/g],
 	["GitLab token", /\bgl(pat|dt|ptt|rt|soat|cbt|imt)-[A-Za-z0-9_-]{20,}/g],
-	["API key", /\bsk-(ant-|proj-|or-v1-|svcacct-)?[A-Za-z0-9_-]{20,}/g],
+	// Newer gateway keys (`sk-llm-…`) have dots inside the body, so a dot between characters doesn't end one.
+	["API key", /\bsk-(ant-|proj-|or-v1-|svcacct-)?(?:[A-Za-z0-9_-]|\.(?=[A-Za-z0-9_-])){20,}/g],
 	["Stripe key", /\b(sk|rk)_(live|test)_[A-Za-z0-9]{20,}\b/g],
 	["Stripe webhook secret", /\bwhsec_[A-Za-z0-9+/=]{20,}/g],
 	["Slack token", /\bxox[abposr]-[A-Za-z0-9-]{20,}|\bxapp-\d-[A-Za-z0-9-]{20,}/g],
@@ -280,6 +283,10 @@ const TOKEN_FORMATS: [string, RegExp][] = [
 	["Telegram bot token", /\b\d{8,10}:AA[A-Za-z0-9_-]{33}(?![\w-])/g],
 	["Discord bot token", /\b[MNO][A-Za-z0-9_-]{23,25}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{27,38}(?![\w-])/g],
 	["Notion token", /\bntn_[A-Za-z0-9]{40,}\b|\bsecret_[A-Za-z0-9]{43}\b/g],
+	// Surplus Intelligence keys (customers paste them cut short) and media job tokens.
+	["Surplus key", /\binf_(?=[a-z]{0,40}\d)[a-z0-9]{24,40}\b/g],
+	["Surplus seller key", /\bsi_seller_(?=[a-z]{0,40}\d)[a-z0-9]{24,40}\b/g],
+	["Surplus job token", /\bmjt_[0-9A-HJKMNP-TV-Z]{26}\b/g],
 	["Venice key", /\bVENICE_INFERENCE_KEY_(?=[A-Za-z_-]{0,40}\d)[A-Za-z0-9_-]{20,}/g],
 	// The `<vendor>_sk_` convention: `aria_sk_…`, ElevenLabs' `sk_…`.
 	["API key", /\b(?:[a-z][a-z0-9]{1,15}_)?sk_(?!live_|test_)(?=[A-Za-z]{0,40}\d)[A-Za-z0-9]{24,}\b/g],
@@ -340,7 +347,7 @@ function redactUnmistakable(text: string): string {
 		.map((line) => {
 			if (line.length > 20_000) return line;
 			line = line
-				.replace(/(\bAuthorization["']?[ \t]{0,10}[:=][ \t]{0,10}["']?(?:Bearer|Basic|Token|Bot|Digest|ApiKey|SSWS|token|bearer|basic)[ \t]{1,10})([^\s"',;]{1,2000})/gi, (m, head, value) =>
+				.replace(/(\bAuthorization["']?[ \t]{0,10}[:=][ \t]{0,10}["']?(?:Bearer|Basic|Token|Bot|Digest|ApiKey|SSWS|token|bearer|basic)[ \t]{1,10})(?!\[secret)([^\s"',;]{1,2000})/gi, (m, head, value) =>
 					literal(value) ? `${head}[secret]` : m,
 				)
 				.replace(/\b(Bearer|Basic)([ \t]{1,10})([A-Za-z0-9._~+/-]{16,2000}={0,2})/g, (m, scheme, gap, value) =>
@@ -734,7 +741,7 @@ function redactNamedValues(text: string): string {
 			return isCredentialName(name) && (looksSecret(value) || passphrase || (/[,;]/.test(value) && value.length >= 8)) ? `${q}${name}=[secret]${q}` : m;
 		});
 		line = line
-			.replace(/(\bAuthorization["']?[ \t]{0,10}[:=][ \t]{0,10}["']?(?:Bearer|Basic|Token|Bot|Digest|ApiKey|SSWS|token|bearer|basic)[ \t]{1,10})([^\s"',;]{1,2000})/gi, "$1[secret]")
+			.replace(/(\bAuthorization["']?[ \t]{0,10}[:=][ \t]{0,10}["']?(?:Bearer|Basic|Token|Bot|Digest|ApiKey|SSWS|token|bearer|basic)[ \t]{1,10})(?!\[secret)([^\s"',;]{1,2000})/gi, "$1[secret]")
 			.replace(/\b(Bearer|Basic)([ \t]{1,10})([A-Za-z0-9._~+/-]{16,2000}={0,2})/g, "$1$2[secret]")
 			.replace(/\b([a-z][a-z0-9+.-]{0,20}:\/\/[^\s/?#@:]{0,200}:)([^\s]{1,300}?)(@[^\s@/?#"']{1,300}(?=[/?#:\s"']|$))/gi, (m, head, pw, tail) =>
 				isUrlPassword(pw) ? `${head}[secret]${tail}` : m,
