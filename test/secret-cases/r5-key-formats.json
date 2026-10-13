@@ -10,7 +10,7 @@
   "keep": [
    "req_@@C:c11d7d6a.0f998f6a.251e7c61.ec26bc18@@",
    "org_@@C:01YJRAHC.9NPXF4YR.D62KVEJC.8Q@@",
-   "Authorization: Bearer [secret"
+   "Authorization: Bearer [REDACTED"
   ]
  },
  {
@@ -46,7 +46,7 @@
    "m5iEUSz0"
   ],
   "keep": [
-   "new key is [secret: API key]. the seller side"
+   "new key is [REDACTED API key #", "]. the seller side"
   ]
  }
 ]

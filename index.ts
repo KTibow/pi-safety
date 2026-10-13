@@ -21,6 +21,7 @@ import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { type ExtensionAPI, type ExtensionContext, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { type Policy, questions } from "./questions.ts";
+import type { Guessing } from "redac---n";
 import { Secrets, type SecretsMode } from "./secrets.ts";
 
 const CONFIG_FILE = join(getAgentDir(), "safety.json");
@@ -97,11 +98,10 @@ interface Config extends Policy {
 	/** Extra secret files, and files that look secret but aren't, as globs. */
 	secretPaths: string[];
 	/**
-	 * How to catch secrets that aren't in any secret file or credential variable: "precise" (well-known
-	 * token formats, private keys, Authorization headers, URL passwords), or "broad", which also hides
-	 * credential-named values in any output and sometimes hides harmless text in source code.
+	 * How hard to guess at random-looking tokens with no name or format next to them: "off", "confident"
+	 * or "eager" (redac---n's `guessing`). Every other rule runs whatever this says.
 	 */
-	secretPatterns: "precise" | "broad";
+	secretGuessing: Guessing;
 	notSecret: string[];
 }
 
@@ -114,7 +114,7 @@ const DEFAULTS: Config = {
 	maxDenials: 20,
 	timeoutMs: 30_000,
 	secrets: "mask",
-	secretPatterns: "precise",
+	secretGuessing: "confident",
 	secretPaths: [],
 	notSecret: [],
 };
@@ -516,7 +516,7 @@ export default function (pi: ExtensionAPI) {
 			(config.enable === "headless" && ctx.mode !== "tui");
 		// --safety and PI_SAFETY=1 can't be turned off; /safety on|off overrides only the config.
 		setEnabled(ctx, isForced() || (typeof toggle === "boolean" ? toggle : wanted));
-		secrets = config.secrets === "off" ? undefined : new Secrets({ mode: config.secrets, patterns: config.secretPatterns, paths: config.secretPaths, notSecret: config.notSecret, agentDir: getAgentDir() });
+		secrets = config.secrets === "off" ? undefined : new Secrets({ mode: config.secrets, guessing: config.secretGuessing, paths: config.secretPaths, notSecret: config.notSecret, agentDir: getAgentDir() });
 		rebuildBacklog(ctx);
 	});
 
@@ -524,12 +524,13 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("tool_result", (event, ctx) => {
 		if (!secrets) return undefined;
-		// A read of a secret file shows the file masked; scrub() does the same for commands that print one.
-		const readPath = maskReads.delete(event.toolCallId) ? resolveToolPath(event.input.path, ctx.cwd) : undefined;
+		// A read is judged as the file it returned, a secret file by pi-safety's rules too; a shell
+		// command's output as what that command prints (`cat .env`, `gh auth token`).
+		const secretFile = maskReads.delete(event.toolCallId);
+		const readPath = event.toolName === "read" ? resolveToolPath(event.input.path, ctx.cwd) : undefined;
 		const command = typeof event.input.command === "string" ? event.input.command : typeof event.input.code === "string" ? event.input.code : "";
-		// A failed call carries no file content, so masking it would only destroy the path in the message.
-		const masked = readPath !== undefined && !event.isError;
-		const fileName = readPath ? basename(readPath) : "";
+		// A failed call carries no file content, so judging it as one would only destroy the path in the message.
+		const hint = event.isError ? {} : readPath ? { path: readPath, secretFile } : command ? { command } : {};
 		const touched =
 			(EDIT_TOOLS.has(event.toolName) && resolveToolPath(event.input.path, ctx.cwd)) ||
 			(event.toolName !== "read" && /\.env|\.pem|\.key\b|credential|secret|id_(rsa|ed25519|ecdsa)|\.npmrc|\.netrc/i.test(json(event.input)));
@@ -537,7 +538,7 @@ export default function (pi: ExtensionAPI) {
 		// If scrubbing itself fails, withhold the output rather than pass it on unchecked.
 		const clean = (text: string) => {
 			try {
-				return secrets!.scrub(text, ctx.cwd, masked, fileName, event.isError ? "" : command);
+				return secrets!.scrub(text, ctx.cwd, hint);
 			} catch (err) {
 				return `[pi-safety withheld this output: checking it for secrets failed (${(err as Error).message})]`;
 			}
@@ -575,7 +576,7 @@ export default function (pi: ExtensionAPI) {
 			const command = message.role === "bashExecution" ? String(message.command ?? "") : "";
 			const redacted = redactMessage(message, (text) => {
 				try {
-					return command && text === message.output ? secrets!.scrub(text, ctx.cwd, false, "", command) : secrets!.redact(text);
+					return command && text === message.output ? secrets!.scrub(text, ctx.cwd, { command }) : secrets!.redact(text);
 				} catch {
 					return "[pi-safety withheld this text: checking it for secrets failed]";
 				}
@@ -607,7 +608,7 @@ export default function (pi: ExtensionAPI) {
 				rebuildBacklog(ctx);
 			}
 			const source = config.endpoint ? `${config.endpoint.model} at ${config.endpoint.url}` : (config.classifier ?? "first available Jev");
-			const secretsLine = secrets ? ` Secrets are ${config.secrets === "block" ? "blocked" : "masked"} (${config.secretPatterns} patterns).` : " Secret protection is off.";
+			const secretsLine = secrets ? ` Secrets are ${config.secrets === "block" ? "blocked" : "masked"} (guessing ${config.secretGuessing}).` : " Secret protection is off.";
 			ctx.ui.notify(
 				(enabled
 					? `pi-safety is on (${source}, threshold ${config.threshold}). ${checks} checked, ${blocked} blocked${cost ? `, $${cost.toFixed(4)}` : ""}.`

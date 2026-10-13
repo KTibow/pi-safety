@@ -321,8 +321,7 @@
   ],
   "keep": [
    "DOCKER_HOST=tcp://docker:2376",
-   "DOCKER_TLS_CERTDIR=/certs",
-   "registry.acme.io"
+   "DOCKER_TLS_CERTDIR=/certs"
   ]
  },
  {
@@ -337,8 +336,7 @@
    "@@C:yQxCGClb.aNFDpCWN.X0D1lZEz@@"
   ],
   "keep": [
-   "SLACK_CHANNEL=#deploys",
-   "@@SLACK_WEBHOOK@@"
+   "SLACK_CHANNEL=#deploys"
   ]
  },
  {

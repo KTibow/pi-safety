@@ -347,8 +347,7 @@
    "@@C:Qx7vR2mK.9tL4wPb8.nC5dF1gJ.6sY3eHa0.zU2iOk@@-@@C:Lm9XvT4p.N7wB3cY6.dF1gH5jQ.0sZr8@@"
   ],
   "keep": [
-   "dev.azure.com/acme/shop/_git/shop (fetch)",
-   "https://discord.com/api/webhooks/"
+   "dev.azure.com/acme/shop/_git/shop (fetch)"
   ]
  },
  {

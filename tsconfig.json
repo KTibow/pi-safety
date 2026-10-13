@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["index.ts", "questions.ts", "secrets.ts", "test/**/*.ts"]
+  "include": ["index.ts", "questions.ts", "secrets.ts", "personal.ts", "test/**/*.ts"]
 }

@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      redac---n:
+        specifier: 0.0.2
+        version: 0.0.2
     devDependencies:
       '@earendil-works/pi-ai':
         specifier: ^0.99.1
@@ -727,6 +731,10 @@ packages:
 
   quickjs-wasi@3.6.2:
     resolution: {integrity: sha512-FCqGtGOrMgzUiIrMNMA2YnsOxCNwo31dzqXvclXUC6xeT35NJLKXQJsvbeCTjvoFAwZgEAPg8U6+KAPDGXn8Mg==}
+
+  redac---n@0.0.2:
+    resolution: {integrity: sha512-+6SDcJa6HqSDMEbhi+PaSey6AcK9CYEfOw+GIBJjkdEOWs312fNKaD1O5++OD7Ei7lGo6xl13Ck/ynsMsJ97/w==}
+    engines: {node: '>=20'}
 
   retry@0.12.0:
     resolution: {integrity: sha512-9LkiTwjUh6rT555DtE9rTX+BKByPfrMzEAtnlEtdEwr3Nkffwiihqe2bWADg+OQRjt9gl6ICdmB/ZFDCGAtSow==}
@@ -1548,6 +1556,8 @@ snapshots:
   proxy-agent-negotiate@1.1.0: {}
 
   quickjs-wasi@3.6.2: {}
+
+  redac---n@0.0.2: {}
 
   retry@0.12.0: {}
 

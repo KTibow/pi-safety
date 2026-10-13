@@ -58,8 +58,8 @@ pi-safety is split into layers:
 |---|---|
 | `index.ts` | Enabling, the fast path, building state, calling the classifier, blocking, and the hooks that rewrite output |
 | `questions.ts` | The gate's policy: the two questions and the default definitions of dangerous and routine |
-| `secrets.ts` | Secret protection: which files and names hold credentials, masking, and redaction |
-| `bip39.ts` | The BIP39 wordlist, for recognizing wallet recovery phrases |
+| `secrets.ts` | Secret protection: which files on this machine are secret, and wrapping [redac---n](https://github.com/KTibow/redac---n), which does the detection |
+| `personal.ts` | Personal data redac---n leaves alone: SSNs, cards, codes, two-factor keys |
 | `test/eval.ts` | 43 labeled actions, including injection attempts, scored against a classifier |
 | `test/secrets-eval.ts` | 560 labeled secret cases in `test/secret-cases/`, scored against `secrets.ts` |
 | `test/hijacked-agent.ts` | A scripted malicious agent that tries to get past the gate in a real pi run |
@@ -228,42 +228,42 @@ secret, that value is in the transcript and goes to whichever provider serves yo
 agent does next. If you don't trust what providers retain, pi-safety rewrites tool output before the
 model sees it. This works whether or not the gate is on.
 
+Detection is [redac---n](https://github.com/KTibow/redac---n)'s: vendor token formats, private keys,
+URL passwords, `Authorization` headers, values under credential names, encoded secrets, and
+random-looking tokens. Each tool result is judged with where it came from, the file a `read` returned
+or the shell command that printed it, so `cat .env` is read as a secret file and `cat .env | wc -l`
+isn't. A secret is replaced by a placeholder like `[REDACTED password #a794f2]`, whose tag is the same
+wherever the same value turns up.
+
 | Layer | What it does |
 |---|---|
-| **Masked files** | A read of a secret file, a command that prints one (`cat .env`, `git show HEAD:.env`), and grep lines from one show the file with credential values replaced by `[secret]`. Names, structure, comments, quoting and harmless settings stay, so the agent can still edit the file |
-| **Known values** | Every credential in a secret file under the project, a credential file in your home directory, or a credential-named environment variable is replaced wherever it appears: JSON-, URL-, shell- and hex-escaped, inside base64 and hex blobs, and when output cut the value short |
-| **Patterns** | Secrets that were never in a file (`gh auth token`, an OAuth response, another container's environment) are caught by well-known token formats, private-key blocks, `Authorization` headers, URL passwords and credentials in URL query strings |
-| **Personal data** | What people paste into chats and get in emails: SSNs, card numbers and security codes, PINs and door codes, passport and driver's license numbers, wallet recovery phrases, two-factor setup keys and backup codes, recovery keys, and reset or magic sign-in links. A bare number is hidden only when a checksum or the issuing rules confirm it (Luhn for cards, the SSA's rules for SSNs, the BIP39 checksum for phrases); after a label like `SSN:` or `card number`, a mistyped one is hidden too. Published test cards and example SSNs stay |
-
-What counts as a credential is decided by a name's last meaningful word, the word that says what the
-value is. `DB_PASSWORD` and `client-key-data` hold credentials; `PASSWORD_MIN_LENGTH`, `TOKEN_URL`,
-`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` and an S3 object `Key` don't. A few names depend on the value:
-`TERM_SESSION_ID` is a terminal's, `INSTAGRAM_SESSION_ID` is a live login.
+| **Secret files** | A read of a secret file, or a command that prints one (`cat .env`, `git show HEAD:.env`), hides every credential in it. Names, structure, comments, quoting and harmless settings stay, so the agent can still edit the file. Besides the names redac---n knows, pi-safety counts credential files in your home directory, pi's own `auth.json`, and your `secretPaths` |
+| **Known values** | Every credential in a secret file under the project or in your home directory, or in a credential-named environment variable, is replaced wherever it appears: escaped, encoded, and cut short. So is any secret found in earlier output, from then on |
+| **Patterns** | Secrets that were never in a file (`gh auth token`, an OAuth response, another container's environment) are caught by redac---n's rules |
+| **Personal data** | What people paste into chats and get in emails: SSNs, card numbers and security codes, PINs and door codes, passport and driver's license numbers, two-factor setup keys and backup codes, and app passwords; redac---n adds wallet recovery phrases and sign-in links. A bare number is hidden only when a checksum or the issuing rules confirm it (Luhn for cards, the SSA's rules for SSNs); after a label like `SSN:` or `card number`, a mistyped one is hidden too. Published test cards and example SSNs stay |
 
 ### What is and isn't guaranteed
 
 - **Guaranteed.** A value pi-safety knows — it was in a secret file or a credential-named variable —
   and that is distinctive enough to replace never reaches the model. `pnpm eval:secrets` fails if one
   does.
-- **Masked, not replaced.** A known value too ordinary to replace everywhere: `postgres`, a 4-digit
-  PIN, a short dictionary word. Replacing those would wreck ordinary output, so they are hidden when
-  the file is read or printed, but not if the agent prints them some other way.
+- **Masked, not replaced.** A known value too ordinary to replace everywhere: under 6 characters,
+  a number of up to 8 digits, or letters only and under 14. Replacing `postgres` everywhere would
+  wreck ordinary output, so such values are hidden when the file is read or printed, but not if the
+  agent prints them some other way.
 - **Best effort.** A secret pi-safety has never seen. This is the same caveat gitleaks and GitHub
   Actions' log masking carry.
 
-Measured on 556 labeled cases, written by four rounds of adversarial agents:
+Measured on 560 labeled cases, written by five rounds of adversarial agents:
 
 | | Known values leaked | Harmless text hidden | Unknown secrets missed |
 |---|---|---|---|
-| `"secretPatterns": "precise"` (default) | 0 | 0 | 113 |
-| `"secretPatterns": "broad"` | 0 | 18 | 44 |
+| `"secretGuessing": "off"` | 0 | 0 | 29 |
+| `"secretGuessing": "confident"` (default) | 0 | 0 | 20 |
+| `"secretGuessing": "eager"` | 0 | 0 | 16 |
 
-"Broad" also hides credential-named values in any output (`password=…`, `"token": "…"`, `--api-key …`)
-and passwords given in sentences (`the wifi password is …`).
-It catches 69 more unknown secrets, and in exchange it hides things an agent needs: type annotations
-like `password: Secret<String>`, i18n labels, `Authorization: Bearer <token>` in documentation, and S3
-object keys. A `[secret]` written into source that the agent later edits breaks that edit, so the
-default is "precise".
+`secretGuessing` is redac---n's `guessing`: how hard it guesses at random-looking tokens with no name
+or format next to them. Every other rule runs whatever it says.
 
 `pnpm eval:secrets` scores the corpus in `test/secret-cases/`. Those cases hold synthetic values in
 real credential formats, because that is what they test, so each format's prefix is stored as a
@@ -295,7 +295,7 @@ what was redacted; to see redaction, read a secret file in a scratch project.
   "timeoutMs": 30000,
 
   "secrets": "mask",          // "mask" | "block" (refuse reads of secret files) | "off"
-  "secretPatterns": "precise",// "precise" | "broad"
+  "secretGuessing": "confident", // "off" | "confident" | "eager"
   "secretPaths": ["infra/*.auto.tfvars"],  // extra secret files, as globs
   "notSecret": ["fixtures/fake-key.pem"]   // files that look secret but aren't
 }

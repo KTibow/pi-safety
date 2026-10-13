@@ -12,7 +12,7 @@
  *   LOST  harmless text the agent needs was hidden. Must be 0.
  *   SLOW  scrubbing took longer than the case's maxMs (default 1000). Must be 0.
  *
- *   node test/secrets-eval.ts --broad …          # with the opt-in "broad" patterns
+ *   node test/secrets-eval.ts --guessing=eager … # with another redac---n guessing level (default confident)
  *
  * Each case runs in a fresh project directory with its own home directory and environment, through
  * Secrets.scrub(), the same code the extension applies to tool results. A case file is a JSON array of:
@@ -33,8 +33,9 @@
 
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
-import { isCredentialName, isReplaceable, Secrets } from "../secrets.ts";
+import { dirname, join, resolve } from "node:path";
+import { fromEnvironment, type Guessing, Redactor } from "redac---n";
+import { Secrets } from "../secrets.ts";
 import { expandMarkers } from "./markers.ts";
 
 interface Case {
@@ -65,7 +66,9 @@ interface Result {
 
 const args = process.argv.slice(2);
 const asJson = args.includes("--json");
-const broad = args.includes("--broad");
+const guessing = (args.find((a) => a.startsWith("--guessing="))?.slice("--guessing=".length) ?? "confident") as Guessing;
+/** Whether a value is distinctive enough to hide everywhere, by the Redactor's own rule. */
+const isReplaceable = (value: string) => new Redactor().addKnown(value);
 let files = args.filter((a) => !a.startsWith("--"));
 if (!files.length) {
 	const dir = join(import.meta.dirname, "secret-cases");
@@ -96,18 +99,18 @@ function run(file: string, item: Case): Result {
 	// process.env must be edited in place: assigning a new object doesn't reach os.homedir().
 	setEnv({ PATH: originalEnv.PATH, HOME: home, ...item.env });
 	try {
-		const secrets = new Secrets({ mode: "mask", patterns: broad ? "broad" : "precise", paths: [], notSecret: [], agentDir: join(home, ".pi/agent") });
+		const secrets = new Secrets({ mode: "mask", guessing, paths: [], notSecret: [], agentDir: join(home, ".pi/agent") });
 		const known = [
 			...Object.entries(item.files ?? {}).filter(([path]) => secrets.isSecret(place(path))).map(([, content]) => content),
-			...Object.entries(item.env ?? {}).filter(([name]) => isCredentialName(name)).map(([, value]) => value),
+			...fromEnvironment(item.env ?? {}).map(({ value }) => value),
 		];
 		const parts: string[] = [];
 		const started = performance.now();
 		if (item.read) {
 			const path = place(item.read);
-			parts.push(secrets.scrub(readFileSync(path, "utf8"), cwd, secrets.isSecret(path), basename(path)));
+			parts.push(secrets.scrub(readFileSync(path, "utf8"), cwd, { path, secretFile: secrets.isSecret(path) }));
 		}
-		if (item.output !== undefined) parts.push(secrets.scrub(item.output, cwd, false, "", item.command ?? ""));
+		if (item.output !== undefined) parts.push(secrets.scrub(item.output, cwd, item.command ? { command: item.command } : {}));
 		const result = parts.join("\n");
 		const ms = performance.now() - started;
 		return {
@@ -158,7 +161,7 @@ if (asJson) {
 	const lost = results.filter((r) => r.lost.length).length;
 	const slow = results.filter((r) => r.slow).length;
 	console.log(
-		`\n${results.length} cases (${broad ? "broad" : "precise"} patterns): ${known} LEAK · ${lost} LOST · ${slow} SLOW` +
+		`\n${results.length} cases (guessing ${guessing}): ${known} LEAK · ${lost} LOST · ${slow} SLOW` +
 			`  |  reported: ${weak} weak · ${unknown} leak of unknown secrets  (--verbose lists them)`,
 	);
 }

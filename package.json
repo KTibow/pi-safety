@@ -33,5 +33,8 @@
     "typecheck": "tsc -p .",
     "eval": "node test/eval.ts",
     "eval:secrets": "node test/secret-cases/r2-robustness.gen.mjs && node test/secrets-eval.ts"
+  },
+  "dependencies": {
+    "redac---n": "0.0.2"
   }
 }
